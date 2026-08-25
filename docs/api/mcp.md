@@ -3,7 +3,7 @@
 MemLore exposes a **domain** MCP surface for coding agents. Graphiti and Neo4j
 internals are not part of the product contract.
 
-**Transport (this slice)**: local **stdio** via `uv run memlore mcp`.
+**Transport (this slice)**: local **stdio** via `memlore mcp` (Go binary; build with `scripts/install-memlore.sh`).
 Streamable HTTP MCP is out of scope.
 
 Mutating tools require an explicit non-empty `actor_id` argument. Actor is not
@@ -26,7 +26,8 @@ create).
 ## Local attach
 
 ```bash
-uv run memlore mcp
+./scripts/install-memlore.sh
+./bin/memlore mcp
 ```
 
 Example agent config:

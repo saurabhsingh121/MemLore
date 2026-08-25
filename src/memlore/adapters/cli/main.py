@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
 import uvicorn
 
 from memlore.adapters.mcp.server import configure_mcp_logging, create_mcp_server
 from memlore.bootstrap.container import build_container
+
+_GO_DEPRECATION = (
+    "note: Python memlore is legacy for governance adapters; "
+    "prefer Go: `memlore {command}` (build via scripts/install-memlore.sh) "
+    "or `go run ./cmd/memlore {command}` from the MemLore repo.\n"
+)
+
+
+def _warn_go_preferred(command: str) -> None:
+    sys.stderr.write(_GO_DEPRECATION.format(command=command))
 
 
 def main() -> None:
@@ -25,6 +36,7 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "serve":
+        _warn_go_preferred("serve")
         uvicorn.run(
             "memlore.adapters.rest.app:create_app",
             factory=True,
@@ -33,6 +45,7 @@ def main() -> None:
         )
         return
     if args.command == "mcp":
+        _warn_go_preferred("mcp")
         configure_mcp_logging()
         server = create_mcp_server(build_container())
         server.run(transport="stdio")

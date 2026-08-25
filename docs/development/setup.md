@@ -13,15 +13,47 @@
 cp .env.example .env
 docker compose up -d postgres
 uv sync
-uv run alembic upgrade head
+./scripts/install-memlore.sh   # builds bin/memlore for MCP cross-project use
+./bin/memlore migrate          # canonical schema apply (embedded goose)
+uv run alembic upgrade head    # legacy Python path; same DDL
 uv run pytest
-uv run memlore serve
-# MCP stdio (coding agents):
-uv run memlore mcp
+./bin/memlore serve            # Go REST on :8080
+./bin/memlore mcp              # Go MCP stdio
 ```
 
 Postgres is published on host port **15432** by default (see `docker-compose.yml`
 and `.env.example`) to avoid clashes with local Postgres installs.
+
+### Cross-project MCP (e.g. another repo in Cursor)
+
+Build once from this repo:
+
+```bash
+./scripts/install-memlore.sh
+```
+
+In the **consumer** project's `.cursor/mcp.json` use an **absolute binary path**
+(Cursor ignores `cwd` for `go run`):
+
+```json
+{
+  "mcpServers": {
+    "memlore": {
+      "type": "stdio",
+      "command": "/absolute/path/to/memlore/bin/memlore",
+      "args": ["mcp"],
+      "env": {
+        "MEMLORE_POSTGRES_DSN": "postgresql://memlore:memlore@localhost:15432/memlore"
+      }
+    }
+  }
+}
+```
+
+Run `./bin/memlore migrate` before first use if tables are missing.
+
+Legacy Python adapters (`uv run memlore serve` / `uv run memlore mcp`) still work
+but print deprecation notices; prefer Go binaries.
 
 Integration tests need Postgres:
 

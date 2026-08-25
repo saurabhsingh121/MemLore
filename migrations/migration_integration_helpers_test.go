@@ -37,3 +37,10 @@ func extractGooseUpSQL(t *testing.T) string {
 	up = strings.ReplaceAll(up, "-- +goose StatementEnd", "")
 	return strings.TrimSpace(up)
 }
+
+func replaceDatabaseInDSN(dsn, dbName string) string {
+	if idx := strings.LastIndex(dsn, "/"); idx >= 0 {
+		return dsn[:idx+1] + dbName
+	}
+	return dsn + "/" + dbName
+}

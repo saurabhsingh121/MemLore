@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M6 — Go MCP lore tools complete (F105); next governance hardening  
-**Current Release Target**: v0.6.0 Go MCP strangler; v0.7.0 cutover planning
+**Current Milestone**: M7 — Go governance hardening complete (F106a); next F106 graph-service  
+**Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
 
@@ -40,6 +40,7 @@
 | F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |
 | F104 | Migrate lore CRUD/verify REST to Go | DONE | ✓ | ✓ | — | — | `memlore serve` :8080 |
 | F105 | Migrate MCP lore tools to Go | DONE | ✓ | ✓ | — | 0003 | `memlore mcp` stdio |
+| F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI integration |
 | F106 | Extract graph-service + contracts | PLANNED | — | — | — | pending | Migration |
 
 ---
@@ -340,7 +341,32 @@ Go MCP stdio server with five `memlore.*` lore tools.
 
 ### Next Step
 
-Plan Python adapter deprecation and governance hardening.
+F106a governance hardening (DONE).
+
+---
+
+## F106a — Go Governance Hardening
+
+**Status**: DONE  
+**Branch**: `008-go-governance-hardening`  
+**Spec**: `specs/008-go-governance-hardening/`
+
+### Goal
+
+Production-ready Go governance: embedded migrations, CI integration, installable
+binary for cross-project MCP, Python deprecation notices.
+
+### Acceptance Criteria
+
+- [x] `memlore migrate` (embedded goose, cwd-independent)
+- [x] Alembic integration test on empty DB
+- [x] CI `go-integration` job with Postgres
+- [x] Python `serve`/`mcp` deprecation stderr notices
+- [x] `scripts/install-memlore.sh` + setup docs
+
+### Next Step
+
+F106 — graph-service extraction.
 
 ---
 
@@ -353,11 +379,17 @@ Plan Python adapter deprecation and governance hardening.
 | F103 | SQLAlchemy repos | F101, F102 |
 | F104 | F001 REST (Python) | F103 |
 | F105 | F002 MCP (Python) | F104 |
+| F106a | Ops hardening | F105 |
 | F106 | (greenfield) | F004 planning |
 
 ---
 
 ## Development Ledger Notes
+
+### 2026-08-25 — F106a Go governance hardening
+
+- `memlore migrate`, CI Postgres integration tests, Python deprecation notices
+- `scripts/install-memlore.sh` for cross-project MCP binary
 
 ### 2026-08-25 — F105 Go MCP lore tools
 
@@ -377,8 +409,8 @@ Plan Python adapter deprecation and governance hardening.
 
 ### Immediate recommended tasks
 
-1. Plan Python REST/MCP deprecation and cutover
-2. Postgres integration verification for Go adapters in CI
+1. `/speckit.specify` F106 (graph-service)
+2. Dogfood lore on insurance-core via `./bin/memlore mcp`
 
 ---
 

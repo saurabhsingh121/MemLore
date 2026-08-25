@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/007-go-mcp-lore-tools/spec.md` for completed F105 MCP strangler.
-Next: deprecate Python adapters / governance hardening.
-Completed: F101 skeleton, F102 domain, F103 repositories, F104 REST, F105 MCP, Python F001/F002.
+Read `specs/008-go-governance-hardening/spec.md` for completed F106a hardening.
+Next: F106 graph-service extraction.
+Completed: F101–F105, F106a, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->
