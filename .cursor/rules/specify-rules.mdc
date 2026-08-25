@@ -3,6 +3,17 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+# MemLore project context for Spec Kit
+
+- Language: Python 3.12
+- Package: `src/memlore/` (domain / application / infrastructure / adapters / bootstrap)
+- Tests: `tests/{unit,integration,contract,e2e}` with pytest; TDD mandatory for behavior
+- Governance DB: PostgreSQL; Knowledge: Graphiti + Neo4j; async sync via outbox
+- Adapters: FastAPI REST, MCP (`memlore.*`), CLI (`memlore`)
+- Tooling: uv, ruff, mypy --strict, Docker Compose
+- Constitution: `.specify/memory/constitution.md` (v1.0.0)
+- Brand: MemLore (not Tavryn) per ADR 0004
+
+For feature-specific technologies and structure, read the active plan under
+`specs/`.
 <!-- SPECKIT END -->

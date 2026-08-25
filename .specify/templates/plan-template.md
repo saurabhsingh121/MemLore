@@ -31,7 +31,22 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] TDD: behavioral work planned as RED → GREEN → REFACTOR; no
+  retroactive test-only compliance
+- [ ] Spec-driven: measurable acceptance criteria exist; ambiguous
+  behavior/architecture clarified before irreversible choices
+- [ ] Architecture integrity: domain independent of FastAPI/Postgres/Neo4j/
+  Graphiti/Redis; governance vs knowledge plane boundaries preserved;
+  no distributed transactions across Postgres and Neo4j
+- [ ] Documentation: docs/ADR updates included in the same unit of work
+- [ ] Authority & provenance: human vs agent origins, evidence, verification,
+  and explainable authority factors preserved
+- [ ] Temporal correctness: history not overwritten; conflicts surfaced
+- [ ] Secure by default: authz, tenant isolation, secret handling, untrusted
+  agent context considered
+- [ ] Observability: meaningful logs/metrics/traces/health for critical paths
+- [ ] Dependency policy: new third-party libraries justified
+- [ ] Simplicity: no speculative abstractions beyond requirements
 
 ## Project Structure
 
@@ -56,43 +71,25 @@ specs/[###-feature]/
 -->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+src/memlore/
+├── domain/
+├── application/
+├── infrastructure/
+├── adapters/
+│   ├── rest/
+│   ├── mcp/
+│   └── cli/
+└── bootstrap/
 
 tests/
-├── contract/
+├── unit/
 ├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+├── contract/
+└── e2e/
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: MemLore default layout above unless an ADR changes it.
+Document any deliberate deviation and rationale.
 
 ## Complexity Tracking
 

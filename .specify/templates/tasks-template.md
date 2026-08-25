@@ -8,7 +8,9 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Per the MemLore constitution, behavioral production work MUST use
+TDD (RED → GREEN → REFACTOR). Include explicit test tasks for every
+behavioral change. Pure docs/config-only tasks may omit tests.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -20,10 +22,8 @@ description: "Task list template for feature implementation"
 
 ## Path Conventions
 
-- **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
-- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
+- **MemLore default**: `src/memlore/`, `tests/{unit,integration,contract,e2e}/`
+- Adjust only when plan.md documents a deliberate deviation
 
 <!-- 
   ============================================================================
