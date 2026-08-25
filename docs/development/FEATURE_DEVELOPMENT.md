@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M8 — F106 graph-service vertical slice complete; next F107 outbox  
+**Current Milestone**: M9 — F107 transactional outbox complete; next F108 retrieval  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -28,7 +28,7 @@
 | F001 | Scoped human-authored lore entry (REST) | DONE | ✓ | ✓ | ✓ | 0001 | PostgreSQL governance slice |
 | F002 | MCP lore tools (remember/get/verify/explain/search) | DONE | ✓ | ✓ | ✓ | 0003 | Merged to main |
 | F003 | Authority factor model + evaluation | PLANNED | — | — | partial | — | Docs only today |
-| F004 | Transactional outbox + graph sync | PLANNED | — | — | partial | — | No code |
+| F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PLANNED | — | — | — | — | Depends on F005 |
 | F007 | Context compiler + `get_for_task` | PLANNED | — | — | partial | — | |
@@ -42,6 +42,7 @@
 | F105 | Migrate MCP lore tools to Go | DONE | ✓ | ✓ | — | 0003 | `memlore mcp` stdio |
 | F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI integration |
 | F106 | Extract graph-service + contracts | DONE | ✓ | ✓ | ✓ | — | `graph-service/`, Go KnowledgeGraph port |
+| F107 | Transactional outbox + graph sync worker | DONE | ✓ | ✓ | ✓ | — | `memlore worker`, outbox migration |
 
 ---
 
@@ -366,7 +367,7 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F107 — transactional outbox + graph sync worker.
+F108 — graph retrieval orchestration.
 
 ---
 
@@ -388,7 +389,7 @@ Go `KnowledgeGraph` port + HTTP client without Graphiti imports.
 - [x] `POST /search` MemLore-shaped results
 - [x] Go `KnowledgeGraph` port + HTTP client + contract tests
 - [x] CI graph-service job
-- [x] Lore create does NOT call graph-service (F107)
+- [x] Lore create wired via F107 outbox (not synchronous dual-write)
 
 ### Implementation
 
@@ -396,6 +397,34 @@ Go `KnowledgeGraph` port + HTTP client without Graphiti imports.
 - `internal/application/ports/knowledge_graph.go`
 - `internal/infrastructure/graphclient/`
 - `docs/api/graph-service.md`
+
+---
+
+## F107 — Transactional Outbox + Graph Sync
+
+**Status**: DONE  
+**Branch**: `010-transactional-outbox`  
+**Spec**: `specs/010-transactional-outbox/`  
+**Implements**: Product F004
+
+### Goal
+
+Lore create writes a pending outbox event in the same Postgres transaction.
+`memlore worker` polls outbox and publishes episodes to graph-service.
+
+### Acceptance Criteria
+
+- [x] `outbox_events` migration (`00002`)
+- [x] `CreateLore` adds `episode.ingest` outbox row atomically with lore + audit
+- [x] `memlore worker` calls `KnowledgeGraph.IngestEpisode` with lore id as episode id
+- [x] Failed events retry with attempts + last_error
+- [x] Unit + Postgres integration tests
+
+### Implementation
+
+- `migrations/00002_outbox_events.sql`
+- `internal/application/commands/process_outbox.go`
+- `cmd/memlore` `worker` subcommand
 
 ---
 
@@ -410,10 +439,16 @@ Go `KnowledgeGraph` port + HTTP client without Graphiti imports.
 | F105 | F002 MCP (Python) | F104 |
 | F106a | Ops hardening | F105 |
 | F106 | (greenfield) | F004 planning |
+| F107 | F004 outbox | F106 |
 
 ---
 
 ## Development Ledger Notes
+
+### 2026-08-26 — F107 transactional outbox + graph sync
+
+- Outbox migration, CreateLore atomic outbox write, `memlore worker`
+- Implements product F004
 
 ### 2026-08-25 — F106 graph-service extraction
 
@@ -444,7 +479,7 @@ Go `KnowledgeGraph` port + HTTP client without Graphiti imports.
 
 ### Immediate recommended tasks
 
-1. `/speckit.specify` F107 (transactional outbox)
+1. `/speckit.specify` F108 (graph retrieval orchestration)
 2. Dogfood lore on insurance-core via `./bin/memlore mcp`
 
 ---

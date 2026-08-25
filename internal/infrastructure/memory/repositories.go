@@ -107,18 +107,22 @@ func (r *AuditRepository) ListByTarget(_ context.Context, targetID string) ([]do
 type UnitOfWork struct {
 	lore   *LoreRepository
 	audits *AuditRepository
+	outbox *OutboxRepository
 }
 
 func NewUnitOfWork() *UnitOfWork {
 	return &UnitOfWork{
 		lore:   NewLoreRepository(),
 		audits: NewAuditRepository(),
+		outbox: NewOutboxRepository(),
 	}
 }
 
 func (u *UnitOfWork) LoreEntries() ports.LoreRepository { return u.lore }
 
 func (u *UnitOfWork) Audits() ports.AuditRepository { return u.audits }
+
+func (u *UnitOfWork) Outbox() ports.OutboxRepository { return u.outbox }
 
 func (u *UnitOfWork) Commit(context.Context) error   { return nil }
 func (u *UnitOfWork) Rollback(context.Context) error { return nil }

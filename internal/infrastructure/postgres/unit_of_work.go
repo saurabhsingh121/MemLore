@@ -15,6 +15,7 @@ type UnitOfWork struct {
 	queries *sqlc.Queries
 	lore    ports.LoreRepository
 	audits  ports.AuditRepository
+	outbox  ports.OutboxRepository
 }
 
 // BeginUnitOfWork starts a transaction-bound unit of work.
@@ -29,6 +30,7 @@ func BeginUnitOfWork(ctx context.Context, pool *pgxpool.Pool) (*UnitOfWork, erro
 		queries: q,
 		lore:    NewLoreRepository(q),
 		audits:  NewAuditRepository(q),
+		outbox:  NewOutboxRepository(q),
 	}, nil
 }
 
@@ -38,6 +40,10 @@ func (u *UnitOfWork) LoreEntries() ports.LoreRepository {
 
 func (u *UnitOfWork) Audits() ports.AuditRepository {
 	return u.audits
+}
+
+func (u *UnitOfWork) Outbox() ports.OutboxRepository {
+	return u.outbox
 }
 
 func (u *UnitOfWork) Commit(ctx context.Context) error {

@@ -56,11 +56,28 @@ func setupPool(t *testing.T) *pgxpool.Pool {
 			actor_id VARCHAR(256) NOT NULL,
 			created_at TIMESTAMPTZ NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS outbox_events (
+			id VARCHAR(36) PRIMARY KEY,
+			aggregate_type VARCHAR(64) NOT NULL,
+			aggregate_id VARCHAR(36) NOT NULL,
+			event_type VARCHAR(64) NOT NULL,
+			payload JSONB NOT NULL,
+			status VARCHAR(32) NOT NULL DEFAULT 'pending',
+			attempts INT NOT NULL DEFAULT 0,
+			idempotency_key VARCHAR(256) NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL,
+			processed_at TIMESTAMPTZ,
+			last_error TEXT
+		);
+		CREATE UNIQUE INDEX IF NOT EXISTS ux_outbox_events_idempotency_key
+			ON outbox_events (idempotency_key);
+		CREATE INDEX IF NOT EXISTS ix_outbox_events_status_created
+			ON outbox_events (status, created_at);
 	`); err != nil {
 		pool.Close()
 		t.Fatalf("ensure schema: %v", err)
 	}
-	if _, err := pool.Exec(ctx, "TRUNCATE audit_records, lore_entries"); err != nil {
+	if _, err := pool.Exec(ctx, "TRUNCATE outbox_events, audit_records, lore_entries"); err != nil {
 		pool.Close()
 		t.Fatalf("truncate tables: %v", err)
 	}

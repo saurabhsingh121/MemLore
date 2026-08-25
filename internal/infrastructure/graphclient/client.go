@@ -43,6 +43,7 @@ type scopeJSON struct {
 }
 
 type episodeRequest struct {
+	EpisodeID      string         `json:"episode_id,omitempty"`
 	Statement      string         `json:"statement"`
 	Scope          scopeJSON      `json:"scope"`
 	Metadata       map[string]any `json:"metadata,omitempty"`
@@ -106,6 +107,7 @@ func (c *Client) Health(ctx context.Context) error {
 // IngestEpisode posts an episode to graph-service.
 func (c *Client) IngestEpisode(ctx context.Context, req ports.EpisodeIngestRequest) (string, error) {
 	payload := episodeRequest{
+		EpisodeID:      req.EpisodeID,
 		Statement:      req.Statement,
 		Scope:          scopeJSON{Kind: req.Scope.Kind, Key: req.Scope.Key},
 		Metadata:       req.Metadata,

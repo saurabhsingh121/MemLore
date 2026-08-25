@@ -65,6 +65,13 @@ func (h *CreateLoreHandler) Handle(ctx context.Context, cmd CreateLoreCommand) (
 	if err := uow.Audits().Add(ctx, audit); err != nil {
 		return domain.LoreEntry{}, err
 	}
+	outboxEvent, err := domain.NewEpisodeIngestOutboxEvent(entry, now)
+	if err != nil {
+		return domain.LoreEntry{}, err
+	}
+	if err := uow.Outbox().Add(ctx, outboxEvent); err != nil {
+		return domain.LoreEntry{}, err
+	}
 	if err := uow.Commit(ctx); err != nil {
 		return domain.LoreEntry{}, err
 	}

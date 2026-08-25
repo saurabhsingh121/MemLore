@@ -173,3 +173,49 @@ func ptrFromText(value pgtype.Text) *string {
 	s := value.String
 	return &s
 }
+
+func textFromString(value string) pgtype.Text {
+	if value == "" {
+		return pgtype.Text{Valid: false}
+	}
+	return pgtype.Text{String: value, Valid: true}
+}
+
+func outboxEventToInsertParams(event domain.OutboxEvent) (sqlc.InsertOutboxEventParams, error) {
+	return sqlc.InsertOutboxEventParams{
+		ID:             event.ID,
+		AggregateType:  event.AggregateType,
+		AggregateID:    event.AggregateID,
+		EventType:      string(event.EventType),
+		Payload:        event.Payload,
+		Status:         string(event.Status),
+		Attempts:       int32(event.Attempts),
+		IdempotencyKey: event.IdempotencyKey,
+		CreatedAt:      timestamptzFromTime(event.CreatedAt),
+		ProcessedAt:    timestamptzFromPtr(event.ProcessedAt),
+		LastError:      textFromString(event.LastError),
+	}, nil
+}
+
+func outboxEventFromRow(row sqlc.OutboxEvent) (domain.OutboxEvent, error) {
+	return domain.OutboxEvent{
+		ID:             row.ID,
+		AggregateType:  row.AggregateType,
+		AggregateID:    row.AggregateID,
+		EventType:      domain.OutboxEventType(row.EventType),
+		Payload:        row.Payload,
+		Status:         domain.OutboxStatus(row.Status),
+		Attempts:       int(row.Attempts),
+		IdempotencyKey: row.IdempotencyKey,
+		CreatedAt:      timeFromTimestamptz(row.CreatedAt),
+		ProcessedAt:    ptrFromTimestamptz(row.ProcessedAt),
+		LastError:      stringFromText(row.LastError),
+	}, nil
+}
+
+func stringFromText(value pgtype.Text) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.String
+}
