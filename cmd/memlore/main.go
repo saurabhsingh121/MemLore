@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -52,6 +53,12 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "migrate":
+		if err := runMigrate(logger); err != nil {
+			fmt.Fprintf(os.Stderr, "migrate failed: %v\n", err)
+			return 1
+		}
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", args[1])
 		return 1
@@ -62,6 +69,7 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintf(stdout, "memlore %s — MemLore Core (Go)\n", Version)
 	fmt.Fprintln(stdout, "usage:")
 	fmt.Fprintln(stdout, "  memlore version")
+	fmt.Fprintln(stdout, "  memlore migrate")
 	fmt.Fprintln(stdout, "  memlore serve")
 	fmt.Fprintln(stdout, "  memlore mcp")
 }
@@ -105,6 +113,15 @@ func runServe(addr string, logger *slog.Logger) error {
 	}
 }
 
+func runMigrate(logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	if err := bootstrap.RunMigrations(dsn); err != nil {
+		return err
+	}
+	logger.Info("memlore migrate complete", "dsn", redactDSN(dsn))
+	return nil
+}
+
 func runMCP(logger *slog.Logger) error {
 	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
 	dsn = bootstrap.NormalizePostgresDSN(dsn)
@@ -125,4 +142,12 @@ func envOr(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func redactDSN(dsn string) string {
+	// Avoid logging passwords; host/db tail is enough for ops.
+	if idx := strings.LastIndex(dsn, "@"); idx >= 0 && idx+1 < len(dsn) {
+		return dsn[idx+1:]
+	}
+	return "configured"
 }

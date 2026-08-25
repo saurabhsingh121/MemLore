@@ -39,7 +39,7 @@ func TestLoreAuditMigrationCreatesTablesOnPostgres(t *testing.T) {
 		}
 	}()
 
-	testDSN := strings.Replace(dsn, "/memlore", "/"+dbName, 1)
+	testDSN := replaceDatabaseInDSN(dsn, dbName)
 	testConn, err := pgx.Connect(ctx, testDSN)
 	if err != nil {
 		t.Fatalf("connect test db: %v", err)
