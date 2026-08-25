@@ -7,30 +7,30 @@
 | Capability | Current Implementation | Target | Status | Tests | Migration Notes |
 |------------|------------------------|--------|--------|-------|-----------------|
 | **Governance plane** |
-| Lore create (human-authored) | Python `CreateLoreHandler` + SQLAlchemy | Go command + sqlc | Not Started | Partial (unit, contract, integration*) | Characterize from `tests/unit/application/test_create_lore.py`; first Go slice |
-| Lore get by id | Python `GetLoreHandler` | Go query + sqlc | Not Started | Partial | |
-| Lore list by scope | Python `ListLoreByScopeHandler` | Go query + sqlc | Not Started | Partial | Exact kind+key match only |
-| Lore verify | Python `VerifyLoreHandler` + domain `apply_verification` | Go command + domain | Not Started | Partial | Idempotent; self-verify allowed |
-| Audit create/verify | Python handlers + `audit_records` table | Go + sqlc | Not Started | Partial | |
-| Audit list by lore id | Python `ListAuditsHandler` | Go query | Not Started | Partial | 404 if lore missing |
+| REST `/v1/lore-entries` | FastAPI `routes_lore.py` | Go `adapters/http` | Migrated | Yes | Go default port 8080 |
+| REST actor header | `X-Memlore-Actor` deps | Go middleware | Migrated | Yes | |
+| Lore create (human-authored) | Python `CreateLoreHandler` | Go command + sqlc | Migrated | Yes | Via Go REST |
+| Lore get by id | Python `GetLoreHandler` | Go query + sqlc | Migrated | Yes | |
+| Lore list by scope | Python `ListLoreByScopeHandler` | Go query + sqlc | Migrated | Yes | |
+| Lore verify | Python `VerifyLoreHandler` | Go command + domain | Migrated | Yes | |
+| Audit list by lore id | Python `ListAuditsHandler` | Go query | Migrated | Yes | |
 | Domain validation (statement, scope, evidence) | Python dataclasses | Go domain package | Verified | Yes | F102 characterization tests |
-| Health endpoint | Python FastAPI `/health` | Go chi handler | Not Started | Yes (unit) | Trivial; good Go smoke test |
+| Health endpoint | Python FastAPI `/health` | Go chi handler | Migrated | Yes | `/health` on Go serve |
 | **API adapters** |
-| REST `/v1/lore-entries` | FastAPI `routes_lore.py` | Go `adapters/http` | Not Started | Yes (contract) | Preserve JSON shapes during strangler |
-| REST actor header | `X-Memlore-Actor` deps | Go middleware | Not Started | Yes (contract) | No OIDC yet |
-| MCP `memlore.remember` | Python MCP adapter | Go MCP SDK | Not Started | Yes (unit, contract, e2e*) | Defer until REST Go slice green or parallel |
-| MCP `memlore.get` | Python MCP adapter | Go MCP SDK | Not Started | Yes | |
-| MCP `memlore.verify` | Python MCP adapter | Go MCP SDK | Not Started | Yes | |
-| MCP `memlore.explain` | Python MCP adapter | Go MCP SDK | Not Started | Yes | Entry + audits, no NL narrative |
-| MCP `memlore.search` | Python MCP adapter (scope list) | Go MCP SDK | Not Started | Yes | Not semantic search |
-| MCP stdio CLI | `memlore mcp` Python | `memlore mcp` Go binary | Not Started | Yes (e2e*) | |
-| CLI `memlore serve` | Uvicorn Python | Go HTTP server | Not Started | No | |
+| REST actor header (MCP context) | `X-Memlore-Actor` deps | Go middleware | Migrated | Yes | No OIDC yet |
+| MCP `memlore.remember` | Python MCP adapter | Go MCP SDK | Migrated | Yes | Via Go `memlore mcp` |
+| MCP `memlore.get` | Python MCP adapter | Go MCP SDK | Migrated | Yes | |
+| MCP `memlore.verify` | Python MCP adapter | Go MCP SDK | Migrated | Yes | |
+| MCP `memlore.explain` | Python MCP adapter | Go MCP SDK | Migrated | Yes | Entry + audits, no NL narrative |
+| MCP `memlore.search` | Python MCP adapter (scope list) | Go MCP SDK | Migrated | Yes | Not semantic search |
+| MCP stdio CLI | `memlore mcp` Python | `memlore mcp` Go binary | Migrated | Yes | Go stdio; Python unchanged |
+| CLI `memlore serve` | Uvicorn Python | Go HTTP server | Migrated | Partial | Go default `:8080`; Python `:8000` |
 | **Persistence** |
 | Postgres schema `lore_entries` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | SQL ported; integration test build tag |
 | Postgres schema `audit_records` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | |
 | Repository layer | SQLAlchemy repos | sqlc + pgx repos | Migrated | Yes | F103 integration tests |
 | Unit of work / transactions | `SqlAlchemyUnitOfWork` | `postgres.BeginUnitOfWork` | Migrated | Yes | pgx transaction |
-| In-memory test doubles | `tests/support/fakes.py` | Go fake repos | Not Started | Yes | For unit/contract without DB |
+| In-memory test doubles | `tests/support/fakes.py` | Go fake repos | Migrated | Yes | `internal/infrastructure/memory` |
 | **Knowledge plane** |
 | Graphiti integration | None | Python `graph-service` | Not Started | No | Greenfield; no code to migrate |
 | Neo4j connectivity | Docker only | Python service | Not Started | No | |
