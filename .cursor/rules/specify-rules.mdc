@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/005-go-postgres-persistence/spec.md` for completed F103 persistence.
-Next: F104 Go REST lore CRUD strangler.
-Completed: F101 skeleton, F102 domain, F103 repositories, Python F001/F002.
+Read `specs/007-go-mcp-lore-tools/spec.md` for completed F105 MCP strangler.
+Next: deprecate Python adapters / governance hardening.
+Completed: F101 skeleton, F102 domain, F103 repositories, F104 REST, F105 MCP, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

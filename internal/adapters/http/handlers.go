@@ -1,0 +1,184 @@
+package httpadapter
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/memlore/memlore/internal/application/commands"
+	"github.com/memlore/memlore/internal/application/ports"
+	"github.com/memlore/memlore/internal/application/queries"
+	"github.com/memlore/memlore/internal/domain"
+)
+
+// Handlers exposes lore REST endpoints.
+type Handlers struct {
+	CreateLore       *commands.CreateLoreHandler
+	VerifyLore       *commands.VerifyLoreHandler
+	GetLore          *queries.GetLoreHandler
+	ListLoreByScope  *queries.ListLoreByScopeHandler
+	ListAudits       *queries.ListAuditsHandler
+	Version          string
+}
+
+// NewHandlers wires application handlers from a unit-of-work factory and clock.
+func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, version string) *Handlers {
+	return &Handlers{
+		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
+		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
+		GetLore:         queries.NewGetLoreHandler(begin),
+		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
+		ListAudits:      queries.NewListAuditsHandler(begin),
+		Version:         version,
+	}
+}
+
+// Router returns the HTTP router for MemLore REST.
+func (h *Handlers) Router() http.Handler {
+	r := chi.NewRouter()
+	r.Get("/health", h.health)
+	r.Route("/v1", func(r chi.Router) {
+		r.Post("/lore-entries", h.createLoreEntry)
+		r.Get("/lore-entries", h.listLoreEntries)
+		r.Get("/lore-entries/{id}", h.getLoreEntry)
+		r.Post("/lore-entries/{id}/verify", h.verifyLoreEntry)
+		r.Get("/lore-entries/{id}/audits", h.listLoreAudits)
+	})
+	return r
+}
+
+func (h *Handlers) health(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"service": "memlore",
+		"version": h.Version,
+	})
+}
+
+func (h *Handlers) createLoreEntry(w http.ResponseWriter, r *http.Request) {
+	actor, err := requireActor(r)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	var body createLoreRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "invalid JSON body")
+		return
+	}
+	statement, scope, evidence, err := parseCreateRequest(body)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	entry, err := h.CreateLore.Handle(r.Context(), commands.CreateLoreCommand{
+		Statement: statement,
+		Scope:     scope,
+		ActorID:   actor,
+		Evidence:  evidence,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, toLoreResponse(entry))
+}
+
+func (h *Handlers) getLoreEntry(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	entry, err := h.GetLore.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toLoreResponse(entry))
+}
+
+func (h *Handlers) verifyLoreEntry(w http.ResponseWriter, r *http.Request) {
+	actor, err := requireActor(r)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	entry, err := h.VerifyLore.Handle(r.Context(), commands.VerifyLoreCommand{
+		EntryID: id,
+		ActorID: actor,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toLoreResponse(entry))
+}
+
+func (h *Handlers) listLoreEntries(w http.ResponseWriter, r *http.Request) {
+	kindRaw := strings.TrimSpace(r.URL.Query().Get("scope_kind"))
+	key := strings.TrimSpace(r.URL.Query().Get("scope_key"))
+	if kindRaw == "" || key == "" {
+		writeError(w, http.StatusBadRequest, "validation_error", "scope_kind and scope_key are required")
+		return
+	}
+	kind, err := domain.ParseScopeKind(kindRaw)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	scope, err := domain.NewScope(kind, key)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	items, err := h.ListLoreByScope.Handle(r.Context(), scope)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	resp := loreEntryListResponse{Items: make([]loreEntryResponse, 0, len(items))}
+	for _, item := range items {
+		resp.Items = append(resp.Items, toLoreResponse(item))
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) listLoreAudits(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	records, err := h.ListAudits.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	resp := auditListResponse{Items: make([]auditRecordResponse, 0, len(records))}
+	for _, record := range records {
+		resp.Items = append(resp.Items, toAuditResponse(record))
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// Serve starts the HTTP server until context is cancelled.
+func Serve(ctx context.Context, addr string, handler http.Handler) error {
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+		return nil
+	case err := <-errCh:
+		if err == http.ErrServerClosed {
+			return nil
+		}
+		return err
+	}
+}

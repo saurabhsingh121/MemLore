@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M4 — Go persistence complete (F103); next F104 REST slice  
-**Current Release Target**: v0.4.0 Go repositories; v0.5.0 Go REST strangler
+**Current Milestone**: M6 — Go MCP lore tools complete (F105); next governance hardening  
+**Current Release Target**: v0.6.0 Go MCP strangler; v0.7.0 cutover planning
 
 ---
 
@@ -38,8 +38,8 @@
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
 | F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |
-| F104 | Migrate lore CRUD/verify REST to Go | PLANNED | — | — | — | — | First vertical slice |
-| F105 | Migrate MCP lore tools to Go | PLANNED | — | — | — | 0003 | After F104 |
+| F104 | Migrate lore CRUD/verify REST to Go | DONE | ✓ | ✓ | — | — | `memlore serve` :8080 |
+| F105 | Migrate MCP lore tools to Go | DONE | ✓ | ✓ | — | 0003 | `memlore mcp` stdio |
 | F106 | Extract graph-service + contracts | PLANNED | — | — | — | pending | Migration |
 
 ---
@@ -93,7 +93,7 @@ plane (PostgreSQL) without knowledge-graph coupling.
 
 ### Next Step
 
-Maintain until Go port (F104) reaches Verified; then deprecate Python REST handlers.
+Maintain until Go port (F104) is verified in production; then deprecate Python REST handlers.
 
 ---
 
@@ -151,7 +151,7 @@ domain tool names (no Graphiti leakage).
 
 ### Next Step
 
-None — complete. Python MCP remains until F105.
+None — complete. Go MCP available via `go run ./cmd/memlore mcp`; Python MCP unchanged until cutover.
 
 ---
 
@@ -249,7 +249,7 @@ sqlc + pgx repositories for lore entries and audit records with transaction UoW.
 
 ### Next Step
 
-F104 — application handlers + REST adapter using Go repositories
+F104 — application handlers + REST adapter using Go repositories (DONE; see F104/F105)
 
 ---
 
@@ -285,33 +285,62 @@ Run Spec Kit specify after Go domain skeleton (F102) or in parallel if modeled l
 
 ## F104 — Migrate Lore CRUD/Verify REST to Go
 
-**Status**: PLANNED  
-**Migration feature** — **recommended first Go vertical slice**
+**Status**: DONE  
+**Branch**: `006-go-rest-lore-crud`  
+**Spec**: `specs/006-go-rest-lore-crud/`
 
 ### Goal
 
-Parity with F001 REST behavior using Go domain, sqlc, chi.
+Go REST `/v1/lore-entries` with application handlers and chi adapter.
 
-### Specification
+### Acceptance Criteria
 
-Extend or fork `specs/001-scoped-lore-entry/` with Go implementation plan
+- [x] Create, get, verify, list by scope, list audits
+- [x] Error envelope parity (`validation_error`, `not_found`)
+- [x] Go contract tests mirror Python contract suite
+- [x] `go run ./cmd/memlore serve` (default `:8080`)
+- [x] Python `uv run memlore serve` unchanged on `:8000`
 
-### Acceptance Criteria (draft)
+### Implementation
 
-- Ported contract tests pass against Go server
-- Characterization fixtures match Python outputs
-- Python REST can run side-by-side until cutover
-- No Graphiti dependency
-
-### TDD Progress
-
-- [ ] RED — port `tests/contract/test_create_lore_entry.py` to Go HTTP harness
-- [ ] GREEN — minimal handlers
-- [ ] REFACTOR — extract domain packages
+- `internal/application/commands/`, `queries/`
+- `internal/adapters/http/`
+- `internal/infrastructure/memory/` (contract tests)
+- `cmd/memlore serve`
 
 ### Next Step
 
-Complete F101/F102/F103; export characterization vectors from Python tests.
+Plan Python adapter deprecation and governance hardening.
+
+---
+
+## F105 — Migrate MCP Lore Tools to Go
+
+**Status**: DONE  
+**Branch**: `007-go-mcp-lore-tools`  
+**Spec**: `specs/007-go-mcp-lore-tools/`
+
+### Goal
+
+Go MCP stdio server with five `memlore.*` lore tools.
+
+### Acceptance Criteria
+
+- [x] `memlore.remember`, `get`, `verify`, `explain`, `search`
+- [x] Tool errors: `validation_error: …`, `not_found: …`
+- [x] Go contract tests mirror Python MCP contract suite
+- [x] `go run ./cmd/memlore mcp` (stdio; logs on stderr)
+- [x] Python `uv run memlore mcp` unchanged
+
+### Implementation
+
+- `internal/adapters/mcp/` (official Go MCP SDK)
+- `internal/adapters/presenters/` (shared JSON with REST)
+- `cmd/memlore mcp`
+
+### Next Step
+
+Plan Python adapter deprecation and governance hardening.
 
 ---
 
@@ -330,6 +359,16 @@ Complete F101/F102/F103; export characterization vectors from Python tests.
 
 ## Development Ledger Notes
 
+### 2026-08-25 — F105 Go MCP lore tools
+
+- Branch `007-go-mcp-lore-tools`: five tools via official Go MCP SDK
+- `go run ./cmd/memlore mcp` on stdio (Python MCP unchanged)
+
+### 2026-08-25 — F104 Go REST lore CRUD
+
+- Branch `006-go-rest-lore-crud`: chi handlers, application layer, contract tests
+- `go run ./cmd/memlore serve` on `:8080` (Python REST unchanged on `:8000`)
+
 ### 2026-08-25 — F002 merged; F101 specified
 
 - Merged `002-mcp-lore-tools` to `main` (F002 DONE)
@@ -338,8 +377,8 @@ Complete F101/F102/F103; export characterization vectors from Python tests.
 
 ### Immediate recommended tasks
 
-1. `/speckit.implement` F101 (Go skeleton)
-2. Characterization fixtures for F104
+1. Plan Python REST/MCP deprecation and cutover
+2. Postgres integration verification for Go adapters in CI
 
 ---
 
