@@ -5,8 +5,9 @@ alwaysApply: true
 <!-- SPECKIT START -->
 # MemLore project context for Spec Kit
 
-- Language: Python 3.12
-- Package: `src/memlore/` (domain / application / infrastructure / adapters / bootstrap)
+- Core (target): Go 1.25+ — `cmd/`, `internal/`, `migrations/`, `db/queries/` (ADR 0005)
+- Legacy core (current): Python 3.12 — `src/memlore/` until Go slices verify
+- Graph service (target): Python 3.12 — `graph-service/` (thin Graphiti boundary)
 - Tests: `tests/{unit,integration,contract,e2e}` with pytest; TDD mandatory for behavior
 - Governance DB: PostgreSQL; Knowledge: Graphiti + Neo4j; async sync via outbox
 - Adapters: FastAPI REST, MCP (`memlore.*`), CLI (`memlore`)
@@ -16,9 +17,10 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/002-mcp-lore-tools/plan.md` for the current feature
-(MCP lore tools: remember / get / verify / explain / search + stdio `memlore mcp`).
-Also see `research.md`, `data-model.md`, `contracts/mcp-lore-tools.md`,
+Read `specs/003-go-core-skeleton/plan.md` for the active feature
+(F101: Go module skeleton, goose/sqlc scaffold, CI gates — no traffic switch).
+Also see `research.md`, `data-model.md`, `contracts/go-module-layout.md`,
 and `quickstart.md` in that directory.
-Prior REST slice: `specs/001-scoped-lore-entry/`.
+Completed: `specs/001-scoped-lore-entry/`, `specs/002-mcp-lore-tools/`.
+Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

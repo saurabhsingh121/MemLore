@@ -1,6 +1,6 @@
 # ADR 0002: Python 3.12 + FastAPI application stack
 
-- **Status**: Accepted
+- **Status**: Superseded (for MemLore Core) — see [ADR 0005](0005-go-memlore-core.md)
 - **Date**: 2026-08-25
 
 ## Context
@@ -13,6 +13,11 @@ async I/O for API and workers.
 Use **Python 3.12**, **FastAPI**, **Pydantic**, **SQLAlchemy/Alembic**,
 **pytest**, and the official MCP Python SDK as the primary application stack.
 Package layout follows hexagonal boundaries under `src/memlore/`.
+
+> **Update (2026-08-25)**: Superseded for the **MemLore Core control plane** by
+> [ADR 0005](0005-go-memlore-core.md). Python remains the stack for the **graph
+> knowledge service** (`graph-service/`) and is legacy for governance features
+> until Go strangler slices verify parity.
 
 ## Alternatives Considered
 
