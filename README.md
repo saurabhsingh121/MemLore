@@ -33,18 +33,22 @@ Health check: `GET http://127.0.0.1:8000/health`
 
 ## Connect a coding agent
 
-MCP tools are not shipped yet. The planned surface is intentionally small
-(`memlore.get_for_task`, `memlore.search`, `memlore.remember`, …). See
-[docs/api/mcp.md](docs/api/mcp.md).
+Start the stdio MCP server (Postgres must be up and migrated):
+
+```bash
+uv run memlore mcp
+```
+
+Implemented tools: `memlore.remember`, `memlore.get`, `memlore.verify`,
+`memlore.explain`, `memlore.search`. Mutating tools require `actor_id`.
+See [docs/api/mcp.md](docs/api/mcp.md).
 
 ## CLI
 
 ```bash
 uv run memlore serve --host 127.0.0.1 --port 8000
+uv run memlore mcp
 ```
-
-Additional commands (`remember`, `recall`, `verify`, …) will land with the
-first product features.
 
 ## Documentation
 
@@ -60,7 +64,9 @@ first product features.
 
 First product slice implemented: scoped human-authored lore entries
 (store / retrieve / verify / list / audit) on PostgreSQL via REST `/v1/lore-entries`.
-MCP, Graphiti sync, OIDC/RBAC, conflicts, and supersession remain future work.
+MCP, Graphiti sync, OIDC/RBAC, conflicts, and supersession remain future work
+except the first MCP lore tools (`remember` / `get` / `verify` / `explain` /
+`search` over stdio).
 
 ## License
 

@@ -15,6 +15,8 @@ uv sync
 uv run alembic upgrade head
 uv run pytest
 uv run memlore serve
+# MCP stdio (coding agents):
+uv run memlore mcp
 ```
 
 Postgres is published on host port **15432** by default (see `docker-compose.yml`

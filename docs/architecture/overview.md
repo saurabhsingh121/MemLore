@@ -37,7 +37,10 @@ Do **not** use distributed transactions across planes. Synchronize with a
 transactional outbox (or equivalent reliable async mechanism).
 
 **Current delivery**: governance-plane lore entry CRUD/verify/audit on
-PostgreSQL is implemented. Knowledge-plane Graphiti/Neo4j sync is not yet wired.
+PostgreSQL is implemented via REST `/v1/lore-entries` and MCP tools
+`memlore.remember`, `memlore.get`, `memlore.verify`, `memlore.explain`, and
+`memlore.search` (local stdio: `memlore mcp`). Knowledge-plane Graphiti/Neo4j
+sync is not yet wired.
 
 ## Adapters
 

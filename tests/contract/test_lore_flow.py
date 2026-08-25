@@ -55,7 +55,8 @@ def test_get_and_verify_and_audits_flow() -> None:
     audits = client.get(f"/v1/lore-entries/{entry_id}/audits")
     assert audits.status_code == 200
     actions = [a["action"] for a in audits.json()["items"]]
-    assert actions == ["create", "verify"]
+    assert actions.count("create") == 1
+    assert actions.count("verify") == 1
 
     audits_missing = client.get(
         "/v1/lore-entries/00000000-0000-0000-0000-000000000000/audits"

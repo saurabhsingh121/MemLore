@@ -16,8 +16,9 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/001-scoped-lore-entry/plan.md` for the current feature
-(scoped human-authored lore entry: store / retrieve / verify / list / audit).
-Also see `research.md`, `data-model.md`, `contracts/rest-lore-entries.md`,
+Read `specs/002-mcp-lore-tools/plan.md` for the current feature
+(MCP lore tools: remember / get / verify / explain / search + stdio `memlore mcp`).
+Also see `research.md`, `data-model.md`, `contracts/mcp-lore-tools.md`,
 and `quickstart.md` in that directory.
+Prior REST slice: `specs/001-scoped-lore-entry/`.
 <!-- SPECKIT END -->

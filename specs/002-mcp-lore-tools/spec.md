@@ -146,7 +146,11 @@ MemLore lore tools and responds to a remember/get round-trip from a test client.
 - MCP tools MUST NOT expose Graphiti or Neo4j internals.
 - Actor identity is supplied via required `actor_id` on mutating tools
   (`remember`, `verify`); omitting it is a validation error.
-- Tool errors MUST be actionable (validation vs not found vs unavailable).
+- Tool errors MUST be actionable: `validation_error` for bad input,
+  `not_found` for unknown ids. There is no third `unavailable` tool code.
+  Infrastructure failures (e.g. database unreachable) MUST surface as a
+  generic tool failure without leaking internals (stack traces, SQL,
+  Graphiti/Neo4j).
 - `get_for_task`, supersede, invalidate, and context compilation are out of
   scope for this feature; `memlore.search` (exact scope list) is in scope.
 - Agent-authored create origins remain out of scope; `memlore.remember` always
