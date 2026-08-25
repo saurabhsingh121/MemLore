@@ -58,6 +58,7 @@ Optional Postgres migration check (use a fresh database; see
 
 ```bash
 go test -tags=integration ./migrations/...
+go test -tags=integration ./internal/infrastructure/postgres/...
 ```
 
 ## Spec Kit

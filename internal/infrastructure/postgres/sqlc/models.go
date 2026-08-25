@@ -5,8 +5,7 @@
 package sqlc
 
 import (
-	"encoding/json"
-	"time"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AuditRecord struct {
@@ -14,7 +13,7 @@ type AuditRecord struct {
 	TargetID  string
 	Action    string
 	ActorID   string
-	CreatedAt time.Time
+	CreatedAt pgtype.Timestamptz
 }
 
 type LoreEntry struct {
@@ -24,10 +23,10 @@ type LoreEntry struct {
 	ScopeKey           string
 	Origin             string
 	VerificationStatus string
-	Evidence           json.RawMessage
+	Evidence           []byte
 	CreatedBy          string
-	CreatedAt          time.Time
-	VerifiedBy         *string
-	VerifiedAt         *time.Time
-	UpdatedAt          time.Time
+	CreatedAt          pgtype.Timestamptz
+	VerifiedBy         pgtype.Text
+	VerifiedAt         pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
 }
