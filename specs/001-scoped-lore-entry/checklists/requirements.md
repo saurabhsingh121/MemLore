@@ -31,7 +31,7 @@
 
 ## Notes
 
-- Validation passed on 2026-08-25. Ready for `/speckit-clarify` (optional) or
-  `/speckit-plan`.
-- Assumptions intentionally defer MCP parity, OIDC, Graphiti sync, and RBAC to
-  later features.
+- Validation passed on 2026-08-25. Clarifications session completed (5/5).
+  Ready for `/speckit-plan`.
+- Assumptions intentionally defer MCP parity, OIDC, Graphiti sync, RBAC, and
+  conflict/dedup detection to later features.

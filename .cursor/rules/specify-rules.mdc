@@ -14,6 +14,10 @@ alwaysApply: true
 - Constitution: `.specify/memory/constitution.md` (v1.0.0)
 - Brand: MemLore (not Tavryn) per ADR 0004
 
-For feature-specific technologies and structure, read the active plan under
-`specs/`.
+## Active feature plan
+
+Read `specs/001-scoped-lore-entry/plan.md` for the current feature
+(scoped human-authored lore entry: store / retrieve / verify / list / audit).
+Also see `research.md`, `data-model.md`, `contracts/rest-lore-entries.md`,
+and `quickstart.md` in that directory.
 <!-- SPECKIT END -->

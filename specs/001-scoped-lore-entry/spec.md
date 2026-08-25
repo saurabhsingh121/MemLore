@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Store, retrieve and verify a scoped human-authored Lore entry with provenance"
 
+## Clarifications
+
+### Session 2026-08-25
+
+- Q: May the author verify their own lore entry in this slice? → A: Yes — self-verify is allowed (author and verifier may be the same actor).
+- Q: How is scope identity represented for create and list? → A: Structured scope with `kind` + `key` (kinds include at least `team` and `repository`).
+- Q: How are evidence references shaped? → A: Structured evidence items with `type` + `value` (types include at least `url`, `path`, `adr`).
+- Q: How is audit inspection exposed in this slice? → A: Persist audit records on create/verify and provide a read API to list audits for a lore entry id.
+- Q: Are duplicate statements allowed in the same scope? → A: Yes — duplicates allowed; identical statement + scope may create multiple entries (each with its own id).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Remember scoped lore (Priority: P1)
@@ -22,17 +32,21 @@ identifier and provenance fields.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid scope and a non-empty knowledge statement, **When** a human
-   actor records the lore entry as human-authored, **Then** the system stores it
-   and returns a stable identifier plus provenance (actor, origin, created time,
-   scope).
-2. **Given** a knowledge statement with one or more evidence references (for
-   example path, URL, or decision record id), **When** the entry is recorded,
-   **Then** those evidence references are retained with the entry and visible on
-   retrieval.
-3. **Given** a missing statement or missing scope, **When** a create attempt is
-   made, **Then** the system rejects the request with a clear validation error
-   and stores nothing.
+1. **Given** a valid scope (`kind` + `key`) and a non-empty knowledge statement,
+   **When** a human actor records the lore entry as human-authored, **Then** the
+   system stores it and returns a stable identifier plus provenance (actor,
+   origin, created time, scope kind and key).
+2. **Given** a knowledge statement with one or more structured evidence
+   references (`type` + `value`, e.g. path, URL, or ADR id), **When** the entry
+   is recorded, **Then** those evidence references are retained with the entry
+   and visible on retrieval.
+3. **Given** a missing statement, missing scope kind, or missing scope key,
+   **When** a create attempt is made, **Then** the system rejects the request
+   with a clear validation error and stores nothing.
+4. **Given** an existing lore entry with statement S in scope X, **When** a
+   caller creates another entry with the same statement S in the same scope X,
+   **Then** the system creates a new entry with a distinct identifier (duplicates
+   are allowed).
 
 ---
 
@@ -73,17 +87,20 @@ treat unverified knowledge as verified without this action must fail.
 
 **Acceptance Scenarios**:
 
-1. **Given** an unverified human-authored lore entry, **When** an authorized
-   human actor verifies it, **Then** verification status becomes verified, the
-   verifier and verification time are recorded, and the original statement and
-   authorship remain unchanged.
+1. **Given** an unverified human-authored lore entry, **When** a human actor
+   verifies it (including the original author), **Then** verification status
+   becomes verified, the verifier and verification time are recorded, and the
+   original statement and authorship remain unchanged.
 2. **Given** an already verified lore entry, **When** a caller verifies it again,
    **Then** the system remains verified and does not invent a conflicting second
-   “canonical” identity for the same entry (idempotent or clearly rejected as
-   already verified—either is acceptable if documented in behavior).
-3. **Given** a lore entry that is not verified, **When** a caller asks whether it
-   is verified/canonical, **Then** the system reports it as unverified and does
-   not present it as verified knowledge.
+   identity for the same entry (idempotent no-op that preserves original
+   verification metadata).
+3. **Given** a lore entry that is not verified, **When** a caller retrieves it,
+   **Then** the system reports it as unverified and does not present it as
+   verified knowledge.
+4. **Given** an unverified entry authored by actor A, **When** actor A verifies
+   it, **Then** the entry becomes verified (self-verify is allowed in this
+   slice).
 
 ---
 
@@ -100,18 +117,49 @@ returns only that scope’s entries.
 
 **Acceptance Scenarios**:
 
-1. **Given** lore entries in scope A and scope B, **When** a caller lists scope A,
-   **Then** only scope A entries are returned.
-2. **Given** a scope with no entries, **When** listed, **Then** the result is an
-   empty collection (not an error).
+1. **Given** lore entries in scope A and scope B (distinct `kind`+`key` pairs),
+   **When** a caller lists scope A, **Then** only scope A entries are returned.
+2. **Given** a scope (`kind`+`key`) with no entries, **When** listed, **Then**
+   the result is an empty collection (not an error).
+3. **Given** two scopes that share a key but differ in kind (or share a kind but
+   differ in key), **When** listing one, **Then** entries from the other are not
+   included.
+
+---
+
+### User Story 5 - Inspect audit trail (Priority: P1)
+
+An engineer inspects the audit history of a lore entry to see who created and
+verified it and when.
+
+**Why this priority**: Provenance and auditability are constitutionally
+first-class; create/verify without inspectable audit fails FR-level acceptance.
+
+**Independent Test**: Create and verify an entry, then list audits by entry id
+and confirm create and verify actions appear with actor and timestamps.
+
+**Acceptance Scenarios**:
+
+1. **Given** a lore entry that was created, **When** a caller lists audits for
+   that entry id, **Then** at least one `create` audit record is returned with
+   actor and timestamp.
+2. **Given** a lore entry that was created and then verified, **When** audits are
+   listed for that id, **Then** both `create` and `verify` actions appear in
+   chronological order.
+3. **Given** an unknown lore entry id, **When** audits are listed, **Then** the
+   system reports not found (or an empty result consistently documented—prefer
+   not-found when the entry does not exist).
 
 ---
 
 ### Edge Cases
 
-- Creating an entry with an empty or whitespace-only statement is rejected.
-- Evidence references that are empty strings are rejected; omitting evidence is
-  allowed.
+- Creating an entry that duplicates an existing statement in the same scope is
+  allowed and yields a new distinct identifier.
+- Creating an entry with an unsupported or blank scope `kind`, or blank scope
+  `key`, is rejected.
+- Evidence omitted is allowed. Evidence items with blank `type`, blank `value`,
+  unsupported `type`, or empty-string fields are rejected.
 - Retrieving or verifying a deleted-or-unknown id yields not-found (hard delete
   is out of scope; this slice has no delete operation).
 - Verification by a missing/blank actor identity is rejected.
@@ -123,40 +171,54 @@ returns only that scope’s entries.
 ### Functional Requirements
 
 - **FR-001**: System MUST allow a human actor to create a lore entry with a
-  non-empty statement, a scope, and origin `human_authored`.
-- **FR-002**: System MUST accept optional evidence references on create and
-  retain them with the entry.
+  non-empty statement, a scope identified by `kind` and `key`, and origin
+  `human_authored`. Supported kinds for this slice MUST include at least `team`
+  and `repository`.
+- **FR-002**: System MUST accept optional evidence references on create, each as
+  a structured `type` + `value` pair. Supported types for this slice MUST
+  include at least `url`, `path`, and `adr`. Evidence is retained with the entry.
 - **FR-003**: System MUST assign each lore entry a stable unique identifier.
+  Identical statement text within the same scope MUST NOT prevent creation of
+  additional entries (duplicates allowed; each receives its own id).
 - **FR-004**: System MUST persist and return provenance for every entry: author
-  actor identity, origin, created timestamp, scope, verification status, and
-  evidence.
+  actor identity, origin, created timestamp, scope `kind` and `key`, verification
+  status, and evidence.
 - **FR-005**: System MUST allow retrieval of a lore entry by its identifier.
-- **FR-006**: System MUST allow an authorized human actor to verify an unverified
+- **FR-006**: System MUST allow a human actor to verify an unverified
   human-authored lore entry, recording verifier identity and verification time.
+  The verifier MAY be the same actor as the author (self-verify allowed).
 - **FR-007**: System MUST NOT present unverified lore as verified.
 - **FR-008**: System MUST reject create/verify requests that fail validation
-  (missing statement, scope, or actor) without partial persistence.
-- **FR-009**: System MUST support listing lore entries filtered by a single
-  scope (P2).
+  (missing statement, scope kind, scope key, actor, or invalid evidence
+  `type`/`value`) without partial persistence.
+- **FR-009**: System MUST support listing lore entries filtered by an exact
+  scope match on both `kind` and `key` (P2).
 - **FR-010**: System MUST distinguish human-authored origin from agent origins in
   stored metadata even though agent-authored creation is out of scope for this
   feature.
-- **FR-011**: Mutating operations (create, verify) MUST be auditable with actor,
-  action type, target id, and timestamp available for later inspection.
+- **FR-011**: Mutating operations (create, verify) MUST write immutable audit
+  records with actor, action type, target lore entry id, and timestamp.
+- **FR-012**: System MUST allow listing audit records for a lore entry by its
+  identifier, ordered chronologically ascending.
 
 ### Key Entities
 
 - **Lore Entry**: A governed unit of engineering knowledge with statement, scope,
   origin, verification status, evidence, and timestamps.
-- **Scope**: A hierarchical context boundary for the entry (organization, team,
-  project, repository, or feature/task). This slice requires at least repository
-  and team scope kinds.
-- **Evidence Reference**: A pointer supporting the claim (path, URL, decision
-  record id, ticket id, or similar), not a full document copy.
+- **Scope**: A hierarchical context boundary identified by `kind` + `key`.
+  Required kinds for this slice: `team` and `repository`. Optional additional
+  kinds (`organization`, `project`, `feature`/`task`) may be accepted if provided
+  but are not required to unlock the MVP. Equality for listing is exact match on
+  both fields.
+- **Evidence Reference**: A structured pointer supporting the claim, identified
+  by `type` + `value` (not a full document copy). Required types for this slice:
+  `url`, `path`, `adr`. Additional types may be accepted later without changing
+  this MVP contract.
 - **Actor**: The human identity performing create or verify.
 - **Verification**: A recorded confirmation action that changes verification
   status without altering authorship origin.
-- **Audit Record**: An immutable record of a mutating action for traceability.
+- **Audit Record**: An immutable record of a mutating action (at least `create`
+  and `verify`) for traceability, queryable by target lore entry id.
 
 ## Success Criteria *(mandatory)*
 
@@ -170,12 +232,14 @@ returns only that scope’s entries.
 - **SC-003**: After verification, 100% of sampled entries show verified status
   plus verifier identity and time, while retaining the original statement and
   `human_authored` origin.
-- **SC-004**: 100% of invalid create attempts (missing statement or scope) fail
-  without creating an entry.
-- **SC-005**: Listing by scope returns only in-scope entries (precision 100% in
-  fixture-based acceptance tests).
+- **SC-004**: 100% of invalid create attempts (missing statement, scope kind, or
+  scope key) fail without creating an entry.
+- **SC-005**: Listing by exact `kind`+`key` returns only matching entries
+  (precision 100% in fixture-based acceptance tests).
 - **SC-006**: Unverified entries are never labeled as verified in retrieval
   responses.
+- **SC-007**: After create and verify, listing audits for the entry returns both
+  actions with actor and timestamp in 100% of fixture-based acceptance tests.
 
 ## Assumptions
 
@@ -190,11 +254,15 @@ returns only that scope’s entries.
   non-empty.
 - Soft authorization (actor must be present) is sufficient for this slice;
   fine-grained RBAC and tenant isolation policies will follow in a later feature.
-- At least `team` and `repository` scope kinds are supported; other hierarchy
-  levels may be accepted if provided but are not required to unlock this MVP.
+  Self-verification is allowed under this soft-auth model.
+- At least `team` and `repository` scope kinds are supported via structured
+  `kind` + `key` identity; other hierarchy levels may be accepted if provided
+  but are not required to unlock this MVP.
 - Primary interaction for this slice is through MemLore’s human/automation
   interface (not requiring MCP tools yet). MCP `remember` / `get` / `verify`
   parity may follow without changing these behavioral requirements.
 - Maximum statement length defaults to 8,000 characters unless later revised.
 - Re-verifying an already verified entry is treated as a successful no-op that
   preserves the original verification metadata.
+- Deduplication and conflict detection across similar statements are out of
+  scope; duplicate statement+scope pairs are permitted.
