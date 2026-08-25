@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M3 — Go domain primitives complete (F102); next F103 persistence  
-**Current Release Target**: v0.3.0 Go domain; v0.4.0 sqlc repositories
+**Current Milestone**: M4 — Go persistence complete (F103); next F104 REST slice  
+**Current Release Target**: v0.4.0 Go repositories; v0.5.0 Go REST strangler
 
 ---
 
@@ -37,7 +37,7 @@
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
-| F103 | Go PostgreSQL persistence (sqlc/goose) | PLANNED | — | — | — | pending | Migration |
+| F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |
 | F104 | Migrate lore CRUD/verify REST to Go | PLANNED | — | — | — | — | First vertical slice |
 | F105 | Migrate MCP lore tools to Go | PLANNED | — | — | — | 0003 | After F104 |
 | F106 | Extract graph-service + contracts | PLANNED | — | — | — | pending | Migration |
@@ -219,7 +219,37 @@ Port Python governance domain types to Go with characterization test parity.
 
 ### Next Step
 
-F103 — sqlc queries + repository ports
+F104 — Migrate lore CRUD/verify REST to Go
+
+---
+
+## F103 — Go PostgreSQL Persistence
+
+**Status**: DONE  
+**Branch**: `005-go-postgres-persistence`  
+**Spec**: `specs/005-go-postgres-persistence/`
+
+### Goal
+
+sqlc + pgx repositories for lore entries and audit records with transaction UoW.
+
+### Acceptance Criteria
+
+- [x] Application ports in `internal/application/ports/`
+- [x] sqlc queries: insert/get/update/list lore; insert/list audit
+- [x] Domain ↔ row mapping including JSONB evidence
+- [x] `BeginUnitOfWork` with pgx transaction
+- [x] Integration tests pass with `-tags=integration` when Postgres is up
+
+### Implementation
+
+- `db/queries/lore.sql`, `audit.sql`
+- `internal/infrastructure/postgres/{mapping,lore_repository,audit_repository,unit_of_work}.go`
+- sqlc regenerated via `docker run ... sqlc/sqlc:1.28.0 generate`
+
+### Next Step
+
+F104 — application handlers + REST adapter using Go repositories
 
 ---
 

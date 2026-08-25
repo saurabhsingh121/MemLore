@@ -10,4 +10,6 @@ func TestSQLcPackageExportsGeneratedTypes(t *testing.T) {
 	_ = sqlc.New(nil)
 	_ = sqlc.LoreEntry{}
 	_ = sqlc.AuditRecord{}
+	_ = sqlc.InsertLoreEntryParams{}
+	_ = sqlc.InsertAuditRecordParams{}
 }

@@ -17,7 +17,7 @@ func TestGoModuleLayoutContract(t *testing.T) {
 		"migrations/00001_lore_audit.sql",
 		"db/queries/smoke.sql",
 		"internal/domain/lore.go",
-		"internal/application/doc.go",
+		"internal/application/ports/repositories.go",
 		"internal/adapters/doc.go",
 		"internal/infrastructure/postgres/doc.go",
 		"internal/infrastructure/postgres/sqlc/db.go",

@@ -28,8 +28,8 @@
 | **Persistence** |
 | Postgres schema `lore_entries` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | SQL ported; integration test build tag |
 | Postgres schema `audit_records` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | |
-| Repository layer | SQLAlchemy repos | sqlc-generated + pgx | Not Started | Partial | sqlc smoke package exists |
-| Unit of work / transactions | `SqlAlchemyUnitOfWork` | Go tx wrapper | Not Started | Partial | |
+| Repository layer | SQLAlchemy repos | sqlc + pgx repos | Migrated | Yes | F103 integration tests |
+| Unit of work / transactions | `SqlAlchemyUnitOfWork` | `postgres.BeginUnitOfWork` | Migrated | Yes | pgx transaction |
 | In-memory test doubles | `tests/support/fakes.py` | Go fake repos | Not Started | Yes | For unit/contract without DB |
 | **Knowledge plane** |
 | Graphiti integration | None | Python `graph-service` | Not Started | No | Greenfield; no code to migrate |

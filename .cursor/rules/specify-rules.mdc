@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/004-go-domain-primitives/spec.md` for completed F102 Go domain primitives.
-Next: F103 Go PostgreSQL persistence (sqlc).
-Completed: F101 skeleton, F102 domain, Python F001/F002.
+Read `specs/005-go-postgres-persistence/spec.md` for completed F103 persistence.
+Next: F104 Go REST lore CRUD strangler.
+Completed: F101 skeleton, F102 domain, F103 repositories, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->
