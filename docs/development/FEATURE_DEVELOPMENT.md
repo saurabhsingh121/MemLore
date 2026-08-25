@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M0 — Migration discovery complete; Python governance slice stable  
-**Current Release Target**: v0.1.0 governance MVP (Python); v0.2.0 Go core strangler begins
+**Current Milestone**: M2 — Go core skeleton complete (F101); next F102 domain primitives  
+**Current Release Target**: v0.2.0 Go skeleton shipped; v0.3.0 Go domain + persistence
 
 ---
 
@@ -26,7 +26,7 @@
 | ID | Feature | Status | Spec | Tests | Docs | ADR | Notes |
 |----|---------|--------|------|-------|------|-----|-------|
 | F001 | Scoped human-authored lore entry (REST) | DONE | ✓ | ✓ | ✓ | 0001 | PostgreSQL governance slice |
-| F002 | MCP lore tools (remember/get/verify/explain/search) | IN REVIEW | ✓ | ✓ | ✓ | 0003 | On branch `002-mcp-lore-tools`; uncommitted |
+| F002 | MCP lore tools (remember/get/verify/explain/search) | DONE | ✓ | ✓ | ✓ | 0003 | Merged to main |
 | F003 | Authority factor model + evaluation | PLANNED | — | — | partial | — | Docs only today |
 | F004 | Transactional outbox + graph sync | PLANNED | — | — | partial | — | No code |
 | F005 | Graph knowledge service (Graphiti isolation) | PLANNED | — | — | partial | — | Greenfield Python service |
@@ -35,7 +35,7 @@
 | F008 | Supersession + invalidation | PLANNED | — | — | — | — | |
 | F009 | Conflict detection | PLANNED | — | — | — | — | |
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
-| F101 | Go project skeleton + tooling | PLANNED | — | — | — | pending | Migration |
+| F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | PLANNED | — | — | — | — | Migration |
 | F103 | Go PostgreSQL persistence (sqlc/goose) | PLANNED | — | — | — | pending | Migration |
 | F104 | Migrate lore CRUD/verify REST to Go | PLANNED | — | — | — | — | First vertical slice |
@@ -99,9 +99,9 @@ Maintain until Go port (F104) reaches Verified; then deprecate Python REST handl
 
 ## F002 — MCP Lore Tools
 
-**Status**: IN REVIEW  
-**Branch**: `002-mcp-lore-tools` (uncommitted changes)  
-**Commit**: `dc33023` (spec only); implementation local
+**Status**: DONE  
+**Branch**: merged to `main`  
+**Commits**: `144974e`, `d3636cb` (with migration docs)
 
 ### Goal
 
@@ -151,7 +151,47 @@ domain tool names (no Graphiti leakage).
 
 ### Next Step
 
-Commit and merge `002-mcp-lore-tools`; mark DONE after merge.
+None — complete. Python MCP remains until F105.
+
+---
+
+## F101 — Go Project Skeleton + Tooling
+
+**Status**: DONE  
+**Branch**: `003-go-core-skeleton`  
+**ADR**: [ADR-0005](../adr/0005-go-memlore-core.md)
+
+### Goal
+
+Additive Go module: `go.mod`, goose/sqlc scaffold, CI gates, layout contract.
+No lore handlers; Python REST/MCP unchanged.
+
+### Specification
+
+`specs/003-go-core-skeleton/`
+
+### Acceptance Criteria
+
+- [x] `go test ./...` and `go vet ./...` pass
+- [x] CI Go job added
+- [x] goose `00001` ports Alembic schema
+- [x] Python pytest still green (51 tests)
+
+### TDD Progress
+
+- [x] RED — version, migration parse, layout contract tests
+- [x] GREEN — cmd/memlore, migrations, sqlc package, CI job
+- [x] REFACTOR — committed sqlc output; integration test behind `integration` tag
+
+### Implementation
+
+- `go.mod`, `cmd/memlore/`, `internal/`, `migrations/`, `db/queries/`
+- `internal/infrastructure/postgres/sqlc/` (committed generated code)
+- `.github/workflows/ci.yml` — `go-test` job
+
+### Next Step
+
+F102 — Go domain primitives (lore, scope, evidence enums)
 
 ---
 
@@ -182,37 +222,6 @@ Not started — requires `/speckit.specify`
 ### Next Step
 
 Run Spec Kit specify after Go domain skeleton (F102) or in parallel if modeled language-agnostically.
-
----
-
-## F101 — Go Project Skeleton + Tooling
-
-**Status**: PLANNED  
-**Migration feature**
-
-### Goal
-
-Introduce `go.mod`, directory layout, CI jobs, goose + sqlc scaffold without
-changing runtime behavior.
-
-### Specification
-
-Pending — propose `specs/003-go-core-skeleton/` via Spec Kit
-
-### Acceptance Criteria (draft)
-
-- `go test ./...` and `go vet ./...` pass
-- goose migration reproduces `0001` schema
-- sqlc generates typed queries (may be unused until F103)
-- Python app remains default entrypoint
-
-### ADRs
-
-- Proposed: ADR-0005 Go for MemLore Core (supersedes ADR-0002 in part)
-
-### Next Step
-
-Draft ADR-0005 + Spec Kit plan; no production traffic switch.
 
 ---
 
@@ -263,19 +272,16 @@ Complete F101/F102/F103; export characterization vectors from Python tests.
 
 ## Development Ledger Notes
 
-### 2026-08-25 — Migration discovery
+### 2026-08-25 — F002 merged; F101 specified
 
-- Completed repository characterization
-- Created `MIGRATION_DISCOVERY.md`, `migration-inventory.md`, this tracker
-- Verified: 51 pytest tests pass; no Go code; no Graphiti code
-- Python MCP feature complete locally; merge pending
+- Merged `002-mcp-lore-tools` to `main` (F002 DONE)
+- ADR-0005 accepted; Spec Kit `003-go-core-skeleton` complete (F101 READY)
+- Added `docs/architecture/target-architecture.md`
 
 ### Immediate recommended tasks
 
-1. Merge `002-mcp-lore-tools` → mark F002 DONE
-2. Propose ADR-0005 (Go for MemLore Core)
-3. Spec Kit: `003-go-core-skeleton` (F101)
-4. Export characterization test fixtures for F104
+1. `/speckit.implement` F101 (Go skeleton)
+2. Characterization fixtures for F104
 
 ---
 
