@@ -71,7 +71,8 @@ List by exact scope.
 
 **Responses**:
 - `200` → `{ "items": [AuditRecordResponse, ...] }` chronological ascending
-- `404` → lore entry not found
+- `404` → lore entry not found (never return an empty `items` list when the
+  entry id does not exist)
 
 ## Schemas
 

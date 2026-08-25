@@ -14,6 +14,7 @@
 - Q: How are evidence references shaped? → A: Structured evidence items with `type` + `value` (types include at least `url`, `path`, `adr`).
 - Q: How is audit inspection exposed in this slice? → A: Persist audit records on create/verify and provide a read API to list audits for a lore entry id.
 - Q: Are duplicate statements allowed in the same scope? → A: Yes — duplicates allowed; identical statement + scope may create multiple entries (each with its own id).
+- Q: (Analyze remediation) Unknown lore id on audit list? → A: Always not-found (404); never empty list for missing entry.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -147,8 +148,8 @@ and confirm create and verify actions appear with actor and timestamps.
    listed for that id, **Then** both `create` and `verify` actions appear in
    chronological order.
 3. **Given** an unknown lore entry id, **When** audits are listed, **Then** the
-   system reports not found (or an empty result consistently documented—prefer
-   not-found when the entry does not exist).
+   system returns not found (HTTP 404 equivalent); it MUST NOT return an empty
+   audit list for a missing entry.
 
 ---
 
@@ -163,8 +164,10 @@ and confirm create and verify actions appear with actor and timestamps.
 - Retrieving or verifying a deleted-or-unknown id yields not-found (hard delete
   is out of scope; this slice has no delete operation).
 - Verification by a missing/blank actor identity is rejected.
-- Extremely long statements beyond a documented maximum length are rejected with
-  a validation error.
+- Extremely long statements beyond **8,000** characters are rejected with a
+  validation error.
+- Scope `key` longer than **512** characters, or evidence `value` longer than
+  **2,048** characters, is rejected.
 
 ## Requirements *(mandatory)*
 
@@ -261,7 +264,8 @@ and confirm create and verify actions appear with actor and timestamps.
 - Primary interaction for this slice is through MemLore’s human/automation
   interface (not requiring MCP tools yet). MCP `remember` / `get` / `verify`
   parity may follow without changing these behavioral requirements.
-- Maximum statement length defaults to 8,000 characters unless later revised.
+- Maximum statement length is **8,000** characters; scope key max **512**;
+  evidence value max **2,048** (aligned with data-model).
 - Re-verifying an already verified entry is treated as a successful no-op that
   preserves the original verification metadata.
 - Deduplication and conflict detection across similar statements are out of

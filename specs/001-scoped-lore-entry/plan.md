@@ -18,8 +18,8 @@ remain out of scope.
 **Primary Dependencies**: FastAPI, Pydantic v2, SQLAlchemy 2.x, Alembic, psycopg
 (PostgreSQL driver), uvicorn  
 **Storage**: PostgreSQL 16 (governance plane only for this feature)  
-**Testing**: pytest, pytest-asyncio where needed, httpx TestClient for API
-contracts; testcontainers or Docker Compose Postgres for integration tests  
+**Testing**: pytest, httpx TestClient for API contracts; Docker Compose Postgres
+for integration tests (sync SQLAlchemy sessions)  
 **Target Platform**: Local developer machine / Linux container; REST over HTTP  
 **Project Type**: Backend service (hexagonal layout under `src/memlore/`)  
 **Performance Goals**: Local create+id return under 30s wall-clock (SC-001);

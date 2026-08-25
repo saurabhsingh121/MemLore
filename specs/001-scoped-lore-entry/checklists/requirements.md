@@ -32,6 +32,7 @@
 ## Notes
 
 - Validation passed on 2026-08-25. Clarifications session completed (5/5).
-  Ready for `/speckit-plan`.
-- Assumptions intentionally defer MCP parity, OIDC, Graphiti sync, RBAC, and
-  conflict/dedup detection to later features.
+  Analyze remediations applied 2026-08-25 (T042 paths, Clock adapter, DONE WHEN,
+  audits 404, 8k boundary tests, length limits). Ready for `/speckit-implement`.
+- Assumptions intentionally defer MCP parity, OIDC, Graphiti sync, RBAC,
+  conflict/dedup detection, and full OpenTelemetry export to later features.
