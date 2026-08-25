@@ -58,9 +58,9 @@ first product features.
 
 ## Status
 
-Bootstrap only: Spec Kit, constitution, package layout, health endpoint, local
-Docker dependencies, CI. First product slice next: scoped human-authored Lore
-entry with provenance (store / retrieve / verify).
+First product slice implemented: scoped human-authored lore entries
+(store / retrieve / verify / list / audit) on PostgreSQL via REST `/v1/lore-entries`.
+MCP, Graphiti sync, OIDC/RBAC, conflicts, and supersession remain future work.
 
 ## License
 

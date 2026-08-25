@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: memlore
       POSTGRES_DB: memlore
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - memlore_postgres:/var/lib/postgresql/data
     healthcheck:

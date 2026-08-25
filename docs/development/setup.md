@@ -10,11 +10,26 @@
 
 ```bash
 cp .env.example .env
-docker compose up -d
+docker compose up -d postgres
 uv sync
+uv run alembic upgrade head
 uv run pytest
 uv run memlore serve
 ```
+
+Postgres is published on host port **15432** by default (see `docker-compose.yml`
+and `.env.example`) to avoid clashes with local Postgres installs.
+
+Integration tests need Postgres:
+
+```bash
+docker compose up -d postgres
+uv run pytest -m integration
+# or skip them when DB is down (auto-skip via fixture)
+uv run pytest
+```
+
+Optional override: `MEMLORE_TEST_DATABASE_URL=postgresql+psycopg://...`
 
 ## Quality commands
 

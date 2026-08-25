@@ -36,6 +36,9 @@ Governance Plane                      Knowledge Plane
 Do **not** use distributed transactions across planes. Synchronize with a
 transactional outbox (or equivalent reliable async mechanism).
 
+**Current delivery**: governance-plane lore entry CRUD/verify/audit on
+PostgreSQL is implemented. Knowledge-plane Graphiti/Neo4j sync is not yet wired.
+
 ## Adapters
 
 - **MCP** — primary agent-facing contract (`memlore.*` tools)
