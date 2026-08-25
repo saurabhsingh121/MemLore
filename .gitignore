@@ -48,3 +48,14 @@ tmp/
 
 # Alembic local overrides
 alembic.ini.local
+
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/

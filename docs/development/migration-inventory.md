@@ -26,9 +26,9 @@
 | MCP stdio CLI | `memlore mcp` Python | `memlore mcp` Go binary | Not Started | Yes (e2e*) | |
 | CLI `memlore serve` | Uvicorn Python | Go HTTP server | Not Started | No | |
 | **Persistence** |
-| Postgres schema `lore_entries` | Alembic `0001_lore_audit` | goose migration | Not Started | Partial (integration*) | Port SQL verbatim initially |
-| Postgres schema `audit_records` | Alembic `0001_lore_audit` | goose migration | Not Started | Partial | |
-| Repository layer | SQLAlchemy repos | sqlc-generated + pgx | Not Started | Partial | Replace ORM mapping |
+| Postgres schema `lore_entries` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | SQL ported; integration test build tag |
+| Postgres schema `audit_records` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | |
+| Repository layer | SQLAlchemy repos | sqlc-generated + pgx | Not Started | Partial | sqlc smoke package exists |
 | Unit of work / transactions | `SqlAlchemyUnitOfWork` | Go tx wrapper | Not Started | Partial | |
 | In-memory test doubles | `tests/support/fakes.py` | Go fake repos | Not Started | Yes | For unit/contract without DB |
 | **Knowledge plane** |
@@ -58,10 +58,11 @@
 | Structured logging | Python `get_logger` | Go `slog` | Not Started | No | |
 | OpenTelemetry | None | Go + Python OTel | Not Started | No | |
 | Docker Compose app services | DBs only | Add memlore + graph-service | Not Started | No | |
-| CI pipeline | Python ruff/mypy/pytest | Add Go jobs | Not Started | N/A | |
+| CI pipeline | Python ruff/mypy/pytest | Add Go jobs | Migrated | N/A | `go-test` job in CI |
 | **Documentation / process** |
 | Spec Kit workflow | Active | Continue | Migrated | N/A | |
-| ADR: Go core | N/A | ADR-0005 (proposed) | Not Started | N/A | Supersedes ADR-0002 in part |
+| Go module skeleton | — | `go.mod`, layout, `cmd/memlore` | Verified | Yes | F101; `go test ./...` |
+| ADR: Go core | ADR-0005 | ADR-0005 | Migrated | N/A | Accepted |
 | ADR: Graphiti isolation | Partial (0001, 0003) | ADR-0002 target variant | Not Started | N/A | |
 | Migration discovery | This effort | Maintained | Verified | N/A | `MIGRATION_DISCOVERY.md` |
 
@@ -73,15 +74,11 @@
 
 | Status | Count |
 |--------|------:|
-| Migrated / Verified (Python baseline) | 0 toward Go target |
-| In Development (Python, pre-migration) | 12 capabilities (F001+F002) |
-| Not Started (Go migration) | All target rows |
+| Verified (Go F101 skeleton) | Go module, goose DDL port, CI |
+| Migrated (partial) | Postgres schema parity in goose |
+| In production (Python) | F001+F002 governance REST/MCP |
+| Not Started (Go features) | Lore handlers, MCP, graph-service |
 | Blocked | 0 |
-
-**Python baseline**: Governance lore REST + MCP slice is **functionally complete**
-on branch `002-mcp-lore-tools` but not yet tagged as Migrated in this inventory
-because the migration target is Go. Those rows move to `Deprecated` only after
-Go replacements reach `Verified`.
 
 ---
 

@@ -36,8 +36,11 @@ for goose-first testing to avoid double-migration conflicts.
 
 ## sqlc (after implementation)
 
+Generated code is **committed** under `internal/infrastructure/postgres/sqlc/`
+so CI does not require the sqlc CLI. To regenerate after query changes:
+
 ```bash
-sqlc generate
+sqlc generate   # requires sqlc CLI
 go test ./...
 ```
 

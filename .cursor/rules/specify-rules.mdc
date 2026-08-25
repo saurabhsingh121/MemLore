@@ -17,10 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/003-go-core-skeleton/plan.md` for the active feature
-(F101: Go module skeleton, goose/sqlc scaffold, CI gates — no traffic switch).
-Also see `research.md`, `data-model.md`, `contracts/go-module-layout.md`,
-and `quickstart.md` in that directory.
+Read `specs/003-go-core-skeleton/plan.md` for the completed F101 Go skeleton.
+Next migration slice: F102 Go domain primitives (spec TBD).
 Completed: `specs/001-scoped-lore-entry/`, `specs/002-mcp-lore-tools/`.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

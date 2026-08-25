@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M1 — Go core skeleton specified (F101); Python governance MVP on main  
-**Current Release Target**: v0.1.0 governance MVP (Python, merged); v0.2.0 Go skeleton (F101)
+**Current Milestone**: M2 — Go core skeleton complete (F101); next F102 domain primitives  
+**Current Release Target**: v0.2.0 Go skeleton shipped; v0.3.0 Go domain + persistence
 
 ---
 
@@ -35,7 +35,7 @@
 | F008 | Supersession + invalidation | PLANNED | — | — | — | — | |
 | F009 | Conflict detection | PLANNED | — | — | — | — | |
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
-| F101 | Go project skeleton + tooling | READY | ✓ | — | ✓ | 0005 | Spec on `003-go-core-skeleton` |
+| F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | PLANNED | — | — | — | — | Migration |
 | F103 | Go PostgreSQL persistence (sqlc/goose) | PLANNED | — | — | — | pending | Migration |
 | F104 | Migrate lore CRUD/verify REST to Go | PLANNED | — | — | — | — | First vertical slice |
@@ -157,7 +157,7 @@ None — complete. Python MCP remains until F105.
 
 ## F101 — Go Project Skeleton + Tooling
 
-**Status**: READY  
+**Status**: DONE  
 **Branch**: `003-go-core-skeleton`  
 **ADR**: [ADR-0005](../adr/0005-go-memlore-core.md)
 
@@ -170,26 +170,32 @@ No lore handlers; Python REST/MCP unchanged.
 
 `specs/003-go-core-skeleton/`
 
-### Acceptance Criteria (draft)
+### Acceptance Criteria
 
-- [ ] `go test ./...` and `go vet ./...` pass
-- [ ] CI Go job added
-- [ ] goose `00001` ports Alembic schema
-- [ ] Python pytest still green
+- [x] `go test ./...` and `go vet ./...` pass
+- [x] CI Go job added
+- [x] goose `00001` ports Alembic schema
+- [x] Python pytest still green (51 tests)
 
 ### TDD Progress
 
-- [ ] RED — tasks T004, T008, T010, T013, T015 in `tasks.md`
-- [ ] GREEN — implementation via `/speckit.implement`
-- [ ] REFACTOR — layout polish
+- [x] RED — version, migration parse, layout contract tests
+- [x] GREEN — cmd/memlore, migrations, sqlc package, CI job
+- [x] REFACTOR — committed sqlc output; integration test behind `integration` tag
+
+### Implementation
+
+- `go.mod`, `cmd/memlore/`, `internal/`, `migrations/`, `db/queries/`
+- `internal/infrastructure/postgres/sqlc/` (committed generated code)
+- `.github/workflows/ci.yml` — `go-test` job
 
 ### Next Step
 
-Run `/speckit.implement` on `specs/003-go-core-skeleton/tasks.md`.
+F102 — Go domain primitives (lore, scope, evidence enums)
 
 ---
 
-## F104 — Migrate Lore CRUD/Verify REST to Go
+## F003 — Authority Factor Model + Evaluation
 
 **Status**: PLANNED
 
@@ -216,37 +222,6 @@ Not started — requires `/speckit.specify`
 ### Next Step
 
 Run Spec Kit specify after Go domain skeleton (F102) or in parallel if modeled language-agnostically.
-
----
-
-## F101 — Go Project Skeleton + Tooling
-
-**Status**: PLANNED  
-**Migration feature**
-
-### Goal
-
-Introduce `go.mod`, directory layout, CI jobs, goose + sqlc scaffold without
-changing runtime behavior.
-
-### Specification
-
-Pending — propose `specs/003-go-core-skeleton/` via Spec Kit
-
-### Acceptance Criteria (draft)
-
-- `go test ./...` and `go vet ./...` pass
-- goose migration reproduces `0001` schema
-- sqlc generates typed queries (may be unused until F103)
-- Python app remains default entrypoint
-
-### ADRs
-
-- Proposed: ADR-0005 Go for MemLore Core (supersedes ADR-0002 in part)
-
-### Next Step
-
-Draft ADR-0005 + Spec Kit plan; no production traffic switch.
 
 ---
 

@@ -4,6 +4,7 @@
 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
+- Go 1.25+ (MemLore Core skeleton)
 - Docker / Docker Compose
 
 ## Bootstrap
@@ -35,11 +36,28 @@ Optional override: `MEMLORE_TEST_DATABASE_URL=postgresql+psycopg://...`
 
 ## Quality commands
 
+### Python
+
 ```bash
 uv run ruff check src tests
 uv run ruff format src tests
 uv run mypy
 uv run pytest
+```
+
+### Go (MemLore Core)
+
+```bash
+go test ./...
+go vet ./...
+go run ./cmd/memlore version
+```
+
+Optional Postgres migration check (use a fresh database; see
+`specs/003-go-core-skeleton/quickstart.md`):
+
+```bash
+go test -tags=integration ./migrations/...
 ```
 
 ## Spec Kit
