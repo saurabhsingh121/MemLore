@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M7 — Go governance hardening complete (F106a); next F106 graph-service  
+**Current Milestone**: M8 — F106 graph-service vertical slice complete; next F107 outbox  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -29,7 +29,7 @@
 | F002 | MCP lore tools (remember/get/verify/explain/search) | DONE | ✓ | ✓ | ✓ | 0003 | Merged to main |
 | F003 | Authority factor model + evaluation | PLANNED | — | — | partial | — | Docs only today |
 | F004 | Transactional outbox + graph sync | PLANNED | — | — | partial | — | No code |
-| F005 | Graph knowledge service (Graphiti isolation) | PLANNED | — | — | partial | — | Greenfield Python service |
+| F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PLANNED | — | — | — | — | Depends on F005 |
 | F007 | Context compiler + `get_for_task` | PLANNED | — | — | partial | — | |
 | F008 | Supersession + invalidation | PLANNED | — | — | — | — | |
@@ -41,7 +41,7 @@
 | F104 | Migrate lore CRUD/verify REST to Go | DONE | ✓ | ✓ | — | — | `memlore serve` :8080 |
 | F105 | Migrate MCP lore tools to Go | DONE | ✓ | ✓ | — | 0003 | `memlore mcp` stdio |
 | F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI integration |
-| F106 | Extract graph-service + contracts | PLANNED | — | — | — | pending | Migration |
+| F106 | Extract graph-service + contracts | DONE | ✓ | ✓ | ✓ | — | `graph-service/`, Go KnowledgeGraph port |
 
 ---
 
@@ -366,7 +366,36 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F106 — graph-service extraction.
+F107 — transactional outbox + graph sync worker.
+
+---
+
+## F106 — Graph Knowledge Service
+
+**Status**: DONE  
+**Branch**: `009-graph-service`  
+**Spec**: `specs/009-graph-service/`
+
+### Goal
+
+Thin Python `graph-service/` isolating Graphiti/Neo4j behind MemLore HTTP contracts.
+Go `KnowledgeGraph` port + HTTP client without Graphiti imports.
+
+### Acceptance Criteria
+
+- [x] `docker compose up` brings graph-service + Neo4j; `GET /health` returns ok
+- [x] `POST /episodes` via Graphiti; integration test (skip without Neo4j/OpenAI)
+- [x] `POST /search` MemLore-shaped results
+- [x] Go `KnowledgeGraph` port + HTTP client + contract tests
+- [x] CI graph-service job
+- [x] Lore create does NOT call graph-service (F107)
+
+### Implementation
+
+- `graph-service/` FastAPI, Graphiti adapter
+- `internal/application/ports/knowledge_graph.go`
+- `internal/infrastructure/graphclient/`
+- `docs/api/graph-service.md`
 
 ---
 
@@ -385,6 +414,12 @@ F106 — graph-service extraction.
 ---
 
 ## Development Ledger Notes
+
+### 2026-08-25 — F106 graph-service extraction
+
+- `graph-service/` FastAPI + Graphiti adapter (`POST /episodes`, `POST /search`)
+- Go `KnowledgeGraph` port + HTTP client + contract tests
+- Docker Compose graph-service container; CI graph-service job
 
 ### 2026-08-25 — F106a Go governance hardening
 
@@ -409,7 +444,7 @@ F106 — graph-service extraction.
 
 ### Immediate recommended tasks
 
-1. `/speckit.specify` F106 (graph-service)
+1. `/speckit.specify` F107 (transactional outbox)
 2. Dogfood lore on insurance-core via `./bin/memlore mcp`
 
 ---
