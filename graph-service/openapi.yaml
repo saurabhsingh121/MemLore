@@ -1,0 +1,155 @@
+openapi: 3.1.0
+info:
+  title: MemLore Graph Service
+  version: 0.1.0
+  description: Thin Graphiti boundary for MemLore knowledge plane
+paths:
+  /health:
+    get:
+      summary: Service health
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /episodes:
+    post:
+      summary: Ingest lore episode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EpisodeRequest"
+      responses:
+        "201":
+          description: Episode created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EpisodeResponse"
+        "400":
+          description: Validation error
+        "503":
+          description: Service unavailable
+  /search:
+    post:
+      summary: Semantic graph search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+  /facts/{id}:
+    get:
+      summary: Get fact by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Fact found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphFactResponse"
+        "404":
+          description: Not found
+components:
+  schemas:
+    Scope:
+      type: object
+      required: [kind, key]
+      properties:
+        kind:
+          type: string
+        key:
+          type: string
+    EpisodeRequest:
+      type: object
+      required: [statement, scope]
+      properties:
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        scope:
+          $ref: "#/components/schemas/Scope"
+        metadata:
+          type: object
+          additionalProperties: true
+        provenance_refs:
+          type: array
+          items:
+            type: string
+        reference_time:
+          type: string
+          format: date-time
+    EpisodeResponse:
+      type: object
+      required: [episode_id]
+      properties:
+        episode_id:
+          type: string
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        scope:
+          $ref: "#/components/schemas/Scope"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+    GraphFactResponse:
+      type: object
+      required: [id, statement, score, provenance_refs]
+      properties:
+        id:
+          type: string
+        statement:
+          type: string
+        score:
+          type: number
+        scope:
+          $ref: "#/components/schemas/Scope"
+        provenance_refs:
+          type: array
+          items:
+            type: string
+    SearchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphFactResponse"
+    HealthResponse:
+      type: object
+      required: [status, service, neo4j]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        service:
+          type: string
+        neo4j:
+          type: string
+          enum: [ok, unavailable]

@@ -86,3 +86,36 @@ jobs:
 
       - name: Tests
         run: uv run pytest
+
+  graph-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install graph-service dependencies
+        working-directory: graph-service
+        run: uv sync --all-groups
+
+      - name: Ruff check
+        working-directory: graph-service
+        run: uv run ruff check src tests
+
+      - name: Ruff format
+        working-directory: graph-service
+        run: uv run ruff format --check src tests
+
+      - name: Type check
+        working-directory: graph-service
+        run: uv run mypy
+
+      - name: Tests
+        working-directory: graph-service
+        run: uv run pytest -m "not integration"
