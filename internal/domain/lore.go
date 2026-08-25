@@ -1,0 +1,90 @@
+package domain
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// LoreEntry is governance-plane engineering knowledge with provenance.
+type LoreEntry struct {
+	ID                 string
+	Statement          string
+	Scope              Scope
+	Origin             KnowledgeOrigin
+	VerificationStatus VerificationStatus
+	Evidence           []EvidenceReference
+	CreatedBy          string
+	CreatedAt          time.Time
+	VerifiedBy         *string
+	VerifiedAt         *time.Time
+	UpdatedAt          time.Time
+}
+
+// NewLoreEntryInput is input for creating a validated lore entry.
+type NewLoreEntryInput struct {
+	Statement string
+	Scope     Scope
+	CreatedBy string
+	Origin    KnowledgeOrigin
+	Evidence  []EvidenceReference
+	ID        string
+	Now       time.Time
+}
+
+// NewLoreEntry creates a human-authored lore entry with validation.
+// Characterization: src/memlore/domain/models/lore_entry.py
+func NewLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
+	statement := strings.TrimSpace(in.Statement)
+	createdBy := strings.TrimSpace(in.CreatedBy)
+
+	if statement == "" {
+		return LoreEntry{}, validationError("statement must be non-empty")
+	}
+	if len(statement) > MaxStatementLength {
+		return LoreEntry{}, validationError(
+			fmt.Sprintf("statement must be at most %d characters", MaxStatementLength),
+		)
+	}
+	if createdBy == "" {
+		return LoreEntry{}, validationError("created_by must be non-empty")
+	}
+	origin := in.Origin
+	if origin == "" {
+		origin = KnowledgeOriginHumanAuthored
+	}
+	if origin != KnowledgeOriginHumanAuthored {
+		return LoreEntry{}, validationError("create origin must be human_authored")
+	}
+
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		id = uuid.NewString()
+	}
+
+	now := in.Now
+	if now.IsZero() {
+		now = time.Now().UTC()
+	} else {
+		now = now.UTC()
+	}
+
+	evidence := in.Evidence
+	if evidence == nil {
+		evidence = []EvidenceReference{}
+	}
+
+	return LoreEntry{
+		ID:                 id,
+		Statement:          statement,
+		Scope:              in.Scope,
+		Origin:             origin,
+		VerificationStatus: VerificationUnverified,
+		Evidence:           evidence,
+		CreatedBy:          createdBy,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}, nil
+}

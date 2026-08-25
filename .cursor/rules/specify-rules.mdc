@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/003-go-core-skeleton/plan.md` for the completed F101 Go skeleton.
-Next migration slice: F102 Go domain primitives (spec TBD).
-Completed: `specs/001-scoped-lore-entry/`, `specs/002-mcp-lore-tools/`.
+Read `specs/004-go-domain-primitives/spec.md` for completed F102 Go domain primitives.
+Next: F103 Go PostgreSQL persistence (sqlc).
+Completed: F101 skeleton, F102 domain, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

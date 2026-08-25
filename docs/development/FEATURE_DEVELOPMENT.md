@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M2 — Go core skeleton complete (F101); next F102 domain primitives  
-**Current Release Target**: v0.2.0 Go skeleton shipped; v0.3.0 Go domain + persistence
+**Current Milestone**: M3 — Go domain primitives complete (F102); next F103 persistence  
+**Current Release Target**: v0.3.0 Go domain; v0.4.0 sqlc repositories
 
 ---
 
@@ -36,7 +36,7 @@
 | F009 | Conflict detection | PLANNED | — | — | — | — | |
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
-| F102 | Go domain primitives (lore/scope/evidence) | PLANNED | — | — | — | — | Migration |
+| F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
 | F103 | Go PostgreSQL persistence (sqlc/goose) | PLANNED | — | — | — | pending | Migration |
 | F104 | Migrate lore CRUD/verify REST to Go | PLANNED | — | — | — | — | First vertical slice |
 | F105 | Migrate MCP lore tools to Go | PLANNED | — | — | — | 0003 | After F104 |
@@ -191,7 +191,35 @@ No lore handlers; Python REST/MCP unchanged.
 
 ### Next Step
 
-F102 — Go domain primitives (lore, scope, evidence enums)
+F103 — Go PostgreSQL persistence (sqlc lore/audit queries)
+
+---
+
+## F102 — Go Domain Primitives
+
+**Status**: DONE  
+**Branch**: `004-go-domain-primitives`  
+**Spec**: `specs/004-go-domain-primitives/`
+
+### Goal
+
+Port Python governance domain types to Go with characterization test parity.
+
+### Acceptance Criteria
+
+- [x] Enums, scope, evidence, lore, audit, verification in `internal/domain/`
+- [x] Validation messages match Python for characterized cases
+- [x] Package has no infra imports
+- [x] `go test ./internal/domain/...` passes
+
+### Implementation
+
+- `internal/domain/{errors,enums,scope,evidence,lore,audit,verification}.go`
+- Characterization tests referencing Python sources
+
+### Next Step
+
+F103 — sqlc queries + repository ports
 
 ---
 

@@ -13,7 +13,7 @@
 | Lore verify | Python `VerifyLoreHandler` + domain `apply_verification` | Go command + domain | Not Started | Partial | Idempotent; self-verify allowed |
 | Audit create/verify | Python handlers + `audit_records` table | Go + sqlc | Not Started | Partial | |
 | Audit list by lore id | Python `ListAuditsHandler` | Go query | Not Started | Partial | 404 if lore missing |
-| Domain validation (statement, scope, evidence) | Python dataclasses | Go domain package | Not Started | Yes (unit) | Port limits: statement 8000, scope key 512 |
+| Domain validation (statement, scope, evidence) | Python dataclasses | Go domain package | Verified | Yes | F102 characterization tests |
 | Health endpoint | Python FastAPI `/health` | Go chi handler | Not Started | Yes (unit) | Trivial; good Go smoke test |
 | **API adapters** |
 | REST `/v1/lore-entries` | FastAPI `routes_lore.py` | Go `adapters/http` | Not Started | Yes (contract) | Preserve JSON shapes during strangler |
