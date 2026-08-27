@@ -22,7 +22,8 @@ func testClient(t *testing.T) http.Handler {
 	uow := memory.NewUnitOfWork()
 	begin := memory.BeginFactory(uow)
 	fixed := clock.FixedClock{Instant: time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)}
-	return httpadapter.NewHandlers(begin, fixed, "test").Router()
+	graph := &memory.KnowledgeGraph{}
+	return httpadapter.NewHandlers(begin, fixed, graph, "test").Router()
 }
 
 func TestCreateLoreEntryContract(t *testing.T) {

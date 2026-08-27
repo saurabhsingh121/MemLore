@@ -16,6 +16,7 @@ import (
 	httpadapter "github.com/memlore/memlore/internal/adapters/http"
 	"github.com/memlore/memlore/internal/bootstrap"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
+	"github.com/memlore/memlore/internal/infrastructure/memory"
 )
 
 func TestHTTPPostgresCreateVerifyFlow(t *testing.T) {
@@ -60,7 +61,8 @@ func TestHTTPPostgresCreateVerifyFlow(t *testing.T) {
 
 	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
 	fixed := clock.FixedClock{Instant: time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)}
-	server := httpadapter.NewHandlers(begin, fixed, "integration").Router()
+	graph := &memory.KnowledgeGraph{}
+	server := httpadapter.NewHandlers(begin, fixed, graph, "integration").Router()
 
 	createBody, _ := json.Marshal(map[string]any{
 		"statement": "Outbox required",

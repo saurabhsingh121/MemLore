@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/memlore/memlore/internal/adapters/presenters"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
@@ -16,22 +17,24 @@ import (
 
 // Handlers exposes lore REST endpoints.
 type Handlers struct {
-	CreateLore       *commands.CreateLoreHandler
-	VerifyLore       *commands.VerifyLoreHandler
-	GetLore          *queries.GetLoreHandler
-	ListLoreByScope  *queries.ListLoreByScopeHandler
-	ListAudits       *queries.ListAuditsHandler
-	Version          string
+	CreateLore      *commands.CreateLoreHandler
+	VerifyLore      *commands.VerifyLoreHandler
+	GetLore         *queries.GetLoreHandler
+	ListLoreByScope *queries.ListLoreByScopeHandler
+	ListAudits      *queries.ListAuditsHandler
+	SearchKnowledge *queries.SearchKnowledgeHandler
+	Version         string
 }
 
 // NewHandlers wires application handlers from a unit-of-work factory and clock.
-func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, version string) *Handlers {
+func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph, version string) *Handlers {
 	return &Handlers{
 		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
 		GetLore:         queries.NewGetLoreHandler(begin),
 		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
 		ListAudits:      queries.NewListAuditsHandler(begin),
+		SearchKnowledge: queries.NewSearchKnowledgeHandler(begin, graph, nil),
 		Version:         version,
 	}
 }
@@ -46,6 +49,7 @@ func (h *Handlers) Router() http.Handler {
 		r.Get("/lore-entries/{id}", h.getLoreEntry)
 		r.Post("/lore-entries/{id}/verify", h.verifyLoreEntry)
 		r.Get("/lore-entries/{id}/audits", h.listLoreAudits)
+		r.Post("/knowledge-search", h.knowledgeSearch)
 	})
 	return r
 }
@@ -156,6 +160,44 @@ func (h *Handlers) listLoreAudits(w http.ResponseWriter, r *http.Request) {
 		resp.Items = append(resp.Items, toAuditResponse(record))
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) knowledgeSearch(w http.ResponseWriter, r *http.Request) {
+	var body knowledgeSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "invalid JSON body")
+		return
+	}
+	var scope *domain.Scope
+	if body.Scope != nil {
+		kind, err := domain.ParseScopeKind(string(body.Scope.Kind))
+		if err != nil {
+			handleDomainError(w, err)
+			return
+		}
+		parsed, err := domain.NewScope(kind, body.Scope.Key)
+		if err != nil {
+			handleDomainError(w, err)
+			return
+		}
+		scope = &parsed
+	}
+	result, err := h.SearchKnowledge.Handle(r.Context(), queries.SearchKnowledgeQuery{
+		Query: body.Query,
+		Scope: scope,
+		Limit: body.Limit,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, presenters.ToKnowledgeSearchResult(
+		result.Query,
+		result.Scope,
+		result.Governance,
+		result.Graph,
+		result.Warnings,
+	))
 }
 
 // Serve starts the HTTP server until context is cancelled.

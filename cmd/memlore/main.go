@@ -94,7 +94,9 @@ func runServe(addr string, logger *slog.Logger) error {
 	defer pool.Close()
 
 	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
-	handler := httpadapter.NewHandlers(begin, clock.SystemClock{}, Version).Router()
+	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
+	graph := graphclient.NewClient(graphURL, nil)
+	handler := httpadapter.NewHandlers(begin, clock.SystemClock{}, graph, Version).Router()
 	server := &http.Server{
 		Addr:              addr,
 		Handler:           handler,
@@ -189,7 +191,9 @@ func runMCP(logger *slog.Logger) error {
 	defer pool.Close()
 
 	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
-	server := mcpadapter.NewServer(begin, clock.SystemClock{}, Version, logger)
+	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
+	graph := graphclient.NewClient(graphURL, nil)
+	server := mcpadapter.NewServer(begin, clock.SystemClock{}, graph, Version, logger)
 	logger.Info("memlore mcp listening on stdio")
 	return server.Run(context.Background(), &sdkmcp.StdioTransport{})
 }

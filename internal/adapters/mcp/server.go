@@ -7,14 +7,14 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// NewServer registers the five memlore lore MCP tools on a stdio-ready server.
-func NewServer(begin ports.UnitOfWorkFactory, clock ports.Clock, version string, logger *slog.Logger) *sdkmcp.Server {
+// NewServer registers memlore lore MCP tools on a stdio-ready server.
+func NewServer(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph, version string, logger *slog.Logger) *sdkmcp.Server {
 	opts := &sdkmcp.ServerOptions{}
 	if logger != nil {
 		opts.Logger = logger
 	}
 	server := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "memlore", Version: version}, opts)
-	tools := NewTools(begin, clock)
+	tools := NewTools(begin, clock, graph)
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "memlore.remember",
@@ -41,6 +41,11 @@ func NewServer(begin ports.UnitOfWorkFactory, clock ports.Clock, version string,
 		Description: "List lore entries by exact scope kind and key.",
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
 	}, tools.search)
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "memlore.knowledge_search",
+		Description: "Search governance lore and knowledge graph in parallel.",
+		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
+	}, tools.knowledgeSearch)
 
 	return server
 }
