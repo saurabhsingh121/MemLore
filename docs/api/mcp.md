@@ -16,6 +16,7 @@ inferred from the environment.
 | `memlore.verify` | Verify (self-verify allowed; idempotent re-verify) | implemented |
 | `memlore.explain` | Lore fields plus chronological audits (no NL summary) | implemented |
 | `memlore.search` | Exact scope list (`kind`+`key`) | implemented |
+| `memlore.knowledge_search` | Dual-plane knowledge search (governance + graph) | implemented |
 | `memlore.get_for_task` | Compiled context packet | deferred |
 | `memlore.supersede` | Replace while preserving history | deferred |
 | `memlore.invalidate` | Mark invalid without deleting evidence | deferred |
@@ -48,4 +49,5 @@ Errors use `{code}: {message}` with `validation_error` or `not_found`.
 Infrastructure failures are generic tool failures without leaking internals.
 
 See `specs/002-mcp-lore-tools/contracts/mcp-lore-tools.md` for argument and
-payload schemas.
+payload schemas. Knowledge search:
+`specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md`.

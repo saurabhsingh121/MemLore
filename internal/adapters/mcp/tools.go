@@ -18,16 +18,18 @@ type Tools struct {
 	GetLore         *queries.GetLoreHandler
 	ListLoreByScope *queries.ListLoreByScopeHandler
 	ListAudits      *queries.ListAuditsHandler
+	SearchKnowledge *queries.SearchKnowledgeHandler
 }
 
 // NewTools constructs MCP tool handlers from a unit-of-work factory and clock.
-func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock) *Tools {
+func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph) *Tools {
 	return &Tools{
 		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
 		GetLore:         queries.NewGetLoreHandler(begin),
 		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
 		ListAudits:      queries.NewListAuditsHandler(begin),
+		SearchKnowledge: queries.NewSearchKnowledgeHandler(begin, graph, nil),
 	}
 }
 
@@ -37,7 +39,7 @@ type scopeInput struct {
 }
 
 type evidenceInput struct {
-	Type domain.EvidenceType `json:"type"`
+	Type  domain.EvidenceType `json:"type"`
 	Value string              `json:"value"`
 }
 
@@ -63,6 +65,13 @@ type explainInput struct {
 
 type searchInput struct {
 	Scope scopeInput `json:"scope"`
+}
+
+type knowledgeSearchInput struct {
+	Query   string      `json:"query"`
+	Scope   *scopeInput `json:"scope,omitempty"`
+	Limit   *int        `json:"limit,omitempty"`
+	ActorID string      `json:"actor_id"`
 }
 
 func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input rememberInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
@@ -158,4 +167,44 @@ func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input sea
 		resp.Items = append(resp.Items, presenters.ToLoreEntry(item))
 	}
 	return nil, resp, nil
+}
+
+func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, input knowledgeSearchInput) (*sdkmcp.CallToolResult, presenters.KnowledgeSearchResult, error) {
+	if _, err := requireActor(input.ActorID); err != nil {
+		return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+	}
+	var scope *domain.Scope
+	if input.Scope != nil {
+		kind, err := domain.ParseScopeKind(string(input.Scope.Kind))
+		if err != nil {
+			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+		}
+		parsed, err := domain.NewScope(kind, input.Scope.Key)
+		if err != nil {
+			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+		}
+		scope = &parsed
+	}
+	result, err := t.SearchKnowledge.Handle(ctx, queries.SearchKnowledgeQuery{
+		Query: input.Query,
+		Scope: scope,
+		Limit: derefLimit(input.Limit),
+	})
+	if err != nil {
+		return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+	}
+	return nil, presenters.ToKnowledgeSearchResult(
+		result.Query,
+		result.Scope,
+		result.Governance,
+		result.Graph,
+		result.Warnings,
+	), nil
+}
+
+func derefLimit(limit *int) int {
+	if limit == nil {
+		return 0
+	}
+	return *limit
 }

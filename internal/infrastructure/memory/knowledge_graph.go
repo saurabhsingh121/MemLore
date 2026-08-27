@@ -10,8 +10,11 @@ import (
 // KnowledgeGraph is a test double for ports.KnowledgeGraph.
 type KnowledgeGraph struct {
 	IngestCalls []ports.EpisodeIngestRequest
+	SearchCalls []ports.SearchRequest
+	SearchFacts []ports.GraphFact
 	HealthErr   error
 	IngestErr   error
+	SearchErr   error
 }
 
 func (g *KnowledgeGraph) Health(context.Context) error {
@@ -29,8 +32,15 @@ func (g *KnowledgeGraph) IngestEpisode(_ context.Context, req ports.EpisodeInges
 	return "episode-stub", nil
 }
 
-func (g *KnowledgeGraph) Search(context.Context, ports.SearchRequest) ([]ports.GraphFact, error) {
-	return nil, nil
+func (g *KnowledgeGraph) Search(_ context.Context, req ports.SearchRequest) ([]ports.GraphFact, error) {
+	if g.SearchErr != nil {
+		return nil, g.SearchErr
+	}
+	g.SearchCalls = append(g.SearchCalls, req)
+	if g.SearchFacts != nil {
+		return g.SearchFacts, nil
+	}
+	return []ports.GraphFact{}, nil
 }
 
 func (g *KnowledgeGraph) GetFact(context.Context, string) (ports.GraphFact, error) {

@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M9 — F107 transactional outbox complete; next F108 retrieval  
+**Current Milestone**: M10 — F108 graph retrieval orchestration complete  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -30,7 +30,7 @@
 | F003 | Authority factor model + evaluation | PLANNED | — | — | partial | — | Docs only today |
 | F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
-| F006 | Semantic search + graph retrieval | PLANNED | — | — | — | — | Depends on F005 |
+| F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
 | F007 | Context compiler + `get_for_task` | PLANNED | — | — | partial | — | |
 | F008 | Supersession + invalidation | PLANNED | — | — | — | — | |
 | F009 | Conflict detection | PLANNED | — | — | — | — | |
@@ -367,7 +367,43 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F108 — graph retrieval orchestration.
+F109 — context compiler (`memlore.get_for_task`).
+
+---
+
+## F108 — Graph Retrieval Orchestration
+
+**Status**: DONE  
+**Branch**: `011-graph-retrieval-orchestration`  
+**Spec**: `specs/011-graph-retrieval-orchestration/`  
+**Implements**: Product F006 (partial)
+
+### Goal
+
+Go application orchestrator parallel-fetches governance scope list (when scope
+provided) and knowledge graph search via `ports.KnowledgeGraph`. REST
+`POST /v1/knowledge-search` and MCP `memlore.knowledge_search` return merged
+MemLore-shaped response. `memlore.search` unchanged.
+
+### Acceptance Criteria
+
+- [x] `SearchKnowledgeHandler` with parallel governance + graph fetch
+- [x] Graceful graph degradation with `graph_service_unavailable` warning
+- [x] `POST /v1/knowledge-search` REST endpoint + contract tests
+- [x] `memlore.knowledge_search` MCP tool + contract tests
+- [x] Bootstrap wiring in `memlore serve` and `memlore mcp`
+- [x] Unit + integration tests; `memlore.search` contract unchanged
+
+### Implementation
+
+- `internal/application/queries/search_knowledge.go`
+- `internal/adapters/presenters/knowledge_search.go`
+- `internal/adapters/http/handlers.go` — `POST /v1/knowledge-search`
+- `internal/adapters/mcp/tools.go` — `memlore.knowledge_search`
+
+### Next Step
+
+F109 — context compiler (`memlore.get_for_task`).
 
 ---
 
@@ -440,10 +476,17 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 | F106a | Ops hardening | F105 |
 | F106 | (greenfield) | F004 planning |
 | F107 | F004 outbox | F106 |
+| F108 | F006 read path | F107 |
 
 ---
 
 ## Development Ledger Notes
+
+### 2026-08-27 — F108 graph retrieval orchestration
+
+- `SearchKnowledgeHandler` parallel governance + graph search
+- `POST /v1/knowledge-search` and `memlore.knowledge_search`
+- Implements product F006 (partial read path)
 
 ### 2026-08-26 — F107 transactional outbox + graph sync
 
@@ -479,7 +522,7 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ### Immediate recommended tasks
 
-1. `/speckit.specify` F108 (graph retrieval orchestration)
+1. `/speckit.specify` F109 (context compiler / `memlore.get_for_task`)
 2. Dogfood lore on insurance-core via `./bin/memlore mcp`
 
 ---

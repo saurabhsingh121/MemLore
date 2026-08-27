@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/010-transactional-outbox/spec.md` for completed F107 outbox sync.
-Next: F108 graph retrieval orchestration.
-Completed: F101–F107, F106a, Python F001/F002.
+Read `specs/011-graph-retrieval-orchestration/spec.md` for completed F108 graph retrieval.
+Next: F109 context compiler (`memlore.get_for_task`).
+Completed: F101–F108, F106a, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

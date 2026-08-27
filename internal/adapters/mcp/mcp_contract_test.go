@@ -21,7 +21,8 @@ func testSession(t *testing.T) (*sdkmcp.ClientSession, *memory.UnitOfWork) {
 	uow := memory.NewUnitOfWork()
 	begin := memory.BeginFactory(uow)
 	fixed := clock.FixedClock{Instant: time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)}
-	server := mcpadapter.NewServer(begin, fixed, "test", nil)
+	graph := &memory.KnowledgeGraph{}
+	server := mcpadapter.NewServer(begin, fixed, graph, "test", nil)
 
 	clientTransport, serverTransport := sdkmcp.NewInMemoryTransports()
 	if _, err := server.Connect(ctx, serverTransport, nil); err != nil {
@@ -76,7 +77,7 @@ func structuredContent(t *testing.T, result *sdkmcp.CallToolResult) map[string]a
 	return payload
 }
 
-func TestListToolsIsExactlyFiveLoreTools(t *testing.T) {
+func TestListToolsIsExactlySixLoreTools(t *testing.T) {
 	session, _ := testSession(t)
 	listed, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -87,14 +88,15 @@ func TestListToolsIsExactlyFiveLoreTools(t *testing.T) {
 		names = append(names, tool.Name)
 	}
 	want := map[string]struct{}{
-		"memlore.remember": {},
-		"memlore.get":      {},
-		"memlore.verify":   {},
-		"memlore.explain":  {},
-		"memlore.search":   {},
+		"memlore.remember":          {},
+		"memlore.get":               {},
+		"memlore.verify":            {},
+		"memlore.explain":           {},
+		"memlore.search":            {},
+		"memlore.knowledge_search":  {},
 	}
-	if len(names) != 5 {
-		t.Fatalf("tool count = %d, want 5: %v", len(names), names)
+	if len(names) != 6 {
+		t.Fatalf("tool count = %d, want 6: %v", len(names), names)
 	}
 	for _, name := range names {
 		if _, ok := want[name]; !ok {
@@ -285,5 +287,48 @@ func TestSearchExactScopeEmptyAndIncomplete(t *testing.T) {
 	text := toolText(incomplete)
 	if !strings.Contains(text, "validation_error:") && !strings.Contains(strings.ToLower(text), "required") {
 		t.Fatalf("incomplete scope text = %q", text)
+	}
+}
+
+func TestKnowledgeSearchMCPContract(t *testing.T) {
+	session, _ := testSession(t)
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use outbox for payments.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+	})
+
+	result := callTool(t, session, "memlore.knowledge_search", map[string]any{
+		"query":    "payment outbox",
+		"scope":    map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id": "alice",
+	})
+	if result.IsError {
+		t.Fatalf("knowledge_search failed: %s", toolText(result))
+	}
+	payload := structuredContent(t, result)
+	if payload["query"] != "payment outbox" {
+		t.Fatalf("query = %v", payload["query"])
+	}
+	governance := payload["governance"].(map[string]any)
+	if len(governance["items"].([]any)) != 1 {
+		t.Fatalf("governance = %v", governance)
+	}
+	graph := payload["graph"].(map[string]any)
+	if graph["items"] == nil {
+		t.Fatal("graph.items should not be null")
+	}
+	for _, forbidden := range []string{"group_id", "EntityEdge", "graphiti"} {
+		raw, _ := json.Marshal(payload)
+		if strings.Contains(strings.ToLower(string(raw)), forbidden) {
+			t.Fatalf("payload contains forbidden key %q", forbidden)
+		}
+	}
+
+	missingActor := callTool(t, session, "memlore.knowledge_search", map[string]any{
+		"query": "payment outbox",
+	})
+	if !missingActor.IsError {
+		t.Fatal("expected validation error for missing actor_id")
 	}
 }
