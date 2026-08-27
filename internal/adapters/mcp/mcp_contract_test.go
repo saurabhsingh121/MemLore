@@ -77,7 +77,7 @@ func structuredContent(t *testing.T, result *sdkmcp.CallToolResult) map[string]a
 	return payload
 }
 
-func TestListToolsIsExactlySixLoreTools(t *testing.T) {
+func TestListToolsIsExactlySevenLoreTools(t *testing.T) {
 	session, _ := testSession(t)
 	listed, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -88,15 +88,16 @@ func TestListToolsIsExactlySixLoreTools(t *testing.T) {
 		names = append(names, tool.Name)
 	}
 	want := map[string]struct{}{
-		"memlore.remember":          {},
-		"memlore.get":               {},
-		"memlore.verify":            {},
-		"memlore.explain":           {},
-		"memlore.search":            {},
-		"memlore.knowledge_search":  {},
+		"memlore.remember":         {},
+		"memlore.get":              {},
+		"memlore.verify":           {},
+		"memlore.explain":          {},
+		"memlore.search":           {},
+		"memlore.knowledge_search": {},
+		"memlore.get_for_task":     {},
 	}
-	if len(names) != 6 {
-		t.Fatalf("tool count = %d, want 6: %v", len(names), names)
+	if len(names) != 7 {
+		t.Fatalf("tool count = %d, want 7: %v", len(names), names)
 	}
 	for _, name := range names {
 		if _, ok := want[name]; !ok {
@@ -104,7 +105,7 @@ func TestListToolsIsExactlySixLoreTools(t *testing.T) {
 		}
 	}
 	joined := strings.ToLower(strings.Join(names, " "))
-	for _, forbidden := range []string{"graphiti", "neo4j", "get_for_task", "supersede", "invalidate"} {
+	for _, forbidden := range []string{"graphiti", "neo4j", "supersede", "invalidate"} {
 		if strings.Contains(joined, forbidden) {
 			t.Fatalf("forbidden tool name fragment %q in %v", forbidden, names)
 		}
@@ -330,5 +331,36 @@ func TestKnowledgeSearchMCPContract(t *testing.T) {
 	})
 	if !missingActor.IsError {
 		t.Fatal("expected validation error for missing actor_id")
+	}
+}
+
+func TestGetForTaskMCPContract(t *testing.T) {
+	session, _ := testSession(t)
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use outbox for payments.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+	})
+
+	result := callTool(t, session, "memlore.get_for_task", map[string]any{
+		"task":     "Implement payment outbox",
+		"query":    "payment outbox",
+		"scope":    map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id": "alice",
+	})
+	if result.IsError {
+		t.Fatalf("get_for_task failed: %s", toolText(result))
+	}
+	payload := structuredContent(t, result)
+	if payload["task"] != "Implement payment outbox" {
+		t.Fatalf("task = %v", payload["task"])
+	}
+	items := payload["items"].([]any)
+	if len(items) < 1 {
+		t.Fatalf("items = %v", items)
+	}
+	meta := payload["meta"].(map[string]any)
+	if meta["items_included"] == nil {
+		t.Fatal("missing meta.items_included")
 	}
 }

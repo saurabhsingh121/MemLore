@@ -46,6 +46,11 @@ func NewServer(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Kno
 		Description: "Search governance lore and knowledge graph in parallel.",
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
 	}, tools.knowledgeSearch)
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "memlore.get_for_task",
+		Description: "Compile token-budgeted context for a coding task.",
+		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
+	}, tools.getForTask)
 
 	return server
 }

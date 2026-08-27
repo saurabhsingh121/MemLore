@@ -9,10 +9,12 @@
 | `GET` | `/v1/lore-entries` | List by `scope_kind` + `scope_key` |
 | `GET` | `/v1/lore-entries/{id}/audits` | List audits (404 if entry missing) |
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph) |
+| `POST` | `/v1/context/compile` | Compile token-budgeted context for a task |
 
 Contract details:
 [`specs/001-scoped-lore-entry/contracts/rest-lore-entries.md`](../../specs/001-scoped-lore-entry/contracts/rest-lore-entries.md).
 Knowledge search: [`specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md`](../../specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md).
+Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md).
 
 Example create:
 
