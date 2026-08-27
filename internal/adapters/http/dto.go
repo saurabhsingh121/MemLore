@@ -2,7 +2,9 @@ package httpadapter
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/memlore/memlore/internal/adapters/presenters"
@@ -48,6 +50,7 @@ func handleDomainError(w http.ResponseWriter, err error) {
 	case *domain.NotFoundError:
 		writeError(w, http.StatusNotFound, "not_found", e.Message)
 	default:
+		fmt.Fprintf(os.Stderr, "memlore http internal error: %v\n", err)
 		writeError(w, http.StatusInternalServerError, "internal_error", "unexpected error")
 	}
 }
