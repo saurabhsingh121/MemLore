@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-25  
-**Current Milestone**: M10 — F108 graph retrieval orchestration complete  
+**Current Milestone**: M11 — F109 context compiler complete  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -31,7 +31,7 @@
 | F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
-| F007 | Context compiler + `get_for_task` | PLANNED | — | — | partial | — | |
+| F007 | Context compiler + `get_for_task` | PARTIAL | ✓ | ✓ | — | — | F109 v1 compiler; conflict/temporal deferred |
 | F008 | Supersession + invalidation | PLANNED | — | — | — | — | |
 | F009 | Conflict detection | PLANNED | — | — | — | — | |
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
@@ -367,7 +367,40 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F109 — context compiler (`memlore.get_for_task`).
+F110 — supersede / invalidate / conflict detection.
+
+---
+
+## F109 — Context Compiler + get_for_task
+
+**Status**: DONE  
+**Branch**: `012-context-compiler`  
+**Spec**: `specs/012-context-compiler/`  
+**Implements**: Product F007 (partial)
+
+### Goal
+
+Compile token-budgeted ContextPacket for agents: retrieve via F108, authority
+ranking, dedup, token budgeting. REST `POST /v1/context/compile` and MCP
+`memlore.get_for_task`.
+
+### Acceptance Criteria
+
+- [x] `CompileContextHandler` with authority ranking and token budget
+- [x] Verified governance outranks graph hits (unit test)
+- [x] Cross-plane statement dedup (v1)
+- [x] `POST /v1/context/compile` + contract tests
+- [x] `memlore.get_for_task` MCP tool + contract tests
+
+### Implementation
+
+- `internal/application/context/ranking.go`
+- `internal/application/queries/compile_context.go`
+- `internal/adapters/presenters/context_packet.go`
+
+### Next Step
+
+F110 — supersede / invalidate / conflict detection.
 
 ---
 
@@ -403,7 +436,7 @@ MemLore-shaped response. `memlore.search` unchanged.
 
 ### Next Step
 
-F109 — context compiler (`memlore.get_for_task`).
+Supersede / invalidate (F008) or conflict detection (F009).
 
 ---
 
@@ -477,10 +510,17 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 | F106 | (greenfield) | F004 planning |
 | F107 | F004 outbox | F106 |
 | F108 | F006 read path | F107 |
+| F109 | F007 compiler v1 | F108 |
 
 ---
 
 ## Development Ledger Notes
+
+### 2026-08-27 — F109 context compiler + get_for_task
+
+- `CompileContextHandler` with authority ranking, dedup, token budgeting
+- `POST /v1/context/compile` and `memlore.get_for_task`
+- Implements product F007 (partial)
 
 ### 2026-08-27 — F108 graph retrieval orchestration
 
@@ -522,8 +562,8 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ### Immediate recommended tasks
 
-1. `/speckit.specify` F109 (context compiler / `memlore.get_for_task`)
-2. Dogfood lore on insurance-core via `./bin/memlore mcp`
+1. Supersede / invalidate lore lifecycle (F008)
+2. Dogfood via `./bin/memlore mcp` with `memlore.get_for_task`
 
 ---
 

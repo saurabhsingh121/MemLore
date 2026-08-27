@@ -23,18 +23,21 @@ type Handlers struct {
 	ListLoreByScope *queries.ListLoreByScopeHandler
 	ListAudits      *queries.ListAuditsHandler
 	SearchKnowledge *queries.SearchKnowledgeHandler
+	CompileContext  *queries.CompileContextHandler
 	Version         string
 }
 
 // NewHandlers wires application handlers from a unit-of-work factory and clock.
 func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph, version string) *Handlers {
+	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
 	return &Handlers{
 		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
 		GetLore:         queries.NewGetLoreHandler(begin),
 		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
 		ListAudits:      queries.NewListAuditsHandler(begin),
-		SearchKnowledge: queries.NewSearchKnowledgeHandler(begin, graph, nil),
+		SearchKnowledge: search,
+		CompileContext:  queries.NewCompileContextHandler(search),
 		Version:         version,
 	}
 }
@@ -50,6 +53,7 @@ func (h *Handlers) Router() http.Handler {
 		r.Post("/lore-entries/{id}/verify", h.verifyLoreEntry)
 		r.Get("/lore-entries/{id}/audits", h.listLoreAudits)
 		r.Post("/knowledge-search", h.knowledgeSearch)
+		r.Post("/context/compile", h.compileContext)
 	})
 	return r
 }
@@ -198,6 +202,39 @@ func (h *Handlers) knowledgeSearch(w http.ResponseWriter, r *http.Request) {
 		result.Graph,
 		result.Warnings,
 	))
+}
+
+func (h *Handlers) compileContext(w http.ResponseWriter, r *http.Request) {
+	var body compileContextRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "invalid JSON body")
+		return
+	}
+	if body.Scope == nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "scope is required")
+		return
+	}
+	kind, err := domain.ParseScopeKind(string(body.Scope.Kind))
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	scope, err := domain.NewScope(kind, body.Scope.Key)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	result, err := h.CompileContext.Handle(r.Context(), queries.CompileContextQuery{
+		Task:        body.Task,
+		Query:       body.Query,
+		Scope:       scope,
+		TokenBudget: body.TokenBudget,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, presenters.ToContextPacket(result))
 }
 
 // Serve starts the HTTP server until context is cancelled.

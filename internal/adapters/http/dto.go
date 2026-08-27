@@ -79,6 +79,13 @@ type knowledgeSearchRequest struct {
 	Limit int       `json:"limit"`
 }
 
+type compileContextRequest struct {
+	Task        string    `json:"task"`
+	Query       string    `json:"query"`
+	Scope       *scopeDTO `json:"scope"`
+	TokenBudget int       `json:"token_budget"`
+}
+
 func toLoreResponse(entry domain.LoreEntry) loreEntryResponse {
 	return presenters.ToLoreEntry(entry)
 }
