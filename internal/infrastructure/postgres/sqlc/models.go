@@ -30,3 +30,17 @@ type LoreEntry struct {
 	VerifiedAt         pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
 }
+
+type OutboxEvent struct {
+	ID             string
+	AggregateType  string
+	AggregateID    string
+	EventType      string
+	Payload        []byte
+	Status         string
+	Attempts       int32
+	IdempotencyKey string
+	CreatedAt      pgtype.Timestamptz
+	ProcessedAt    pgtype.Timestamptz
+	LastError      pgtype.Text
+}

@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/009-graph-service/spec.md` for completed F106 graph-service slice.
-Next: F107 transactional outbox + async graph sync.
-Completed: F101–F106, F106a, Python F001/F002.
+Read `specs/010-transactional-outbox/spec.md` for completed F107 outbox sync.
+Next: F108 graph retrieval orchestration.
+Completed: F101–F107, F106a, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

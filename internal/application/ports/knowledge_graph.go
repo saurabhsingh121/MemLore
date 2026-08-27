@@ -13,6 +13,7 @@ type GraphScope struct {
 
 // EpisodeIngestRequest ingests lore into the knowledge graph.
 type EpisodeIngestRequest struct {
+	EpisodeID       string
 	Statement       string
 	Scope           GraphScope
 	Metadata        map[string]any

@@ -25,6 +25,7 @@ class ScopeSchema(BaseModel):
 class EpisodeRequest(BaseModel):
     statement: str = Field(min_length=1, max_length=8000)
     scope: ScopeSchema
+    episode_id: str | None = Field(default=None, max_length=36)
     metadata: dict[str, Any] = Field(default_factory=dict)
     provenance_refs: list[str] = Field(default_factory=list)
     reference_time: datetime | None = None
@@ -123,6 +124,7 @@ async def create_episode(
         metadata=body.metadata,
         provenance_refs=body.provenance_refs,
         reference_time=body.reference_time,
+        episode_id=body.episode_id,
     )
     try:
         episode_id = await graph.ingest_episode(episode)

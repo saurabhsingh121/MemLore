@@ -16,7 +16,10 @@ import (
 	httpadapter "github.com/memlore/memlore/internal/adapters/http"
 	mcpadapter "github.com/memlore/memlore/internal/adapters/mcp"
 	"github.com/memlore/memlore/internal/bootstrap"
+	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
+	"github.com/memlore/memlore/internal/infrastructure/graphclient"
+	"github.com/memlore/memlore/internal/infrastructure/postgres"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -59,6 +62,12 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "worker":
+		if err := runWorker(logger); err != nil {
+			fmt.Fprintf(os.Stderr, "worker failed: %v\n", err)
+			return 1
+		}
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", args[1])
 		return 1
@@ -72,6 +81,7 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore migrate")
 	fmt.Fprintln(stdout, "  memlore serve")
 	fmt.Fprintln(stdout, "  memlore mcp")
+	fmt.Fprintln(stdout, "  memlore worker")
 }
 
 func runServe(addr string, logger *slog.Logger) error {
@@ -120,6 +130,53 @@ func runMigrate(logger *slog.Logger) error {
 	}
 	logger.Info("memlore migrate complete", "dsn", redactDSN(dsn))
 	return nil
+}
+
+func runWorker(logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
+	graph := graphclient.NewClient(graphURL, nil)
+	runner := postgres.NewOutboxProcessor(pool)
+	handler := commands.NewProcessOutboxHandler(runner, graph, clock.SystemClock{}, 10)
+
+	interval := workerPollInterval()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	logger.Info("memlore worker started", "graph_service", graphURL, "poll_interval", interval.String())
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		processed, err := handler.ProcessOnce(ctx)
+		if err != nil {
+			logger.Error("outbox processing failed", "error", err)
+		} else if processed > 0 {
+			logger.Info("outbox batch processed", "count", processed)
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+		}
+	}
+}
+
+func workerPollInterval() time.Duration {
+	raw := envOr("MEMLORE_WORKER_POLL_INTERVAL", "5s")
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return 5 * time.Second
+	}
+	return d
 }
 
 func runMCP(logger *slog.Logger) error {

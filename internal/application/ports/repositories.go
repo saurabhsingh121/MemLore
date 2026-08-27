@@ -24,6 +24,7 @@ type AuditRepository interface {
 type UnitOfWork interface {
 	LoreEntries() LoreRepository
 	Audits() AuditRepository
+	Outbox() OutboxRepository
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
