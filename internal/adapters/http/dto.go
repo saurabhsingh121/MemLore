@@ -65,6 +65,11 @@ type createLoreRequest struct {
 	Evidence  []evidenceDTO `json:"evidence"`
 }
 
+type supersedeLoreRequest struct {
+	Statement string        `json:"statement"`
+	Evidence  []evidenceDTO `json:"evidence"`
+}
+
 type loreEntryResponse = presenters.LoreEntry
 
 type loreEntryListResponse = presenters.LoreEntryList

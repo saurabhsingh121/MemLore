@@ -51,6 +51,16 @@ func NewServer(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Kno
 		Description: "Compile token-budgeted context for a coding task.",
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
 	}, tools.getForTask)
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "memlore.invalidate",
+		Description: "Mark a lore entry invalidated without deleting evidence or audits.",
+		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: true},
+	}, tools.invalidate)
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "memlore.supersede",
+		Description: "Replace a lore entry with a successor while preserving history.",
+		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: false},
+	}, tools.supersede)
 
 	return server
 }

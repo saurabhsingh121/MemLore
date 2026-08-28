@@ -19,6 +19,8 @@ import (
 type Handlers struct {
 	CreateLore      *commands.CreateLoreHandler
 	VerifyLore      *commands.VerifyLoreHandler
+	InvalidateLore  *commands.InvalidateLoreHandler
+	SupersedeLore   *commands.SupersedeLoreHandler
 	GetLore         *queries.GetLoreHandler
 	ListLoreByScope *queries.ListLoreByScopeHandler
 	ListAudits      *queries.ListAuditsHandler
@@ -33,6 +35,8 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 	return &Handlers{
 		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
+		InvalidateLore:  commands.NewInvalidateLoreHandler(begin, clock),
+		SupersedeLore:   commands.NewSupersedeLoreHandler(begin, clock),
 		GetLore:         queries.NewGetLoreHandler(begin),
 		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
 		ListAudits:      queries.NewListAuditsHandler(begin),
@@ -51,6 +55,8 @@ func (h *Handlers) Router() http.Handler {
 		r.Get("/lore-entries", h.listLoreEntries)
 		r.Get("/lore-entries/{id}", h.getLoreEntry)
 		r.Post("/lore-entries/{id}/verify", h.verifyLoreEntry)
+		r.Post("/lore-entries/{id}/invalidate", h.invalidateLoreEntry)
+		r.Post("/lore-entries/{id}/supersede", h.supersedeLoreEntry)
 		r.Get("/lore-entries/{id}/audits", h.listLoreAudits)
 		r.Post("/knowledge-search", h.knowledgeSearch)
 		r.Post("/context/compile", h.compileContext)
@@ -121,6 +127,58 @@ func (h *Handlers) verifyLoreEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, toLoreResponse(entry))
+}
+
+func (h *Handlers) invalidateLoreEntry(w http.ResponseWriter, r *http.Request) {
+	actor, err := requireActor(r)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	entry, err := h.InvalidateLore.Handle(r.Context(), commands.InvalidateLoreCommand{
+		EntryID: id,
+		ActorID: actor,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toLoreResponse(entry))
+}
+
+func (h *Handlers) supersedeLoreEntry(w http.ResponseWriter, r *http.Request) {
+	actor, err := requireActor(r)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	var body supersedeLoreRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "invalid JSON body")
+		return
+	}
+	evidence := make([]domain.EvidenceReference, 0, len(body.Evidence))
+	for _, item := range body.Evidence {
+		ref, refErr := domain.NewEvidenceReference(item.Type, item.Value)
+		if refErr != nil {
+			handleDomainError(w, refErr)
+			return
+		}
+		evidence = append(evidence, ref)
+	}
+	id := chi.URLParam(r, "id")
+	entry, err := h.SupersedeLore.Handle(r.Context(), commands.SupersedeLoreCommand{
+		EntryID:   id,
+		Statement: body.Statement,
+		ActorID:   actor,
+		Evidence:  evidence,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, toLoreResponse(entry))
 }
 
 func (h *Handlers) listLoreEntries(w http.ResponseWriter, r *http.Request) {

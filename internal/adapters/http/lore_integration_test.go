@@ -49,6 +49,9 @@ func TestHTTPPostgresCreateVerifyFlow(t *testing.T) {
 			verified_at TIMESTAMPTZ,
 			updated_at TIMESTAMPTZ NOT NULL
 		);
+		ALTER TABLE lore_entries ADD COLUMN IF NOT EXISTS superseded_by_id VARCHAR(36) NULL;
+		ALTER TABLE lore_entries ADD COLUMN IF NOT EXISTS invalidated_by VARCHAR(256) NULL;
+		ALTER TABLE lore_entries ADD COLUMN IF NOT EXISTS invalidated_at TIMESTAMPTZ NULL;
 		CREATE TABLE IF NOT EXISTS audit_records (
 			id VARCHAR(36) PRIMARY KEY,
 			target_id VARCHAR(36) NOT NULL,

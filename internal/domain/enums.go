@@ -50,27 +50,30 @@ func ParseEvidenceType(value string) (EvidenceType, error) {
 type KnowledgeOrigin string
 
 const (
-	KnowledgeOriginHumanAuthored          KnowledgeOrigin = "human_authored"
-	KnowledgeOriginHumanVerified          KnowledgeOrigin = "human_verified"
-	KnowledgeOriginAgentObservation       KnowledgeOrigin = "agent_observation"
-	KnowledgeOriginAgentInference         KnowledgeOrigin = "agent_inference"
-	KnowledgeOriginRepositoryObservation  KnowledgeOrigin = "repository_observation"
-	KnowledgeOriginImportedSource         KnowledgeOrigin = "imported_source"
-	KnowledgeOriginArchitectureDecision   KnowledgeOrigin = "architecture_decision"
+	KnowledgeOriginHumanAuthored         KnowledgeOrigin = "human_authored"
+	KnowledgeOriginHumanVerified         KnowledgeOrigin = "human_verified"
+	KnowledgeOriginAgentObservation      KnowledgeOrigin = "agent_observation"
+	KnowledgeOriginAgentInference        KnowledgeOrigin = "agent_inference"
+	KnowledgeOriginRepositoryObservation KnowledgeOrigin = "repository_observation"
+	KnowledgeOriginImportedSource        KnowledgeOrigin = "imported_source"
+	KnowledgeOriginArchitectureDecision  KnowledgeOrigin = "architecture_decision"
 )
 
 // VerificationStatus is the trust posture of a lore entry.
 type VerificationStatus string
 
 const (
-	VerificationUnverified VerificationStatus = "unverified"
-	VerificationVerified   VerificationStatus = "verified"
+	VerificationUnverified  VerificationStatus = "unverified"
+	VerificationVerified    VerificationStatus = "verified"
+	VerificationInvalidated VerificationStatus = "invalidated"
 )
 
 // AuditAction records what happened to a lore entry.
 type AuditAction string
 
 const (
-	AuditActionCreate AuditAction = "create"
-	AuditActionVerify AuditAction = "verify"
+	AuditActionCreate     AuditAction = "create"
+	AuditActionVerify     AuditAction = "verify"
+	AuditActionInvalidate AuditAction = "invalidate"
+	AuditActionSupersede  AuditAction = "supersede"
 )

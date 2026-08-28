@@ -26,13 +26,13 @@ func TestRunMigrationsCreatesTables(t *testing.T) {
 	}
 	t.Cleanup(pool.Close)
 
-	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS audit_records, lore_entries, goose_db_version")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS outbox_events, audit_records, lore_entries, goose_db_version CASCADE")
 
 	if err := bootstrap.RunMigrations(dsn); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
 
-	for _, table := range []string{"lore_entries", "audit_records"} {
+	for _, table := range []string{"lore_entries", "audit_records", "outbox_events"} {
 		var exists bool
 		err := pool.QueryRow(ctx, `
 			SELECT EXISTS (
@@ -44,6 +44,20 @@ func TestRunMigrationsCreatesTables(t *testing.T) {
 		}
 		if !exists {
 			t.Fatalf("table %s missing after migrate", table)
+		}
+	}
+	for _, col := range []string{"superseded_by_id", "invalidated_by", "invalidated_at"} {
+		var exists bool
+		err := pool.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = 'public' AND table_name = 'lore_entries' AND column_name = $1
+			)`, col).Scan(&exists)
+		if err != nil {
+			t.Fatalf("check column %s: %v", col, err)
+		}
+		if !exists {
+			t.Fatalf("column lore_entries.%s missing after migrate", col)
 		}
 	}
 }

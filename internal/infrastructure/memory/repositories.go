@@ -94,10 +94,7 @@ func (r *AuditRepository) ListByTarget(_ context.Context, targetID string) ([]do
 			out = append(out, record)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].CreatedAt.Equal(out[j].CreatedAt) {
-			return out[i].ID < out[j].ID
-		}
+	sort.SliceStable(out, func(i, j int) bool {
 		return out[i].CreatedAt.Before(out[j].CreatedAt)
 	})
 	return out, nil

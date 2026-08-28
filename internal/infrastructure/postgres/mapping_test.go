@@ -48,6 +48,9 @@ func TestLoreEntryMappingRoundTripWithEvidence(t *testing.T) {
 		VerifiedBy:         insert.VerifiedBy,
 		VerifiedAt:         insert.VerifiedAt,
 		UpdatedAt:          insert.UpdatedAt,
+		SupersededByID:     insert.SupersededByID,
+		InvalidatedBy:      insert.InvalidatedBy,
+		InvalidatedAt:      insert.InvalidatedAt,
 	}
 
 	got, err := loreEntryFromRow(row)

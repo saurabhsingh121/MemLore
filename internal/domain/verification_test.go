@@ -74,6 +74,35 @@ func TestApplyVerificationIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestApplyVerificationRejectsInvalidated(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	entry, _ := domain.NewLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Rule",
+		Scope:     scope,
+		CreatedBy: "alice",
+	})
+	entry.VerificationStatus = domain.VerificationInvalidated
+	_, _, err := domain.ApplyVerification(entry, "alice", time.Now().UTC())
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
+func TestApplyVerificationRejectsSuperseded(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	entry, _ := domain.NewLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Rule",
+		Scope:     scope,
+		CreatedBy: "alice",
+	})
+	id := "successor-1"
+	entry.SupersededByID = &id
+	_, _, err := domain.ApplyVerification(entry, "alice", time.Now().UTC())
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
 func TestApplyVerificationRejectsBlankActor(t *testing.T) {
 	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
 	entry, _ := domain.NewLoreEntry(domain.NewLoreEntryInput{

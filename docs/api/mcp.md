@@ -18,8 +18,8 @@ inferred from the environment.
 | `memlore.search` | Exact scope list (`kind`+`key`) | implemented |
 | `memlore.knowledge_search` | Dual-plane knowledge search (governance + graph) | implemented |
 | `memlore.get_for_task` | Compiled context packet for a task | implemented |
-| `memlore.supersede` | Replace while preserving history | deferred |
-| `memlore.invalidate` | Mark invalid without deleting evidence | deferred |
+| `memlore.supersede` | Replace while preserving history | implemented |
+| `memlore.invalidate` | Mark invalid without deleting evidence | implemented |
 
 `memlore.remember` always stores origin `human_authored` (parity with REST
 create).
@@ -52,3 +52,5 @@ See `specs/002-mcp-lore-tools/contracts/mcp-lore-tools.md` for argument and
 payload schemas. Knowledge search:
 `specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md`.
 Context compile: `specs/012-context-compiler/contracts/context-compile.md`.
+Invalidate and supersede:
+`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`.

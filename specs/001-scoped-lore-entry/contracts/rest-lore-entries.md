@@ -52,7 +52,35 @@ Create human-authored lore entry.
 **Body**: empty object `{}` or none  
 **Responses**:
 - `200` → `LoreEntryResponse` (verified; idempotent if already verified)
-- `400` → missing actor
+- `400` → missing actor, or entry is invalidated/superseded
+- `404` → not found
+
+## POST /v1/lore-entries/{id}/invalidate
+
+**Headers**: `X-Memlore-Actor` required  
+**Body**: empty or `{}`  
+**Responses**:
+- `200` → `LoreEntryResponse` (`verification_status=invalidated`; idempotent if already invalidated)
+- `400` → missing actor, or entry is superseded
+- `404` → not found
+
+## POST /v1/lore-entries/{id}/supersede
+
+**Headers**: `X-Memlore-Actor` required  
+**Body**:
+
+```json
+{
+  "statement": "string (1..8000)",
+  "evidence": [{ "type": "url|path|adr", "value": "string" }]
+}
+```
+
+`evidence` optional (default `[]`). Scope is taken from the predecessor.
+
+**Responses**:
+- `201` → successor `LoreEntryResponse`
+- `400` → missing actor, empty statement, superseded or invalidated predecessor
 - `404` → not found
 
 ## GET /v1/lore-entries
@@ -84,12 +112,15 @@ List by exact scope.
   "statement": "string",
   "scope": { "kind": "repository", "key": "github.com/acme/app" },
   "origin": "human_authored",
-  "verification_status": "unverified|verified",
+  "verification_status": "unverified|verified|invalidated",
   "evidence": [{ "type": "adr", "value": "0001-dual-plane" }],
   "created_by": "alice",
   "created_at": "2026-08-25T12:00:00Z",
   "verified_by": null,
   "verified_at": null,
+  "invalidated_by": null,
+  "invalidated_at": null,
+  "superseded_by_id": null,
   "updated_at": "2026-08-25T12:00:00Z"
 }
 ```
@@ -100,7 +131,7 @@ List by exact scope.
 {
   "id": "uuid",
   "target_id": "uuid",
-  "action": "create|verify",
+  "action": "create|verify|invalidate|supersede",
   "actor_id": "alice",
   "created_at": "2026-08-25T12:00:00Z"
 }
@@ -116,5 +147,9 @@ List by exact scope.
 | Get unknown | 404 |
 | Verify then get | verified_by/at set; origin unchanged |
 | Verify twice | 200; single verify audit |
+| Invalidate current | 200; status invalidated; one invalidate audit |
+| Invalidate twice | 200; single invalidate audit |
+| Supersede current | 201 successor; predecessor `superseded_by_id` set |
+| Supersede superseded | 400; no additional successor |
 | List scope | only matching kind+key |
 | Audits unknown id | 404 |

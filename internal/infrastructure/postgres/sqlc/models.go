@@ -29,6 +29,9 @@ type LoreEntry struct {
 	VerifiedBy         pgtype.Text
 	VerifiedAt         pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
+	SupersededByID     pgtype.Text
+	InvalidatedBy      pgtype.Text
+	InvalidatedAt      pgtype.Timestamptz
 }
 
 type OutboxEvent struct {

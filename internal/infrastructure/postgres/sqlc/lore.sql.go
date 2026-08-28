@@ -14,7 +14,8 @@ import (
 const getLoreEntry = `-- name: GetLoreEntry :one
 SELECT
     id, statement, scope_kind, scope_key, origin, verification_status,
-    evidence, created_by, created_at, verified_by, verified_at, updated_at
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
 FROM lore_entries
 WHERE id = $1
 `
@@ -35,6 +36,9 @@ func (q *Queries) GetLoreEntry(ctx context.Context, id string) (LoreEntry, error
 		&i.VerifiedBy,
 		&i.VerifiedAt,
 		&i.UpdatedAt,
+		&i.SupersededByID,
+		&i.InvalidatedBy,
+		&i.InvalidatedAt,
 	)
 	return i, err
 }
@@ -42,9 +46,10 @@ func (q *Queries) GetLoreEntry(ctx context.Context, id string) (LoreEntry, error
 const insertLoreEntry = `-- name: InsertLoreEntry :exec
 INSERT INTO lore_entries (
     id, statement, scope_kind, scope_key, origin, verification_status,
-    evidence, created_by, created_at, verified_by, verified_at, updated_at
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
 )
 `
 
@@ -61,6 +66,9 @@ type InsertLoreEntryParams struct {
 	VerifiedBy         pgtype.Text
 	VerifiedAt         pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
+	SupersededByID     pgtype.Text
+	InvalidatedBy      pgtype.Text
+	InvalidatedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) InsertLoreEntry(ctx context.Context, arg InsertLoreEntryParams) error {
@@ -77,6 +85,9 @@ func (q *Queries) InsertLoreEntry(ctx context.Context, arg InsertLoreEntryParams
 		arg.VerifiedBy,
 		arg.VerifiedAt,
 		arg.UpdatedAt,
+		arg.SupersededByID,
+		arg.InvalidatedBy,
+		arg.InvalidatedAt,
 	)
 	return err
 }
@@ -84,7 +95,8 @@ func (q *Queries) InsertLoreEntry(ctx context.Context, arg InsertLoreEntryParams
 const listLoreEntriesByScope = `-- name: ListLoreEntriesByScope :many
 SELECT
     id, statement, scope_kind, scope_key, origin, verification_status,
-    evidence, created_by, created_at, verified_by, verified_at, updated_at
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
 FROM lore_entries
 WHERE scope_kind = $1 AND scope_key = $2
 ORDER BY created_at DESC
@@ -117,6 +129,9 @@ func (q *Queries) ListLoreEntriesByScope(ctx context.Context, arg ListLoreEntrie
 			&i.VerifiedBy,
 			&i.VerifiedAt,
 			&i.UpdatedAt,
+			&i.SupersededByID,
+			&i.InvalidatedBy,
+			&i.InvalidatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -140,7 +155,10 @@ UPDATE lore_entries SET
     created_at = $9,
     verified_by = $10,
     verified_at = $11,
-    updated_at = $12
+    updated_at = $12,
+    superseded_by_id = $13,
+    invalidated_by = $14,
+    invalidated_at = $15
 WHERE id = $1
 `
 
@@ -157,6 +175,9 @@ type UpdateLoreEntryParams struct {
 	VerifiedBy         pgtype.Text
 	VerifiedAt         pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
+	SupersededByID     pgtype.Text
+	InvalidatedBy      pgtype.Text
+	InvalidatedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) UpdateLoreEntry(ctx context.Context, arg UpdateLoreEntryParams) error {
@@ -173,6 +194,9 @@ func (q *Queries) UpdateLoreEntry(ctx context.Context, arg UpdateLoreEntryParams
 		arg.VerifiedBy,
 		arg.VerifiedAt,
 		arg.UpdatedAt,
+		arg.SupersededByID,
+		arg.InvalidatedBy,
+		arg.InvalidatedAt,
 	)
 	return err
 }

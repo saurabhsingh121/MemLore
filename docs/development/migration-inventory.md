@@ -1,6 +1,6 @@
 # MemLore Migration Inventory
 
-**Last Updated**: 2026-08-25  
+**Last Updated**: 2026-08-28  
 **Purpose**: Track each capability from current implementation → target architecture.  
 **Statuses**: `Not Started` · `Characterizing` · `Specified` · `In Development` · `Migrated` · `Verified` · `Deprecated` · `Removed` · `Blocked`
 
@@ -44,15 +44,15 @@
 | **Domain features (not built in Python)** |
 | Authority factor persistence | Docs only | Go domain + Postgres | Not Started | No | Spec before implement |
 | Authority scoring / ranking | Docs only | Go application service | Not Started | No | Explainable factors required |
-| Verification canonical/invalidated | Enum partial | Go domain | Not Started | No | Extend `VerificationStatus` |
-| Supersession | None | Go governance + graph coord | Not Started | No | |
-| Conflict detection | None | Go application | Not Started | No | |
+| Verification canonical/invalidated | Enum partial | Go domain | Migrated | Yes | F110 adds `invalidated` (canonical still deferred) |
+| Supersession | None | Go governance + graph coord | Migrated | Yes | F110 governance only; graph-service deferred |
+| Conflict detection | None | Go application | Not Started | No | F112 |
 | Agent-authored lore origins | Enum reserved | Go create paths | Not Started | No | MCP remember currently human only |
 | Users / teams / projects / repos | None | Go + Postgres | Not Started | No | |
-| OIDC / RBAC | None | Go auth adapter | Not Started | No | |
-| Context compiler | None | Go application | Not Started | No | |
-| `memlore.get_for_task` | None | Go MCP | Not Started | No | |
-| `memlore.supersede` / `invalidate` | None | Go MCP + graph | Not Started | No | |
+| OIDC / RBAC | None | Go auth adapter | Not Started | No | F111 |
+| Context compiler | None | Go application | Migrated | Yes | F109 |
+| `memlore.get_for_task` | None | Go MCP | Migrated | Yes | F109 |
+| `memlore.supersede` / `invalidate` | None | Go MCP + graph | Migrated | Yes | F110 Go core; graph-service still deferred |
 | **Infrastructure** |
 | Configuration | Pydantic settings | Go typed env config | Not Started | No | |
 | Structured logging | Python `get_logger` | Go `slog` | Not Started | No | |

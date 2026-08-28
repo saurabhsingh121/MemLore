@@ -32,6 +32,15 @@ func TestLoreEntryDefaultsToUnverifiedHumanAuthored(t *testing.T) {
 	if entry.VerifiedBy != nil {
 		t.Fatal("expected verified_by nil")
 	}
+	if entry.InvalidatedBy != nil || entry.InvalidatedAt != nil {
+		t.Fatal("expected invalidate fields nil")
+	}
+	if entry.SupersededByID != nil {
+		t.Fatal("expected superseded_by_id nil")
+	}
+	if domain.IsSuperseded(entry) {
+		t.Fatal("new entry must not be superseded")
+	}
 	if entry.ID == "" {
 		t.Fatal("expected non-empty id")
 	}

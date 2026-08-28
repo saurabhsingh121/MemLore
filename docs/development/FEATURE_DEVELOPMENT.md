@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
-**Last Updated**: 2026-08-25  
-**Current Milestone**: M11 — F109 context compiler complete  
+**Last Updated**: 2026-08-28  
+**Current Milestone**: M12 — F110 invalidate + supersede complete  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -32,8 +32,8 @@
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
 | F007 | Context compiler + `get_for_task` | PARTIAL | ✓ | ✓ | — | — | F109 v1 compiler; conflict/temporal deferred |
-| F008 | Supersession + invalidation | PLANNED | — | — | — | — | |
-| F009 | Conflict detection | PLANNED | — | — | — | — | |
+| F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 (filtering deferred F112) |
+| F009 | Conflict detection | PLANNED | — | — | — | — | F112 |
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
@@ -43,6 +43,7 @@
 | F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI integration |
 | F106 | Extract graph-service + contracts | DONE | ✓ | ✓ | ✓ | — | `graph-service/`, Go KnowledgeGraph port |
 | F107 | Transactional outbox + graph sync worker | DONE | ✓ | ✓ | ✓ | — | `memlore worker`, outbox migration |
+| F110 | Invalidate + supersede lifecycle | DONE | ✓ | ✓ | ✓ | 0003 | REST + MCP; filtering deferred F112 |
 
 ---
 
@@ -367,7 +368,42 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F110 — supersede / invalidate / conflict detection.
+F111 — OIDC/RBAC. F112 — conflict detection + superseded/invalidated filtering.
+
+---
+
+## F110 — Invalidate + supersede (governance lifecycle)
+
+**Status**: DONE  
+**Branch**: `013-supersede-invalidate`  
+**Spec**: `specs/013-supersede-invalidate/`  
+**Implements**: Product F008 (partial — no conflict detection / retrieval filtering)
+
+### Goal
+
+Mark lore invalidated without deleting history, and supersede lore with a
+successor that preserves the predecessor. REST and MCP (`memlore.invalidate`,
+`memlore.supersede`) share the same entry shape.
+
+### Acceptance Criteria
+
+- [x] `verification_status=invalidated`; idempotent re-invalidate
+- [x] `superseded_by_id` on predecessor; successor in same scope
+- [x] Dual audits (`supersede` + `create`); explain chronological
+- [x] REST `POST .../invalidate` and `POST .../supersede`
+- [x] MCP nine tools including invalidate + supersede
+- [x] Goose `00003` + sqlc mapping
+
+### Implementation
+
+- `internal/domain/lifecycle.go`
+- `internal/application/commands/invalidate_lore.go`
+- `internal/application/commands/supersede_lore.go`
+- `migrations/00003_supersede_invalidate.sql`
+
+### Next Step
+
+F111 — OIDC/RBAC. F112 — conflict detection + superseded/invalidated filtering.
 
 ---
 
@@ -400,7 +436,7 @@ ranking, dedup, token budgeting. REST `POST /v1/context/compile` and MCP
 
 ### Next Step
 
-F110 — supersede / invalidate / conflict detection.
+F110 invalidate + supersede (DONE). Next: F111 auth, F112 conflict/filtering.
 
 ---
 
@@ -562,8 +598,9 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ### Immediate recommended tasks
 
-1. Supersede / invalidate lore lifecycle (F008)
-2. Dogfood via `./bin/memlore mcp` with `memlore.get_for_task`
+1. Conflict detection + superseded/invalidated filtering (F112)
+2. OIDC / RBAC (F111)
+3. Dogfood via `./bin/memlore mcp` with `memlore.supersede`
 
 ---
 

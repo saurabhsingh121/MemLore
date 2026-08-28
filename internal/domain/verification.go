@@ -14,6 +14,13 @@ func ApplyVerification(entry LoreEntry, actorID string, now time.Time) (LoreEntr
 		return LoreEntry{}, nil, validationError("actor must be non-empty")
 	}
 
+	if entry.VerificationStatus == VerificationInvalidated {
+		return LoreEntry{}, nil, validationError("cannot verify an invalidated lore entry")
+	}
+	if IsSuperseded(entry) {
+		return LoreEntry{}, nil, validationError("cannot verify a superseded lore entry")
+	}
+
 	if entry.VerificationStatus == VerificationVerified {
 		return entry, nil, nil
 	}
