@@ -49,7 +49,7 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		ListLoreByScope:   list,
 		ListAudits:        queries.NewListAuditsHandler(begin),
 		SearchKnowledge:   search,
-		CompileContext:    queries.NewCompileContextHandler(search),
+		CompileContext:    queries.NewCompileContextHandler(search, list),
 		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
@@ -393,10 +393,15 @@ func (h *Handlers) compileContext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := h.CompileContext.Handle(r.Context(), queries.CompileContextQuery{
-		Task:        body.Task,
-		Query:       body.Query,
-		Scope:       scope,
-		TokenBudget: body.TokenBudget,
+		Task:         body.Task,
+		Query:        body.Query,
+		Scope:        scope,
+		TokenBudget:  body.TokenBudget,
+		Branch:       body.Branch,
+		Ticket:       body.Ticket,
+		ChangedFiles: body.ChangedFiles,
+		WorkingFiles: body.WorkingFiles,
+		AgentID:      body.AgentID,
 	})
 	if err != nil {
 		handleDomainError(w, err)

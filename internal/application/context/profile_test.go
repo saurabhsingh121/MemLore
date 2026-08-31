@@ -77,3 +77,65 @@ func TestClassifyOmitsUnmatchedAndEmptySections(t *testing.T) {
 		t.Fatalf("second section = %s, want architecture", sections[1].ID)
 	}
 }
+
+func TestClassifyPacketNamedSectionsAndTaskContext(t *testing.T) {
+	items := []appcontext.RankedItem{
+		{Statement: "Hexagonal architecture with ports."},
+		{Statement: "Use Kafka instead of RabbitMQ.", Evidence: []domain.EvidenceReference{{Type: domain.EvidenceTypeADR, Value: "ADR-017"}}},
+		{Statement: "Controllers must not access repositories directly."},
+		{Statement: "Gotcha: refunds are eventually consistent."},
+		{Statement: "Payment outbox must persist events atomically."},
+		{Statement: "The sky is blue."},
+	}
+	sections, unclassified := appcontext.ClassifyPacket(items, appcontext.TaskSignals{
+		Task: "Implement payment outbox handler",
+	})
+	if unclassified != 1 {
+		t.Fatalf("unclassified = %d, want 1", unclassified)
+	}
+	got := map[appcontext.ProfileSectionID]int{}
+	for _, sec := range sections {
+		if len(sec.Items) == 0 {
+			t.Fatalf("empty section emitted: %s", sec.ID)
+		}
+		got[sec.ID] = len(sec.Items)
+	}
+	if got[appcontext.SectionArchitecture] != 1 || got[appcontext.SectionDecisions] != 1 ||
+		got[appcontext.SectionConventions] != 1 || got[appcontext.SectionGotchas] != 1 {
+		t.Fatalf("briefing sections = %v", got)
+	}
+	if got[appcontext.SectionTaskContext] != 1 {
+		t.Fatalf("task_context = %d, want 1: %v", got[appcontext.SectionTaskContext], sections)
+	}
+	if _, ok := got[appcontext.SectionTechnologies]; ok {
+		t.Fatal("technologies must not be a packet section")
+	}
+}
+
+func TestClassifyPacketOmitsEmptyAndUsesFiles(t *testing.T) {
+	items := []appcontext.RankedItem{
+		{Statement: "Publisher writes to src/payments/outbox.go after commit."},
+		{Statement: "Unrelated refund SLA is 2 days."},
+	}
+	sections, unclassified := appcontext.ClassifyPacket(items, appcontext.TaskSignals{
+		Task:         "wire publisher",
+		ChangedFiles: []string{"src/payments/outbox.go"},
+	})
+	if unclassified != 1 {
+		t.Fatalf("unclassified = %d, want 1", unclassified)
+	}
+	if len(sections) != 1 || sections[0].ID != appcontext.SectionTaskContext {
+		t.Fatalf("sections = %+v", sections)
+	}
+	if sections[0].Items[0].Statement != items[0].Statement {
+		t.Fatalf("task_context item = %+v", sections[0].Items)
+	}
+}
+
+func TestIsBriefingSection(t *testing.T) {
+	if !appcontext.IsBriefingSection(appcontext.SectionArchitecture) ||
+		appcontext.IsBriefingSection(appcontext.SectionTaskContext) ||
+		appcontext.IsBriefingSection(appcontext.SectionMigrations) {
+		t.Fatal("briefing section mapping")
+	}
+}

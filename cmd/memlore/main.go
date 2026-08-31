@@ -74,6 +74,17 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "context":
+		opts, err := cli.ParseContextArgs(args[2:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "context failed: %v\n", err)
+			return 1
+		}
+		if err := runContext(opts, stdout, logger); err != nil {
+			fmt.Fprintf(os.Stderr, "context failed: %v\n", err)
+			return 1
+		}
+		return 0
 	case "migrate":
 		if err := runMigrate(logger); err != nil {
 			fmt.Fprintf(os.Stderr, "migrate failed: %v\n", err)
@@ -100,6 +111,7 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore serve")
 	fmt.Fprintln(stdout, "  memlore mcp")
 	fmt.Fprintln(stdout, "  memlore profile --repository <key>")
+	fmt.Fprintln(stdout, "  memlore context --task <text> --repository <key>")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -260,6 +272,43 @@ func runProfile(opts cli.ProfileArgs, stdout io.Writer, logger *slog.Logger) err
 		return err
 	}
 	_, err = io.WriteString(stdout, cli.FormatProfile(presenters.ToRepositoryProfile(result)))
+	return err
+}
+
+func runContext(opts cli.ContextArgs, stdout io.Writer, logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
+	graph := graphclient.NewClient(graphURL, nil)
+	list := queries.NewListLoreByScopeHandler(begin)
+	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
+	handler := queries.NewCompileContextHandler(search, list)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:         opts.Task,
+		Query:        opts.Query,
+		Scope:        scope,
+		TokenBudget:  opts.TokenBudget,
+		Branch:       opts.Branch,
+		Ticket:       opts.Ticket,
+		ChangedFiles: opts.ChangedFiles,
+		WorkingFiles: opts.WorkingFiles,
+		AgentID:      opts.AgentID,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(stdout, cli.FormatContext(presenters.ToContextPacket(result)))
 	return err
 }
 

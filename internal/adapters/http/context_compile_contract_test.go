@@ -77,6 +77,98 @@ func TestCompileContextContract(t *testing.T) {
 	}
 }
 
+func TestCompileContextContractSectionsAndV1Body(t *testing.T) {
+	server := testClient(t)
+	create := func(statement string, evidence []map[string]string) {
+		t.Helper()
+		body := map[string]any{
+			"statement": statement,
+			"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		}
+		if evidence != nil {
+			body["evidence"] = evidence
+		}
+		raw, _ := json.Marshal(body)
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/v1/lore-entries", bytes.NewReader(raw))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Memlore-Actor", "alice")
+		server.ServeHTTP(rec, req)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create status = %d body=%s", rec.Code, rec.Body.String())
+		}
+	}
+	create("Hexagonal architecture with ports.", nil)
+	create("Use Kafka instead of RabbitMQ.", []map[string]string{{"type": "adr", "value": "ADR-017"}})
+	create("Payment outbox must persist events atomically.", nil)
+
+	v1Body, _ := json.Marshal(map[string]any{
+		"task":  "Implement payment outbox",
+		"scope": map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+	})
+	v1Rec := httptest.NewRecorder()
+	v1Req := httptest.NewRequest(http.MethodPost, "/v1/context/compile", bytes.NewReader(v1Body))
+	v1Req.Header.Set("Content-Type", "application/json")
+	server.ServeHTTP(v1Rec, v1Req)
+	if v1Rec.Code != http.StatusOK {
+		t.Fatalf("v1 compile status = %d body=%s", v1Rec.Code, v1Rec.Body.String())
+	}
+	var v1 map[string]any
+	if err := json.Unmarshal(v1Rec.Body.Bytes(), &v1); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"task", "query", "scope", "items", "meta", "warnings", "conflicts"} {
+		if _, ok := v1[key]; !ok {
+			t.Fatalf("v1 packet missing %s", key)
+		}
+	}
+
+	richBody, _ := json.Marshal(map[string]any{
+		"task":          "Implement payment outbox",
+		"scope":         map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"changed_files": []string{"src/payments/outbox.go"},
+		"ticket":        "PAY-1842",
+		"agent_id":      "cursor-agent",
+	})
+	richRec := httptest.NewRecorder()
+	richReq := httptest.NewRequest(http.MethodPost, "/v1/context/compile", bytes.NewReader(richBody))
+	richReq.Header.Set("Content-Type", "application/json")
+	server.ServeHTTP(richRec, richReq)
+	if richRec.Code != http.StatusOK {
+		t.Fatalf("rich compile status = %d body=%s", richRec.Code, richRec.Body.String())
+	}
+	var rich map[string]any
+	if err := json.Unmarshal(richRec.Body.Bytes(), &rich); err != nil {
+		t.Fatal(err)
+	}
+	if rich["agent_id"] != "cursor-agent" || rich["ticket"] != "PAY-1842" {
+		t.Fatalf("echo fields = %v", rich)
+	}
+	sections, ok := rich["sections"].([]any)
+	if !ok || len(sections) < 2 {
+		t.Fatalf("sections = %v", rich["sections"])
+	}
+	ids := map[string]bool{}
+	for _, raw := range sections {
+		sec := raw.(map[string]any)
+		ids[sec["id"].(string)] = true
+		items := sec["items"].([]any)
+		if len(items) == 0 {
+			t.Fatalf("empty section %v", sec["id"])
+		}
+	}
+	if !ids["architecture"] || !ids["decisions"] {
+		t.Fatalf("section ids = %v", ids)
+	}
+	if _, ok := ids["conventions"]; ok {
+		t.Fatal("empty conventions must be omitted")
+	}
+	sources, ok := rich["sources"].([]any)
+	if !ok || len(sources) < 1 {
+		t.Fatalf("sources = %v", rich["sources"])
+	}
+}
+
 func TestCompileContextSurfacesConflictsAndOmitsStale(t *testing.T) {
 	server := testClient(t)
 	create := func(statement string) string {

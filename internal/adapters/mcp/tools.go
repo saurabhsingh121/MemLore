@@ -44,7 +44,7 @@ func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Know
 		ListLoreByScope:   list,
 		ListAudits:        queries.NewListAuditsHandler(begin),
 		SearchKnowledge:   search,
-		CompileContext:    queries.NewCompileContextHandler(search),
+		CompileContext:    queries.NewCompileContextHandler(search, list),
 		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
@@ -115,12 +115,17 @@ type knowledgeSearchInput struct {
 }
 
 type getForTaskInput struct {
-	Task        string     `json:"task"`
-	Query       string     `json:"query,omitempty"`
-	Scope       scopeInput `json:"scope"`
-	TokenBudget *int       `json:"token_budget,omitempty"`
-	ActorID     string     `json:"actor_id"`
-	AccessToken string     `json:"access_token,omitempty"`
+	Task         string     `json:"task"`
+	Query        string     `json:"query,omitempty"`
+	Scope        scopeInput `json:"scope"`
+	TokenBudget  *int       `json:"token_budget,omitempty"`
+	Branch       string     `json:"branch,omitempty"`
+	Ticket       string     `json:"ticket,omitempty"`
+	ChangedFiles []string   `json:"changed_files,omitempty"`
+	WorkingFiles []string   `json:"working_files,omitempty"`
+	AgentID      string     `json:"agent_id,omitempty"`
+	ActorID      string     `json:"actor_id"`
+	AccessToken  string     `json:"access_token,omitempty"`
 }
 
 type repoProfileInput struct {
@@ -404,10 +409,15 @@ func (t *Tools) getForTask(ctx context.Context, _ *sdkmcp.CallToolRequest, input
 		}
 	}
 	result, err := t.CompileContext.Handle(ctx, queries.CompileContextQuery{
-		Task:        input.Task,
-		Query:       input.Query,
-		Scope:       scope,
-		TokenBudget: derefTokenBudget(input.TokenBudget),
+		Task:         input.Task,
+		Query:        input.Query,
+		Scope:        scope,
+		TokenBudget:  derefTokenBudget(input.TokenBudget),
+		Branch:       input.Branch,
+		Ticket:       input.Ticket,
+		ChangedFiles: input.ChangedFiles,
+		WorkingFiles: input.WorkingFiles,
+		AgentID:      input.AgentID,
 	})
 	if err != nil {
 		return nil, presenters.ContextPacket{}, mapDomainError(err)

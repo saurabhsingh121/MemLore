@@ -26,7 +26,7 @@ and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018
 | `GET` | `/v1/lore-entries` | List by `scope_kind` + `scope_key` (current only; `include_stale=true` for history) |
 | `GET` | `/v1/lore-entries/{id}/audits` | List audits (404 if entry missing) |
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) |
-| `POST` | `/v1/context/compile` | Compile token-budgeted context for a task (`conflicts` array; items include `trust_band`) |
+| `POST` | `/v1/context/compile` | Compile token-budgeted named context packet for a task (`sections`, `sources`; `items` retained; additive optional files/ticket/agent_id) |
 | `POST` | `/v1/repository-profile` | Compile a repository intelligence profile (named sections; omit empty) |
 | `POST` | `/v1/admin/teams` | Create team (admin) |
 | `POST` | `/v1/admin/projects` | Create project (admin; optional `team_key`) |
@@ -43,7 +43,8 @@ Knowledge search: [`specs/019-semantic-graph-retrieval/contracts/knowledge-searc
 (extends F108). Governance hits are query-relevant; optional `graph_receipt`
 when a graph fact collapses onto lore; scope omitted searches membership-allowed
 lore (local: all).
-Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md).
+Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md)
+(v1 fields). F021 packet: [`specs/021-agent-context-bootstrap/contracts/context-packet.md`](../../specs/021-agent-context-bootstrap/contracts/context-packet.md).
 Repository profile: [`specs/020-repo-intelligence-profile/contracts/repository-profile.md`](../../specs/020-repo-intelligence-profile/contracts/repository-profile.md).
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).

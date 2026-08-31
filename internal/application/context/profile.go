@@ -1,7 +1,9 @@
 package context
 
 import (
+	"path"
 	"strings"
+	"unicode"
 
 	"github.com/memlore/memlore/internal/domain"
 )
@@ -21,6 +23,7 @@ const (
 	SectionArchitecture      ProfileSectionID = "architecture"
 	SectionTechnologies      ProfileSectionID = "technologies"
 	SectionRecentChanges     ProfileSectionID = "recent_changes"
+	SectionTaskContext       ProfileSectionID = "task_context"
 )
 
 // ClassificationOrder is first-match priority (most specific first).
@@ -122,4 +125,110 @@ func containsAny(text string, needles ...string) bool {
 		}
 	}
 	return false
+}
+
+// PacketSectionOrder is display order for get_for_task / compile packet sections.
+var PacketSectionOrder = []ProfileSectionID{
+	SectionArchitecture,
+	SectionDecisions,
+	SectionConventions,
+	SectionTaskContext,
+	SectionGotchas,
+}
+
+// TaskSignals are optional compile inputs used to decide task_context membership.
+type TaskSignals struct {
+	Task         string
+	Query        string
+	Ticket       string
+	ChangedFiles []string
+	WorkingFiles []string
+}
+
+// IsBriefingSection reports whether id is one of the four repository briefing types
+// merged into a task packet (architecture, decisions, conventions, gotchas).
+func IsBriefingSection(id ProfileSectionID) bool {
+	switch id {
+	case SectionArchitecture, SectionDecisions, SectionConventions, SectionGotchas:
+		return true
+	default:
+		return false
+	}
+}
+
+// ItemTaskRelevant reports whether an item matches task/query/ticket/file needles.
+func ItemTaskRelevant(item RankedItem, sig TaskSignals) bool {
+	needles := relevanceNeedles(sig)
+	if len(needles) == 0 {
+		return false
+	}
+	text := strings.ToLower(item.Statement)
+	for _, ref := range item.Evidence {
+		text += " " + strings.ToLower(ref.Value)
+	}
+	return containsAny(text, needles...)
+}
+
+// ClassifyPacket groups budgeted items into packet sections. Briefing classes
+// keep their F020 ids. Leftover task-relevant items go to task_context.
+// Empty sections are omitted. Unmatched non-relevant items increment unclassified.
+func ClassifyPacket(items []RankedItem, sig TaskSignals) (sections []ProfileSection, unclassified int) {
+	buckets := make(map[ProfileSectionID][]RankedItem, len(PacketSectionOrder))
+	for _, item := range items {
+		id, ok := ClassifyItem(item)
+		if ok && IsBriefingSection(id) {
+			buckets[id] = append(buckets[id], item)
+			continue
+		}
+		if ItemTaskRelevant(item, sig) {
+			buckets[SectionTaskContext] = append(buckets[SectionTaskContext], item)
+			continue
+		}
+		unclassified++
+	}
+	for _, id := range PacketSectionOrder {
+		if got := buckets[id]; len(got) > 0 {
+			sections = append(sections, ProfileSection{ID: id, Items: got})
+		}
+	}
+	return sections, unclassified
+}
+
+func relevanceNeedles(sig TaskSignals) []string {
+	seen := make(map[string]struct{})
+	var needles []string
+	add := func(s string) {
+		s = strings.ToLower(strings.TrimSpace(s))
+		if s == "" {
+			return
+		}
+		if _, ok := seen[s]; ok {
+			return
+		}
+		seen[s] = struct{}{}
+		needles = append(needles, s)
+	}
+	addTokens := func(s string) {
+		for _, w := range strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+		}) {
+			if len(w) >= 4 {
+				add(w)
+			}
+		}
+	}
+	addTokens(sig.Task)
+	addTokens(sig.Query)
+	addTokens(sig.Ticket)
+	for _, f := range append(append([]string{}, sig.ChangedFiles...), sig.WorkingFiles...) {
+		f = strings.TrimSpace(f)
+		if f == "" {
+			continue
+		}
+		add(strings.ToLower(f))
+		if base := path.Base(f); base != "" {
+			add(strings.ToLower(base))
+		}
+	}
+	return needles
 }

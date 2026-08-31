@@ -22,7 +22,7 @@ when OIDC is on.
 | `memlore.explain` | Lore fields, chronological audits, and explainable authority evaluation (no NL summary) | implemented |
 | `memlore.search` | Exact scope list (`kind`+`key`); current only unless `include_stale` | implemented |
 | `memlore.knowledge_search` | Dual-plane knowledge search (query-relevant governance + graph; optional `include_stale`; optional `graph_receipt`) | implemented |
-| `memlore.get_for_task` | Compiled context packet for a task (`conflicts` array; never packs stale) | implemented |
+| `memlore.get_for_task` | Compiled named context packet for a task (`sections`, `sources`; never packs stale; additive files/ticket/agent_id) | implemented |
 | `memlore.repo_profile` | Compact repository intelligence profile (named sections; omit empty) | implemented |
 | `memlore.supersede` | Replace while preserving history | implemented |
 | `memlore.invalidate` | Mark invalid without deleting evidence | implemented |
@@ -34,7 +34,11 @@ Default retrieval (`search`, `knowledge_search`, `get_for_task`) omits
 superseded and invalidated lore. `get` and `explain` still return history.
 `get_for_task` surfaces structural conflict groups when current statements in
 the same scope disagree. Compiled items include `trust_band` and explainable
-`authority_factors`. `memlore.explain` adds `trust_band`, `authority_score`,
+`authority_factors`. Named `sections` (`architecture`, `decisions`,
+`conventions`, `task_context`, `gotchas`) are omitted when empty. Optional
+`branch`, `ticket`, `changed_files`, `working_files`, and `agent_id` do not
+fail the request when omitted; `agent_id` is never an authority factor.
+`memlore.explain` adds `trust_band`, `authority_score`,
 `authority_factors`, and `factor_breakdown`.
 
 ## Local attach
@@ -65,6 +69,7 @@ See `specs/002-mcp-lore-tools/contracts/mcp-lore-tools.md` for argument and
 payload schemas. Knowledge search:
 `specs/019-semantic-graph-retrieval/contracts/knowledge-search-v2.md`.
 Context compile: `specs/012-context-compiler/contracts/context-compile.md`.
+F021 packet: `specs/021-agent-context-bootstrap/contracts/context-packet.md`.
 Repository profile: `specs/020-repo-intelligence-profile/contracts/repository-profile.md`.
 Invalidate and supersede:
 `specs/013-supersede-invalidate/contracts/lifecycle-lore.md`.

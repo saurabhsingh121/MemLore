@@ -43,3 +43,18 @@ func TestUsageMentionsProfile(t *testing.T) {
 		t.Fatalf("usage missing profile: %s", buf.String())
 	}
 }
+
+func TestContextWithoutTaskExitsNonZero(t *testing.T) {
+	code := run([]string{"memlore", "context", "--repository", "r1"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(context) = 0, want non-zero")
+	}
+}
+
+func TestUsageMentionsContext(t *testing.T) {
+	var buf bytes.Buffer
+	printUsage(&buf)
+	if !bytes.Contains(buf.Bytes(), []byte("context --task")) {
+		t.Fatalf("usage missing context: %s", buf.String())
+	}
+}

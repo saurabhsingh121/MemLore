@@ -72,6 +72,11 @@ authority evaluate + rank/dedup → token budget.
 - Conflict sides are not dropped; budget may exclude an id from `items` while
   still listing it in `conflicts`.
 
+F021 extends this contract with additive `sections`, `sources`, optional
+inputs (`branch`, `ticket`, `changed_files`, `working_files`, `agent_id`),
+and `meta.unclassified_count`. See
+[`specs/021-agent-context-bootstrap/contracts/context-packet.md`](../../021-agent-context-bootstrap/contracts/context-packet.md).
+
 See also: [`specs/014-conflict-filtering/contracts/conflict-detection.md`](../../014-conflict-filtering/contracts/conflict-detection.md)
 and [`specs/016-authority-factors/contracts/authority-evaluation.md`](../../016-authority-factors/contracts/authority-evaluation.md).
 
