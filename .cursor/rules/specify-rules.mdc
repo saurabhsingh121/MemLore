@@ -12,7 +12,7 @@ alwaysApply: true
 - Adapters: REST + MCP (`memlore.*`) + CLI (`memlore`) — Go
 - Tooling: go test/vet, goose, sqlc, Docker Compose; uv/ruff/mypy in graph-service
 - Constitution: `.specify/memory/constitution.md` (v1.1.0)
-- Brand: MemLore (not Tavryn) per ADR 0004
+- Brand: MemLore per ADR 0004
 
 ## Active feature plan
 

@@ -127,8 +127,7 @@ Unless an accepted ADR changes it, MemLore uses:
 - Spec Kit for specification-driven development
 
 Canonical public brand for this repository is **MemLore**. Package, CLI, and
-MCP namespaces use `memlore`. Alternative brand names (e.g. Tavryn) are
-deferred unless an ADR accepts them.
+MCP namespaces use `memlore`.
 
 Preferred package layout:
 

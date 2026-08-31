@@ -59,3 +59,7 @@ bin/
 *.test
 *.out
 vendor/
+
+# Local ChatGPT brand export dumps (curated copies live in docs/brand/)
+memlore-*.zip
+memlore-individual-brand-assets/

@@ -2,39 +2,37 @@
 
 - **Status**: Accepted
 - **Date**: 2026-08-25
+- **Amended**: 2026-09-01 — removed alternate-brand references from the tree
 
 ## Context
 
-Source materials included both **MemLore** (agent/product brief and repository
-intent) and a recommended alternate brand **Tavryn**
-(`docs/reference/tavryn_brand_cli_decision_guide.docx`). Package, CLI, MCP
-namespace, and docs must share one canonical name.
+Package, CLI, MCP namespace, and documentation must share one canonical public
+name so agents and humans do not encounter conflicting product identity.
 
 ## Decision
 
 Use **MemLore** as the canonical project brand:
 
 - Repository / product: MemLore
-- Python package / CLI: `memlore`
+- Package / CLI: `memlore`
 - MCP namespace: `memlore.*`
 - Domain metaphor “lore” remains valid vocabulary (lore entry, team lore, …)
 
-Tavryn branding is **deferred** and not used in code or public contracts unless
-a future ADR supersedes this decision.
+No alternate product brand is used in code, contracts, or public docs.
 
 ## Alternatives Considered
 
-- **Tavryn now**: stronger brand guide rationale, but conflicts with the
-  established MemLore agent brief and current repository direction.
 - **Dual branding**: creates irreversible naming drift across CLI/MCP/docs.
+- **Rename later without an ADR**: high coordination cost across adapters and
+  documentation; rejected in favor of an explicit brand decision.
 
 ## Consequences
 
-- All bootstrap artifacts use MemLore.
-- Brand guide retained under `docs/reference/` for historical context only.
+- All bootstrap artifacts and brand assets use MemLore.
+- Brand assets live under `docs/brand/`.
 - Renaming later requires a superseding ADR and coordinated contract changes.
 
 ## References
 
 - `.specify/memory/constitution.md` (Architecture & Technology Baseline)
-- `docs/reference/tavryn_brand_cli_decision_guide.docx`
+- `docs/brand/README.md`

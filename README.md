@@ -1,4 +1,18 @@
+<p align="center">
+  <img src="docs/brand/memlore-hero-scholar.png" alt="MemLore — Your code tells agents what. MemLore remembers why — and brings the receipts." width="960" />
+</p>
+
 # MemLore
+
+<p align="center">
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" /></a>
+  <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" /></a>
+  <a href="https://neo4j.com/"><img src="https://img.shields.io/badge/Neo4j-008CC1?style=for-the-badge&logo=neo4j&logoColor=white" alt="Neo4j" /></a>
+  <a href="https://github.com/getzep/graphiti"><img src="https://img.shields.io/badge/Graphiti-6B4C9A?style=for-the-badge" alt="Graphiti" /></a>
+  <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-7C5CDB?style=for-the-badge" alt="MCP" /></a>
+  <img src="https://img.shields.io/badge/Open%20Source-1F2937?style=for-the-badge" alt="Open Source" />
+  <a href="#license"><img src="https://img.shields.io/badge/License-Apache%202.0-1F2937?style=for-the-badge" alt="License: Apache 2.0" /></a>
+</p>
 
 Shared engineering memory for humans and AI coding agents.
 
@@ -73,4 +87,5 @@ OIDC/RBAC). Knowledge plane is a thin Python **graph-service** (Graphiti/Neo4j).
 
 ## License
 
-Apache-2.0 (planned; confirm before public release).
+Licensed under the [Apache License, Version 2.0](LICENSE).
+See [ADR 0006](docs/adr/0006-apache-2-0-license.md).
