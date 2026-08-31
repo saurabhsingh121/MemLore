@@ -130,6 +130,7 @@ type UnitOfWork struct {
 	ingest    *IngestRepository
 	prIngest  *PRIngestRepository
 	adrIngest *ADRIngestRepository
+	review    *ReviewDecisionRepository
 }
 
 func NewUnitOfWork() *UnitOfWork {
@@ -140,6 +141,7 @@ func NewUnitOfWork() *UnitOfWork {
 		ingest:    NewIngestRepository(),
 		prIngest:  NewPRIngestRepository(),
 		adrIngest: NewADRIngestRepository(),
+		review:    NewReviewDecisionRepository(),
 	}
 }
 
@@ -154,6 +156,8 @@ func (u *UnitOfWork) Ingest() ports.IngestRepository { return u.ingest }
 func (u *UnitOfWork) PRIngest() ports.PRIngestRepository { return u.prIngest }
 
 func (u *UnitOfWork) ADRIngest() ports.ADRIngestRepository { return u.adrIngest }
+
+func (u *UnitOfWork) ReviewDecisions() ports.ReviewDecisionRepository { return u.review }
 
 func (u *UnitOfWork) Commit(context.Context) error   { return nil }
 func (u *UnitOfWork) Rollback(context.Context) error { return nil }

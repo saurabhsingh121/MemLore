@@ -90,3 +90,51 @@ func TestAuditRecordMappingRoundTrip(t *testing.T) {
 		t.Fatalf("audit = %+v", got)
 	}
 }
+
+func TestReviewDecisionMappingRoundTrip(t *testing.T) {
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	if err != nil {
+		t.Fatalf("NewScope: %v", err)
+	}
+	succ := "successor-id"
+	decision := domain.ReviewDecision{
+		ID:                uuid.NewString(),
+		Scope:             scope,
+		EvidenceType:      domain.EvidenceTypeCommit,
+		EvidenceValue:     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		StatementChecksum: domain.StatementChecksum("Use the outbox."),
+		LoreEntryID:       uuid.NewString(),
+		SuccessorLoreID:   &succ,
+		Status:            domain.ReviewStatusAccepted,
+		ActorID:           "alice",
+		DecidedAt:         now,
+	}
+	insert := reviewDecisionToInsertParams(decision)
+	row := sqlc.LoreReviewDecision{
+		ID:                insert.ID,
+		ScopeKind:         insert.ScopeKind,
+		ScopeKey:          insert.ScopeKey,
+		EvidenceType:      insert.EvidenceType,
+		EvidenceValue:     insert.EvidenceValue,
+		StatementChecksum: insert.StatementChecksum,
+		LoreEntryID:       insert.LoreEntryID,
+		SuccessorLoreID:   insert.SuccessorLoreID,
+		Status:            insert.Status,
+		ActorID:           insert.ActorID,
+		DecidedAt:         insert.DecidedAt,
+	}
+	got, err := reviewDecisionFromRow(row)
+	if err != nil {
+		t.Fatalf("reviewDecisionFromRow: %v", err)
+	}
+	if got.Status != domain.ReviewStatusAccepted || got.ActorID != "alice" {
+		t.Fatalf("decision = %+v", got)
+	}
+	if got.SuccessorLoreID == nil || *got.SuccessorLoreID != succ {
+		t.Fatalf("successor = %v", got.SuccessorLoreID)
+	}
+	if got.EvidenceType != domain.EvidenceTypeCommit || got.StatementChecksum != decision.StatementChecksum {
+		t.Fatalf("identity = %+v", got)
+	}
+}

@@ -561,6 +561,50 @@ func TestCompileContextIngestedADROutranksGitAndPRObservation(t *testing.T) {
 	}
 }
 
+func TestCompileContextAcceptedReviewOutranksUnverifiedObservation(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	commitEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeCommit, Value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	adrEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeADR, Value: "0001-use-postgres"}}
+	verified := "alice"
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
+				{ID: "obs", Statement: "Use the outbox because dual-writes race.", Scope: scope, Origin: domain.KnowledgeOriginRepositoryObservation, VerificationStatus: domain.VerificationUnverified, Evidence: commitEv, CreatedAt: now, UpdatedAt: now},
+				{ID: "accepted", Statement: "Use the outbox because dual-writes race.", Scope: scope, Origin: domain.KnowledgeOriginHumanVerified, VerificationStatus: domain.VerificationVerified, Evidence: commitEv, VerifiedBy: &verified, VerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
+				{ID: "adr", Statement: "Use PostgreSQL as the system of record.", Scope: scope, Origin: domain.KnowledgeOriginArchitectureDecision, VerificationStatus: domain.VerificationVerified, Evidence: adrEv, VerifiedBy: &verified, VerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
+			}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "review architecture postgres outbox",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) < 3 {
+		t.Fatalf("items = %+v", result.Items)
+	}
+	if result.Items[0].ID != "adr" {
+		t.Fatalf("expected ingested ADR first, got %+v", result.Items)
+	}
+	acceptedRank, obsRank := -1, -1
+	for i, item := range result.Items {
+		if item.ID == "accepted" {
+			acceptedRank = i
+		}
+		if item.ID == "obs" {
+			obsRank = i
+		}
+	}
+	if acceptedRank < 0 || obsRank < 0 || acceptedRank >= obsRank {
+		t.Fatalf("accepted should outrank unverified observation, items=%+v", result.Items)
+	}
+}
+
 func stringsRepeat(ch byte, n int) string {
 	b := make([]byte, n)
 	for i := range b {

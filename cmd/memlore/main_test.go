@@ -71,6 +71,9 @@ func TestUsageMentionsIngest(t *testing.T) {
 	if !bytes.Contains(buf.Bytes(), []byte("ingest adr --repository")) {
 		t.Fatalf("usage missing ingest adr: %s", buf.String())
 	}
+	if !bytes.Contains(buf.Bytes(), []byte("review list --repository")) {
+		t.Fatalf("usage missing review list: %s", buf.String())
+	}
 }
 
 func TestIngestPRWithoutRepositoryExitsNonZero(t *testing.T) {
@@ -91,5 +94,16 @@ func TestIngestADRWithoutRepositoryExitsNonZero(t *testing.T) {
 	code := run([]string{"memlore", "ingest", "adr"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if code == 0 {
 		t.Fatal("run(ingest adr) = 0, want non-zero")
+	}
+}
+
+func TestReviewWithoutIDExitsNonZero(t *testing.T) {
+	code := run([]string{"memlore", "review", "accept"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(review accept) = 0, want non-zero")
+	}
+	code = run([]string{"memlore", "review", "list"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(review list) = 0, want non-zero")
 	}
 }

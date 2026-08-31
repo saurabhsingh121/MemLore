@@ -224,6 +224,86 @@ func NewArchitectureDecisionLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
 	}, nil
 }
 
+// NewHumanVerifiedLoreEntry creates verified human_verified lore.
+// F035 Accept-as-stated MUST use this path; NewLoreEntry remains human-authored only.
+func NewHumanVerifiedLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
+	return newVerifiedReviewSuccessor(in, KnowledgeOriginHumanVerified, "human verified origin must be human_verified")
+}
+
+// NewVerifiedHumanAuthoredLoreEntry creates verified human_authored lore.
+// F035 Edit-then-Accept MUST use this path so evidence is kept and the entry is born verified.
+func NewVerifiedHumanAuthoredLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
+	return newVerifiedReviewSuccessor(in, KnowledgeOriginHumanAuthored, "verified human authored origin must be human_authored")
+}
+
+func newVerifiedReviewSuccessor(in NewLoreEntryInput, want KnowledgeOrigin, originErr string) (LoreEntry, error) {
+	statement := strings.TrimSpace(in.Statement)
+	createdBy := strings.TrimSpace(in.CreatedBy)
+
+	if statement == "" {
+		return LoreEntry{}, validationError("statement must be non-empty")
+	}
+	if len(statement) > MaxStatementLength {
+		return LoreEntry{}, validationError(
+			fmt.Sprintf("statement must be at most %d characters", MaxStatementLength),
+		)
+	}
+	if createdBy == "" {
+		return LoreEntry{}, validationError("created_by must be non-empty")
+	}
+	origin := in.Origin
+	if origin == "" {
+		origin = want
+	}
+	if origin != want {
+		return LoreEntry{}, validationError(originErr)
+	}
+
+	evidence := in.Evidence
+	if evidence == nil {
+		evidence = []EvidenceReference{}
+	}
+	hasEvidence := false
+	for _, ref := range evidence {
+		if strings.TrimSpace(ref.Value) != "" {
+			hasEvidence = true
+			break
+		}
+	}
+	if !hasEvidence {
+		if want == KnowledgeOriginHumanVerified {
+			return LoreEntry{}, validationError("human verified lore requires evidence")
+		}
+		return LoreEntry{}, validationError("verified human authored lore requires evidence")
+	}
+
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		id = uuid.NewString()
+	}
+
+	now := in.Now
+	if now.IsZero() {
+		now = time.Now().UTC()
+	} else {
+		now = now.UTC()
+	}
+
+	return LoreEntry{
+		ID:                 id,
+		Statement:          statement,
+		Scope:              in.Scope,
+		Origin:             origin,
+		VerificationStatus: VerificationVerified,
+		Evidence:           evidence,
+		CreatedBy:          createdBy,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+		VerifiedBy:         &createdBy,
+		VerifiedAt:         &now,
+	}, nil
+}
+
 // IsSuperseded reports whether the entry has been replaced by a successor.
 func IsSuperseded(entry LoreEntry) bool {
 	return entry.SupersededByID != nil && strings.TrimSpace(*entry.SupersededByID) != ""
