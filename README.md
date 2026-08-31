@@ -79,7 +79,8 @@ See [docs/api/mcp.md](docs/api/mcp.md).
 ./bin/memlore context --task <text> --repository <key>  # task context packet
 ./bin/memlore ingest git --repository <key> --path <dir> [--actor <id>]
 ./bin/memlore ingest pr --repository <key> [--pr <n>] [--actor <id>]
-./bin/memlore ingest status --repository <key> [--kind git|pr]
+./bin/memlore ingest adr --repository <key> --path <dir> [--adr-dir <rel>] [--actor <id>]
+./bin/memlore ingest status --repository <key> [--kind git|pr|adr]
 ./bin/memlore migrate   # goose (embedded)
 ./bin/memlore worker    # outbox → graph-service
 ```

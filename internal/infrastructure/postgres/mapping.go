@@ -3,6 +3,7 @@ package postgres
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -416,5 +417,117 @@ func processedPRFromRow(row sqlc.PrIngestPr) domain.ProcessedPR {
 		Skipped:     row.Skipped,
 		SkipReason:  stringFromText(row.SkipReason),
 		ProcessedAt: timeFromTimestamptz(row.ProcessedAt),
+	}
+}
+
+func joinExtraDirs(dirs []string) string {
+	if len(dirs) == 0 {
+		return ""
+	}
+	return strings.Join(dirs, "\n")
+}
+
+func splitExtraDirs(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, "\n")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+func adrIngestRunToInsertParams(run domain.ADRIngestRun) sqlc.InsertADRIngestRunParams {
+	return sqlc.InsertADRIngestRunParams{
+		ID:             run.ID,
+		ScopeKind:      string(run.Scope.Kind),
+		ScopeKey:       run.Scope.Key,
+		ActorID:        run.ActorID,
+		LocalPath:      run.LocalPath,
+		ExtraDirs:      joinExtraDirs(run.ExtraDirs),
+		Status:         string(run.Status),
+		FilesSeen:      int32(run.FilesSeen),
+		FilesSkipped:   int32(run.FilesSkipped),
+		LoreStored:     int32(run.LoreStored),
+		LoreSuperseded: int32(run.LoreSuperseded),
+		ErrorSummary:   textFromString(run.ErrorSummary),
+		StartedAt:      timestamptzFromTime(run.StartedAt),
+		FinishedAt:     timestamptzFromPtr(run.FinishedAt),
+	}
+}
+
+func adrIngestRunToUpdateParams(run domain.ADRIngestRun) sqlc.UpdateADRIngestRunParams {
+	return sqlc.UpdateADRIngestRunParams{
+		ID:             run.ID,
+		Status:         string(run.Status),
+		FilesSeen:      int32(run.FilesSeen),
+		FilesSkipped:   int32(run.FilesSkipped),
+		LoreStored:     int32(run.LoreStored),
+		LoreSuperseded: int32(run.LoreSuperseded),
+		ErrorSummary:   textFromString(run.ErrorSummary),
+		FinishedAt:     timestamptzFromPtr(run.FinishedAt),
+	}
+}
+
+func adrIngestRunFromRow(row sqlc.AdrIngestRun) (domain.ADRIngestRun, error) {
+	kind, err := domain.ParseScopeKind(row.ScopeKind)
+	if err != nil {
+		return domain.ADRIngestRun{}, err
+	}
+	return domain.ADRIngestRun{
+		ID:             row.ID,
+		Scope:          domain.Scope{Kind: kind, Key: row.ScopeKey},
+		ActorID:        row.ActorID,
+		LocalPath:      row.LocalPath,
+		ExtraDirs:      splitExtraDirs(row.ExtraDirs),
+		Status:         domain.IngestRunStatus(row.Status),
+		FilesSeen:      int(row.FilesSeen),
+		FilesSkipped:   int(row.FilesSkipped),
+		LoreStored:     int(row.LoreStored),
+		LoreSuperseded: int(row.LoreSuperseded),
+		ErrorSummary:   stringFromText(row.ErrorSummary),
+		StartedAt:      timeFromTimestamptz(row.StartedAt),
+		FinishedAt:     ptrFromTimestamptz(row.FinishedAt),
+	}, nil
+}
+
+func adrIngestCursorFromRow(row sqlc.AdrIngestCursor) domain.ADRIngestCursor {
+	return domain.ADRIngestCursor{
+		Scope:        domain.Scope{Kind: domain.ScopeKind(row.ScopeKind), Key: row.ScopeKey},
+		LastPath:     stringFromText(row.LastPath),
+		LastChecksum: stringFromText(row.LastChecksum),
+		UpdatedAt:    timeFromTimestamptz(row.UpdatedAt),
+	}
+}
+
+func processedADRToInsertParams(row domain.ProcessedADR) sqlc.InsertADRIngestFileParams {
+	return sqlc.InsertADRIngestFileParams{
+		ScopeKind:    string(row.Scope.Kind),
+		ScopeKey:     row.Scope.Key,
+		RelativePath: row.RelativePath,
+		Checksum:     row.Checksum,
+		AdrID:        textFromString(row.ADRID),
+		LoreEntryID:  textFromString(row.LoreEntryID),
+		Skipped:      row.Skipped,
+		SkipReason:   textFromString(row.SkipReason),
+		ProcessedAt:  timestamptzFromTime(row.ProcessedAt),
+	}
+}
+
+func processedADRFromRow(row sqlc.AdrIngestFile) domain.ProcessedADR {
+	return domain.ProcessedADR{
+		Scope:        domain.Scope{Kind: domain.ScopeKind(row.ScopeKind), Key: row.ScopeKey},
+		RelativePath: row.RelativePath,
+		Checksum:     row.Checksum,
+		ADRID:        stringFromText(row.AdrID),
+		LoreEntryID:  stringFromText(row.LoreEntryID),
+		Skipped:      row.Skipped,
+		SkipReason:   stringFromText(row.SkipReason),
+		ProcessedAt:  timeFromTimestamptz(row.ProcessedAt),
 	}
 }

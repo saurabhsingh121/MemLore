@@ -15,6 +15,7 @@ import (
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
 	"github.com/memlore/memlore/internal/domain"
+	"github.com/memlore/memlore/internal/infrastructure/fsadr"
 	"github.com/memlore/memlore/internal/infrastructure/gitcli"
 	"github.com/memlore/memlore/internal/infrastructure/githubhttp"
 )
@@ -34,10 +35,13 @@ type Handlers struct {
 	ExplainLore       *queries.ExplainLoreHandler
 	IngestGit         *commands.IngestGitHandler
 	IngestPR          *commands.IngestPullRequestsHandler
+	IngestADR         *commands.IngestADRsHandler
 	ListIngestRuns    *queries.ListIngestRunsHandler
 	GetIngestRun      *queries.GetIngestRunHandler
 	ListPRIngestRuns  *queries.ListPRIngestRunsHandler
 	GetPRIngestRun    *queries.GetPRIngestRunHandler
+	ListADRIngestRuns *queries.ListADRIngestRunsHandler
+	GetADRIngestRun   *queries.GetADRIngestRunHandler
 	ListIngestCands   *queries.ListIngestCandidatesHandler
 	Auth              *appauth.Service
 	Authz             *authz.Gate
@@ -63,10 +67,13 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
 		IngestGit:         commands.NewIngestGitHandler(begin, clock, gitcli.NewReader()),
 		IngestPR:          commands.NewIngestPullRequestsHandler(begin, clock, githubhttp.NewReader("", githubhttp.TokenFromEnv(), nil)),
+		IngestADR:         commands.NewIngestADRsHandler(begin, clock, fsadr.NewReader()),
 		ListIngestRuns:    queries.NewListIngestRunsHandler(begin),
 		GetIngestRun:      queries.NewGetIngestRunHandler(begin),
 		ListPRIngestRuns:  queries.NewListPRIngestRunsHandler(begin),
 		GetPRIngestRun:    queries.NewGetPRIngestRunHandler(begin),
+		ListADRIngestRuns: queries.NewListADRIngestRunsHandler(begin),
+		GetADRIngestRun:   queries.NewGetADRIngestRunHandler(begin),
 		ListIngestCands:   queries.NewListIngestCandidatesHandler(begin),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
 		Version:           version,
@@ -92,10 +99,13 @@ func (h *Handlers) Router() http.Handler {
 		r.Post("/repository-profile", h.repositoryProfile)
 		r.Post("/ingest/git", h.ingestGit)
 		r.Post("/ingest/pr", h.ingestPR)
+		r.Post("/ingest/adr", h.ingestADR)
 		r.Get("/ingest/runs", h.listIngestRuns)
 		r.Get("/ingest/runs/{id}", h.getIngestRun)
 		r.Get("/ingest/pr-runs", h.listPRIngestRuns)
 		r.Get("/ingest/pr-runs/{id}", h.getPRIngestRun)
+		r.Get("/ingest/adr-runs", h.listADRIngestRuns)
+		r.Get("/ingest/adr-runs/{id}", h.getADRIngestRun)
 		r.Get("/ingest/candidates", h.listIngestCandidates)
 
 		r.Post("/admin/teams", h.adminCreateTeam)

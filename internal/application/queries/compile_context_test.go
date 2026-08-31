@@ -525,6 +525,42 @@ func TestCompileContextVerifiedArchitectureOutranksPRObservation(t *testing.T) {
 	}
 }
 
+func TestCompileContextIngestedADROutranksGitAndPRObservation(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	adrEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeADR, Value: "0001-use-postgres"}}
+	gitEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeCommit, Value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	prEv := []domain.EvidenceReference{{Type: domain.EvidenceTypePR, Value: "acme/payments#1842"}}
+	verified := "alice"
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
+				{ID: "git", Statement: "Use the outbox because dual-writes race.", Scope: scope, Origin: domain.KnowledgeOriginRepositoryObservation, VerificationStatus: domain.VerificationUnverified, Evidence: gitEv, CreatedAt: now, UpdatedAt: now},
+				{ID: "pr", Statement: "Use the outbox because dual-writes race.", Scope: scope, Origin: domain.KnowledgeOriginRepositoryObservation, VerificationStatus: domain.VerificationUnverified, Evidence: prEv, CreatedAt: now, UpdatedAt: now},
+				{ID: "adr", Statement: "Use PostgreSQL as the system of record.", Scope: scope, Origin: domain.KnowledgeOriginArchitectureDecision, VerificationStatus: domain.VerificationVerified, Evidence: adrEv, VerifiedBy: &verified, VerifiedAt: &now, CreatedAt: now, UpdatedAt: now},
+			}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "review architecture postgres outbox",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) < 3 {
+		t.Fatalf("items = %+v", result.Items)
+	}
+	if result.Items[0].ID != "adr" {
+		t.Fatalf("expected ingested ADR first, got %+v", result.Items)
+	}
+	if result.Items[0].AuthorityFactors.Origin != string(domain.KnowledgeOriginArchitectureDecision) {
+		t.Fatalf("adr origin = %+v", result.Items[0].AuthorityFactors)
+	}
+}
+
 func stringsRepeat(ch byte, n int) string {
 	b := make([]byte, n)
 	for i := range b {

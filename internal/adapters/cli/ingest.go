@@ -59,7 +59,7 @@ func ParseIngestStatusArgs(args []string) (IngestStatusArgs, error) {
 	fs := flag.NewFlagSet("ingest status", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	repo := fs.String("repository", "", "repository scope key")
-	kind := fs.String("kind", "git", "ingest kind: git or pr")
+	kind := fs.String("kind", "git", "ingest kind: git, pr, or adr")
 	if err := fs.Parse(args); err != nil {
 		return IngestStatusArgs{}, err
 	}
@@ -71,8 +71,8 @@ func ParseIngestStatusArgs(args []string) (IngestStatusArgs, error) {
 	if k == "" {
 		k = "git"
 	}
-	if k != "git" && k != "pr" {
-		return IngestStatusArgs{}, fmt.Errorf("validation_error: --kind must be git or pr")
+	if k != "git" && k != "pr" && k != "adr" {
+		return IngestStatusArgs{}, fmt.Errorf("validation_error: --kind must be git, pr, or adr")
 	}
 	return IngestStatusArgs{Repository: key, Kind: k}, nil
 }
@@ -96,6 +96,69 @@ func ParseIngestPRArgs(args []string) (IngestPRArgs, error) {
 		return IngestPRArgs{}, fmt.Errorf("validation_error: --pr must be non-negative")
 	}
 	return IngestPRArgs{Repository: key, PR: *pr, MaxPRs: *maxPRs, Actor: strings.TrimSpace(*actor)}, nil
+}
+
+// IngestADRArgs is parsed input for `memlore ingest adr`.
+type IngestADRArgs struct {
+	Repository string
+	Path       string
+	ADRDirs    []string
+	Actor      string
+}
+
+type stringList []string
+
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+
+func (s *stringList) Set(value string) error {
+	v := strings.TrimSpace(value)
+	if v != "" {
+		*s = append(*s, v)
+	}
+	return nil
+}
+
+// ParseIngestADRArgs parses flags for ingest adr.
+func ParseIngestADRArgs(args []string) (IngestADRArgs, error) {
+	fs := flag.NewFlagSet("ingest adr", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	repo := fs.String("repository", "", "repository scope key")
+	path := fs.String("path", "", "local working-copy directory")
+	actor := fs.String("actor", "", "acting subject (or MEMLORE_ACTOR)")
+	var extras stringList
+	fs.Var(&extras, "adr-dir", "extra ADR directory relative to --path (repeatable)")
+	if err := fs.Parse(args); err != nil {
+		return IngestADRArgs{}, err
+	}
+	key := strings.TrimSpace(*repo)
+	dir := strings.TrimSpace(*path)
+	if key == "" {
+		return IngestADRArgs{}, fmt.Errorf("validation_error: --repository is required")
+	}
+	if dir == "" {
+		return IngestADRArgs{}, fmt.Errorf("validation_error: --path is required")
+	}
+	return IngestADRArgs{Repository: key, Path: dir, ADRDirs: []string(extras), Actor: strings.TrimSpace(*actor)}, nil
+}
+
+// FormatADRIngestStatus renders a human-readable latest ADR-run summary.
+func FormatADRIngestStatus(repository string, run *domain.ADRIngestRun) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Repository: %s\n", repository)
+	if run == nil {
+		b.WriteString("Latest ADR run: (none)\n")
+		return b.String()
+	}
+	fmt.Fprintf(&b, "Latest ADR run: %s\n", run.Status)
+	fmt.Fprintf(&b, "  id: %s\n", run.ID)
+	fmt.Fprintf(&b, "  files seen: %d\n", run.FilesSeen)
+	fmt.Fprintf(&b, "  skipped: %d\n", run.FilesSkipped)
+	fmt.Fprintf(&b, "  lore stored: %d\n", run.LoreStored)
+	fmt.Fprintf(&b, "  superseded: %d\n", run.LoreSuperseded)
+	if run.ErrorSummary != "" {
+		fmt.Fprintf(&b, "  error: %s\n", run.ErrorSummary)
+	}
+	return b.String()
 }
 
 // FormatIngestStatus renders a human-readable latest-run summary.

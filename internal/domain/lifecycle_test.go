@@ -194,3 +194,49 @@ func TestApplySupersessionRejectsBlankActorAndStatement(t *testing.T) {
 		t.Fatal("expected empty statement error")
 	}
 }
+
+func TestApplySupersessionWithSuccessorUsesPrebuiltArchitectureDecision(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	predEv, _ := domain.NewEvidenceReference(domain.EvidenceTypeADR, "0003-old")
+	predecessor, err := domain.NewArchitectureDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Old decision.", Scope: scope, CreatedBy: "alice", Evidence: []domain.EvidenceReference{predEv}, ID: "pred", Now: now,
+	})
+	if err != nil {
+		t.Fatalf("pred: %v", err)
+	}
+	succEv, _ := domain.NewEvidenceReference(domain.EvidenceTypeADR, "0007-new")
+	successor, err := domain.NewArchitectureDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "New decision.", Scope: scope, CreatedBy: "alice", Evidence: []domain.EvidenceReference{succEv}, ID: "succ", Now: now,
+	})
+	if err != nil {
+		t.Fatalf("succ: %v", err)
+	}
+	result, err := domain.ApplySupersessionWithSuccessor(predecessor, successor, "alice", now)
+	if err != nil {
+		t.Fatalf("ApplySupersessionWithSuccessor: %v", err)
+	}
+	if result.Successor.Origin != domain.KnowledgeOriginArchitectureDecision {
+		t.Fatalf("origin = %q", result.Successor.Origin)
+	}
+	if result.Successor.VerificationStatus != domain.VerificationVerified {
+		t.Fatalf("status = %q", result.Successor.VerificationStatus)
+	}
+	if result.Predecessor.SupersededByID == nil || *result.Predecessor.SupersededByID != "succ" {
+		t.Fatal("predecessor must point at successor")
+	}
+	if result.SupersedeAudit.Action != domain.AuditActionSupersede {
+		t.Fatalf("audit = %+v", result.SupersedeAudit)
+	}
+}
+
+func TestApplySupersessionStillCreatesHumanAuthoredSuccessor(t *testing.T) {
+	predecessor := testEntry(t, "entry-1")
+	result, err := domain.ApplySupersession(predecessor, "Human replacement", "bob", nil, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Successor.Origin != domain.KnowledgeOriginHumanAuthored {
+		t.Fatalf("human supersede origin = %q", result.Successor.Origin)
+	}
+}

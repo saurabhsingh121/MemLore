@@ -108,3 +108,56 @@ func ApplySupersession(
 		CreateAudit:    createAudit,
 	}, nil
 }
+
+// ApplySupersessionWithSuccessor links a pre-built successor onto a current predecessor.
+// Used by ADR ingest so successors can be architecture_decision lore (not NewLoreEntry).
+func ApplySupersessionWithSuccessor(predecessor, successor LoreEntry, actorID string, now time.Time) (SupersessionResult, error) {
+	actor := strings.TrimSpace(actorID)
+	if actor == "" {
+		return SupersessionResult{}, validationError("actor must be non-empty")
+	}
+	if strings.TrimSpace(successor.ID) == "" {
+		return SupersessionResult{}, validationError("successor id must be non-empty")
+	}
+	if IsSuperseded(predecessor) {
+		return SupersessionResult{}, validationError("cannot supersede a superseded lore entry")
+	}
+	if predecessor.VerificationStatus == VerificationInvalidated {
+		return SupersessionResult{}, validationError("cannot supersede an invalidated lore entry")
+	}
+	if predecessor.Scope.Kind != successor.Scope.Kind || predecessor.Scope.Key != successor.Scope.Key {
+		return SupersessionResult{}, validationError("successor scope must match predecessor")
+	}
+
+	now = EnsureUTC(now)
+	successorID := successor.ID
+	predecessor.SupersededByID = &successorID
+	predecessor.UpdatedAt = now
+	successor.UpdatedAt = now
+
+	supersedeAudit, err := NewAuditRecord(NewAuditRecordInput{
+		TargetID:  predecessor.ID,
+		Action:    AuditActionSupersede,
+		ActorID:   actor,
+		CreatedAt: now,
+	})
+	if err != nil {
+		return SupersessionResult{}, err
+	}
+	createAudit, err := NewAuditRecord(NewAuditRecordInput{
+		TargetID:  successor.ID,
+		Action:    AuditActionCreate,
+		ActorID:   actor,
+		CreatedAt: now,
+	})
+	if err != nil {
+		return SupersessionResult{}, err
+	}
+
+	return SupersessionResult{
+		Predecessor:    predecessor,
+		Successor:      successor,
+		SupersedeAudit: supersedeAudit,
+		CreateAudit:    createAudit,
+	}, nil
+}

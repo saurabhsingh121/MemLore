@@ -124,20 +124,22 @@ func (r *AuditRepository) ListByTarget(_ context.Context, targetID string) ([]do
 
 // UnitOfWork shares repositories across HTTP requests in contract tests.
 type UnitOfWork struct {
-	lore     *LoreRepository
-	audits   *AuditRepository
-	outbox   *OutboxRepository
-	ingest   *IngestRepository
-	prIngest *PRIngestRepository
+	lore      *LoreRepository
+	audits    *AuditRepository
+	outbox    *OutboxRepository
+	ingest    *IngestRepository
+	prIngest  *PRIngestRepository
+	adrIngest *ADRIngestRepository
 }
 
 func NewUnitOfWork() *UnitOfWork {
 	return &UnitOfWork{
-		lore:     NewLoreRepository(),
-		audits:   NewAuditRepository(),
-		outbox:   NewOutboxRepository(),
-		ingest:   NewIngestRepository(),
-		prIngest: NewPRIngestRepository(),
+		lore:      NewLoreRepository(),
+		audits:    NewAuditRepository(),
+		outbox:    NewOutboxRepository(),
+		ingest:    NewIngestRepository(),
+		prIngest:  NewPRIngestRepository(),
+		adrIngest: NewADRIngestRepository(),
 	}
 }
 
@@ -150,6 +152,8 @@ func (u *UnitOfWork) Outbox() ports.OutboxRepository { return u.outbox }
 func (u *UnitOfWork) Ingest() ports.IngestRepository { return u.ingest }
 
 func (u *UnitOfWork) PRIngest() ports.PRIngestRepository { return u.prIngest }
+
+func (u *UnitOfWork) ADRIngest() ports.ADRIngestRepository { return u.adrIngest }
 
 func (u *UnitOfWork) Commit(context.Context) error   { return nil }
 func (u *UnitOfWork) Rollback(context.Context) error { return nil }

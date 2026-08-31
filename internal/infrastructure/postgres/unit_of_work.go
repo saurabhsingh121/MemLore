@@ -11,13 +11,14 @@ import (
 
 // UnitOfWork runs lore and audit repositories in a single pgx transaction.
 type UnitOfWork struct {
-	tx       pgx.Tx
-	queries  *sqlc.Queries
-	lore     ports.LoreRepository
-	audits   ports.AuditRepository
-	outbox   ports.OutboxRepository
-	ingest   ports.IngestRepository
-	prIngest ports.PRIngestRepository
+	tx        pgx.Tx
+	queries   *sqlc.Queries
+	lore      ports.LoreRepository
+	audits    ports.AuditRepository
+	outbox    ports.OutboxRepository
+	ingest    ports.IngestRepository
+	prIngest  ports.PRIngestRepository
+	adrIngest ports.ADRIngestRepository
 }
 
 // BeginUnitOfWork starts a transaction-bound unit of work.
@@ -28,13 +29,14 @@ func BeginUnitOfWork(ctx context.Context, pool *pgxpool.Pool) (*UnitOfWork, erro
 	}
 	q := sqlc.New(tx)
 	return &UnitOfWork{
-		tx:       tx,
-		queries:  q,
-		lore:     NewLoreRepository(q),
-		audits:   NewAuditRepository(q),
-		outbox:   NewOutboxRepository(q),
-		ingest:   NewIngestRepository(q),
-		prIngest: NewPRIngestRepository(q),
+		tx:        tx,
+		queries:   q,
+		lore:      NewLoreRepository(q),
+		audits:    NewAuditRepository(q),
+		outbox:    NewOutboxRepository(q),
+		ingest:    NewIngestRepository(q),
+		prIngest:  NewPRIngestRepository(q),
+		adrIngest: NewADRIngestRepository(q),
 	}, nil
 }
 
@@ -56,6 +58,10 @@ func (u *UnitOfWork) Ingest() ports.IngestRepository {
 
 func (u *UnitOfWork) PRIngest() ports.PRIngestRepository {
 	return u.prIngest
+}
+
+func (u *UnitOfWork) ADRIngest() ports.ADRIngestRepository {
+	return u.adrIngest
 }
 
 func (u *UnitOfWork) Commit(ctx context.Context) error {

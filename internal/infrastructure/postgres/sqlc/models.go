@@ -8,6 +8,43 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AdrIngestCursor struct {
+	ScopeKind    string
+	ScopeKey     string
+	LastPath     pgtype.Text
+	LastChecksum pgtype.Text
+	UpdatedAt    pgtype.Timestamptz
+}
+
+type AdrIngestFile struct {
+	ScopeKind    string
+	ScopeKey     string
+	RelativePath string
+	Checksum     string
+	AdrID        pgtype.Text
+	LoreEntryID  pgtype.Text
+	Skipped      bool
+	SkipReason   pgtype.Text
+	ProcessedAt  pgtype.Timestamptz
+}
+
+type AdrIngestRun struct {
+	ID             string
+	ScopeKind      string
+	ScopeKey       string
+	ActorID        string
+	LocalPath      string
+	ExtraDirs      string
+	Status         string
+	FilesSeen      int32
+	FilesSkipped   int32
+	LoreStored     int32
+	LoreSuperseded int32
+	ErrorSummary   pgtype.Text
+	StartedAt      pgtype.Timestamptz
+	FinishedAt     pgtype.Timestamptz
+}
+
 type AuditRecord struct {
 	ID        string
 	TargetID  string

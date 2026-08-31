@@ -30,11 +30,14 @@ and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018
 | `POST` | `/v1/repository-profile` | Compile a repository intelligence profile (named sections; omit empty) |
 | `POST` | `/v1/ingest/git` | Ingest commits from a local git path (write; observational lore only) |
 | `POST` | `/v1/ingest/pr` | Ingest merged GitHub pull requests (write; observational lore only) |
+| `POST` | `/v1/ingest/adr` | Ingest ADRs from a local working copy (write; accepted ADRs are trusted-source) |
 | `GET` | `/v1/ingest/runs` | List git ingest runs (`scope_kind` + `scope_key`) |
 | `GET` | `/v1/ingest/runs/{id}` | Get one git ingest run |
 | `GET` | `/v1/ingest/pr-runs` | List PR ingest runs (`scope_kind` + `scope_key`) |
 | `GET` | `/v1/ingest/pr-runs/{id}` | Get one PR ingest run |
-| `GET` | `/v1/ingest/candidates` | List current observational lore (`evidence_type=pr` optional) |
+| `GET` | `/v1/ingest/adr-runs` | List ADR ingest runs (`scope_kind` + `scope_key`) |
+| `GET` | `/v1/ingest/adr-runs/{id}` | Get one ADR ingest run |
+| `GET` | `/v1/ingest/candidates` | List current observational lore (`evidence_type=commit\|pr\|adr`) |
 | `POST` | `/v1/admin/teams` | Create team (admin) |
 | `POST` | `/v1/admin/projects` | Create project (admin; optional `team_key`) |
 | `POST` | `/v1/admin/teams/{key}/members` | Add team member (admin) |
@@ -55,6 +58,7 @@ Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../
 Repository profile: [`specs/020-repo-intelligence-profile/contracts/repository-profile.md`](../../specs/020-repo-intelligence-profile/contracts/repository-profile.md).
 Git commit ingest: [`specs/030-git-commit-ingest/contracts/git-commit-ingest.md`](../../specs/030-git-commit-ingest/contracts/git-commit-ingest.md).
 PR ingest: [`specs/031-pull-request-ingest/contracts/pull-request-ingest.md`](../../specs/031-pull-request-ingest/contracts/pull-request-ingest.md).
+ADR ingest: [`specs/032-adr-ingest/contracts/adr-ingest.md`](../../specs/032-adr-ingest/contracts/adr-ingest.md).
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).
 Auth + RBAC: [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).
