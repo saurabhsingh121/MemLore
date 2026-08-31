@@ -20,6 +20,9 @@ type LoreEntry struct {
 	CreatedAt          time.Time
 	VerifiedBy         *string
 	VerifiedAt         *time.Time
+	InvalidatedBy      *string
+	InvalidatedAt      *time.Time
+	SupersededByID     *string
 	UpdatedAt          time.Time
 }
 
@@ -87,4 +90,9 @@ func NewLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}, nil
+}
+
+// IsSuperseded reports whether the entry has been replaced by a successor.
+func IsSuperseded(entry LoreEntry) bool {
+	return entry.SupersededByID != nil && strings.TrimSpace(*entry.SupersededByID) != ""
 }

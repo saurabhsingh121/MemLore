@@ -54,11 +54,20 @@ func TestVerificationAndAuditEnumsMatchPython(t *testing.T) {
 	if domain.VerificationVerified != "verified" {
 		t.Fatal("verified mismatch")
 	}
+	if domain.VerificationInvalidated != "invalidated" {
+		t.Fatal("invalidated mismatch")
+	}
 	if domain.AuditActionCreate != "create" {
 		t.Fatal("create mismatch")
 	}
 	if domain.AuditActionVerify != "verify" {
 		t.Fatal("verify mismatch")
+	}
+	if domain.AuditActionInvalidate != "invalidate" {
+		t.Fatal("invalidate mismatch")
+	}
+	if domain.AuditActionSupersede != "supersede" {
+		t.Fatal("supersede mismatch")
 	}
 }
 

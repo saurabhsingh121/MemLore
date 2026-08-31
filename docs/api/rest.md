@@ -6,6 +6,8 @@
 | `POST` | `/v1/lore-entries` | Create human-authored lore (`X-Memlore-Actor` required) |
 | `GET` | `/v1/lore-entries/{id}` | Get by id |
 | `POST` | `/v1/lore-entries/{id}/verify` | Verify (`X-Memlore-Actor` required; idempotent) |
+| `POST` | `/v1/lore-entries/{id}/invalidate` | Invalidate (`X-Memlore-Actor` required; idempotent) |
+| `POST` | `/v1/lore-entries/{id}/supersede` | Supersede with successor (`X-Memlore-Actor` required) |
 | `GET` | `/v1/lore-entries` | List by `scope_kind` + `scope_key` |
 | `GET` | `/v1/lore-entries/{id}/audits` | List audits (404 if entry missing) |
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph) |
@@ -15,6 +17,7 @@ Contract details:
 [`specs/001-scoped-lore-entry/contracts/rest-lore-entries.md`](../../specs/001-scoped-lore-entry/contracts/rest-lore-entries.md).
 Knowledge search: [`specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md`](../../specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md).
 Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md).
+Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 
 Example create:
 

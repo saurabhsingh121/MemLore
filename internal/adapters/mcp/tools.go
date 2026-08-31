@@ -15,6 +15,8 @@ import (
 type Tools struct {
 	CreateLore      *commands.CreateLoreHandler
 	VerifyLore      *commands.VerifyLoreHandler
+	InvalidateLore  *commands.InvalidateLoreHandler
+	SupersedeLore   *commands.SupersedeLoreHandler
 	GetLore         *queries.GetLoreHandler
 	ListLoreByScope *queries.ListLoreByScopeHandler
 	ListAudits      *queries.ListAuditsHandler
@@ -28,6 +30,8 @@ func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Know
 	return &Tools{
 		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
+		InvalidateLore:  commands.NewInvalidateLoreHandler(begin, clock),
+		SupersedeLore:   commands.NewSupersedeLoreHandler(begin, clock),
 		GetLore:         queries.NewGetLoreHandler(begin),
 		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
 		ListAudits:      queries.NewListAuditsHandler(begin),
@@ -60,6 +64,18 @@ type getInput struct {
 type verifyInput struct {
 	ID      string `json:"id"`
 	ActorID string `json:"actor_id"`
+}
+
+type invalidateInput struct {
+	ID      string `json:"id"`
+	ActorID string `json:"actor_id"`
+}
+
+type supersedeInput struct {
+	ID        string          `json:"id"`
+	Statement string          `json:"statement"`
+	ActorID   string          `json:"actor_id"`
+	Evidence  []evidenceInput `json:"evidence,omitempty"`
 }
 
 type explainInput struct {
@@ -134,6 +150,46 @@ func (t *Tools) verify(ctx context.Context, _ *sdkmcp.CallToolRequest, input ver
 	entry, err := t.VerifyLore.Handle(ctx, commands.VerifyLoreCommand{
 		EntryID: input.ID,
 		ActorID: actor,
+	})
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	return nil, presenters.ToLoreEntry(entry), nil
+}
+
+func (t *Tools) invalidate(ctx context.Context, _ *sdkmcp.CallToolRequest, input invalidateInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
+	actor, err := requireActor(input.ActorID)
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	entry, err := t.InvalidateLore.Handle(ctx, commands.InvalidateLoreCommand{
+		EntryID: input.ID,
+		ActorID: actor,
+	})
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	return nil, presenters.ToLoreEntry(entry), nil
+}
+
+func (t *Tools) supersede(ctx context.Context, _ *sdkmcp.CallToolRequest, input supersedeInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
+	actor, err := requireActor(input.ActorID)
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	evidence := make([]domain.EvidenceReference, 0, len(input.Evidence))
+	for _, item := range input.Evidence {
+		ref, refErr := domain.NewEvidenceReference(item.Type, item.Value)
+		if refErr != nil {
+			return nil, presenters.LoreEntry{}, mapDomainError(refErr)
+		}
+		evidence = append(evidence, ref)
+	}
+	entry, err := t.SupersedeLore.Handle(ctx, commands.SupersedeLoreCommand{
+		EntryID:   input.ID,
+		Statement: input.Statement,
+		ActorID:   actor,
+		Evidence:  evidence,
 	})
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)

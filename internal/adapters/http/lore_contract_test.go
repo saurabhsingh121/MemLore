@@ -229,3 +229,115 @@ func TestListByScope(t *testing.T) {
 		t.Fatalf("empty = %v", empty)
 	}
 }
+
+func TestInvalidateAndSupersedeHTTPContract(t *testing.T) {
+	server := testClient(t)
+	create := func(statement string) string {
+		t.Helper()
+		raw, _ := json.Marshal(map[string]any{
+			"statement": statement,
+			"scope":     map[string]string{"kind": "repository", "key": "r1"},
+		})
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/v1/lore-entries", bytes.NewReader(raw))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Memlore-Actor", "alice")
+		server.ServeHTTP(rec, req)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create status = %d body=%s", rec.Code, rec.Body.String())
+		}
+		var resp map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+		return resp["id"].(string)
+	}
+
+	entryID := create("Use the outbox")
+	invRec := httptest.NewRecorder()
+	invReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries/"+entryID+"/invalidate", nil)
+	invReq.Header.Set("X-Memlore-Actor", "alice")
+	server.ServeHTTP(invRec, invReq)
+	if invRec.Code != http.StatusOK {
+		t.Fatalf("invalidate status = %d body=%s", invRec.Code, invRec.Body.String())
+	}
+	var inv map[string]any
+	_ = json.Unmarshal(invRec.Body.Bytes(), &inv)
+	if inv["verification_status"] != "invalidated" {
+		t.Fatalf("status = %v", inv["verification_status"])
+	}
+
+	again := httptest.NewRecorder()
+	againReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries/"+entryID+"/invalidate", nil)
+	againReq.Header.Set("X-Memlore-Actor", "bob")
+	server.ServeHTTP(again, againReq)
+	if again.Code != http.StatusOK {
+		t.Fatalf("re-invalidate status = %d", again.Code)
+	}
+
+	missingActor := httptest.NewRecorder()
+	server.ServeHTTP(missingActor, httptest.NewRequest(http.MethodPost, "/v1/lore-entries/"+entryID+"/invalidate", nil))
+	if missingActor.Code != http.StatusBadRequest {
+		t.Fatalf("missing actor status = %d", missingActor.Code)
+	}
+
+	missing := httptest.NewRecorder()
+	missingReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries/00000000-0000-0000-0000-000000000000/invalidate", nil)
+	missingReq.Header.Set("X-Memlore-Actor", "alice")
+	server.ServeHTTP(missing, missingReq)
+	if missing.Code != http.StatusNotFound {
+		t.Fatalf("unknown invalidate status = %d", missing.Code)
+	}
+
+	predID := create("Old rule")
+	body, _ := json.Marshal(map[string]any{
+		"statement": "New rule",
+		"evidence":  []map[string]string{{"type": "adr", "value": "0003-lifecycle"}},
+	})
+	supRec := httptest.NewRecorder()
+	supReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries/"+predID+"/supersede", bytes.NewReader(body))
+	supReq.Header.Set("Content-Type", "application/json")
+	supReq.Header.Set("X-Memlore-Actor", "bob")
+	server.ServeHTTP(supRec, supReq)
+	if supRec.Code != http.StatusCreated {
+		t.Fatalf("supersede status = %d body=%s", supRec.Code, supRec.Body.String())
+	}
+	var successor map[string]any
+	_ = json.Unmarshal(supRec.Body.Bytes(), &successor)
+	if successor["statement"] != "New rule" {
+		t.Fatalf("successor = %v", successor)
+	}
+
+	gotRec := httptest.NewRecorder()
+	server.ServeHTTP(gotRec, httptest.NewRequest(http.MethodGet, "/v1/lore-entries/"+predID, nil))
+	var pred map[string]any
+	_ = json.Unmarshal(gotRec.Body.Bytes(), &pred)
+	if pred["superseded_by_id"] != successor["id"] {
+		t.Fatalf("superseded_by_id = %v", pred["superseded_by_id"])
+	}
+
+	retry := httptest.NewRecorder()
+	retryReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries/"+predID+"/supersede", bytes.NewReader(body))
+	retryReq.Header.Set("Content-Type", "application/json")
+	retryReq.Header.Set("X-Memlore-Actor", "bob")
+	server.ServeHTTP(retry, retryReq)
+	if retry.Code != http.StatusBadRequest {
+		t.Fatalf("re-supersede status = %d", retry.Code)
+	}
+
+	invSup := httptest.NewRecorder()
+	invSupReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries/"+entryID+"/supersede", bytes.NewReader(body))
+	invSupReq.Header.Set("Content-Type", "application/json")
+	invSupReq.Header.Set("X-Memlore-Actor", "alice")
+	server.ServeHTTP(invSup, invSupReq)
+	if invSup.Code != http.StatusBadRequest {
+		t.Fatalf("supersede invalidated status = %d", invSup.Code)
+	}
+
+	auditsRec := httptest.NewRecorder()
+	server.ServeHTTP(auditsRec, httptest.NewRequest(http.MethodGet, "/v1/lore-entries/"+predID+"/audits", nil))
+	var audits map[string]any
+	_ = json.Unmarshal(auditsRec.Body.Bytes(), &audits)
+	items := audits["items"].([]any)
+	if items[len(items)-1].(map[string]any)["action"] != "supersede" {
+		t.Fatalf("audits = %v", items)
+	}
+}

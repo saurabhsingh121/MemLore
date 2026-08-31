@@ -14,7 +14,7 @@ type Scope struct {
 
 // Evidence is a single evidence reference in API responses.
 type Evidence struct {
-	Type domain.EvidenceType `json:"type"`
+	Type  domain.EvidenceType `json:"type"`
 	Value string              `json:"value"`
 }
 
@@ -30,6 +30,9 @@ type LoreEntry struct {
 	CreatedAt          time.Time  `json:"created_at"`
 	VerifiedBy         *string    `json:"verified_by"`
 	VerifiedAt         *time.Time `json:"verified_at"`
+	InvalidatedBy      *string    `json:"invalidated_by"`
+	InvalidatedAt      *time.Time `json:"invalidated_at"`
+	SupersededByID     *string    `json:"superseded_by_id"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
@@ -78,6 +81,9 @@ func ToLoreEntry(entry domain.LoreEntry) LoreEntry {
 		CreatedAt:          entry.CreatedAt.UTC(),
 		VerifiedBy:         entry.VerifiedBy,
 		VerifiedAt:         entry.VerifiedAt,
+		InvalidatedBy:      entry.InvalidatedBy,
+		InvalidatedAt:      entry.InvalidatedAt,
+		SupersededByID:     entry.SupersededByID,
 		UpdatedAt:          entry.UpdatedAt.UTC(),
 	}
 }

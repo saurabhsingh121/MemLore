@@ -8,6 +8,31 @@ import (
 	"testing"
 )
 
+func TestSupersedeInvalidateMigrationAddsLifecycleColumns(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	sqlPath := filepath.Join(filepath.Dir(file), "00003_supersede_invalidate.sql")
+	body, err := os.ReadFile(sqlPath)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	content := string(body)
+	required := []string{
+		"ADD COLUMN superseded_by_id VARCHAR(36)",
+		"REFERENCES lore_entries (id)",
+		"ADD COLUMN invalidated_by VARCHAR(256)",
+		"ADD COLUMN invalidated_at TIMESTAMPTZ",
+		"DROP COLUMN IF EXISTS superseded_by_id",
+	}
+	for _, fragment := range required {
+		if !strings.Contains(content, fragment) {
+			t.Errorf("migration missing %q", fragment)
+		}
+	}
+}
+
 func TestLoreAuditMigrationDefinesExpectedTablesAndIndexes(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {

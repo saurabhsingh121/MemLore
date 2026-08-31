@@ -77,7 +77,7 @@ func structuredContent(t *testing.T, result *sdkmcp.CallToolResult) map[string]a
 	return payload
 }
 
-func TestListToolsIsExactlySevenLoreTools(t *testing.T) {
+func TestListToolsIsExactlyNineLoreTools(t *testing.T) {
 	session, _ := testSession(t)
 	listed, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -95,9 +95,11 @@ func TestListToolsIsExactlySevenLoreTools(t *testing.T) {
 		"memlore.search":           {},
 		"memlore.knowledge_search": {},
 		"memlore.get_for_task":     {},
+		"memlore.invalidate":       {},
+		"memlore.supersede":        {},
 	}
-	if len(names) != 7 {
-		t.Fatalf("tool count = %d, want 7: %v", len(names), names)
+	if len(names) != 9 {
+		t.Fatalf("tool count = %d, want 9: %v", len(names), names)
 	}
 	for _, name := range names {
 		if _, ok := want[name]; !ok {
@@ -105,7 +107,7 @@ func TestListToolsIsExactlySevenLoreTools(t *testing.T) {
 		}
 	}
 	joined := strings.ToLower(strings.Join(names, " "))
-	for _, forbidden := range []string{"graphiti", "neo4j", "supersede", "invalidate"} {
+	for _, forbidden := range []string{"graphiti", "neo4j"} {
 		if strings.Contains(joined, forbidden) {
 			t.Fatalf("forbidden tool name fragment %q in %v", forbidden, names)
 		}
@@ -364,3 +366,109 @@ func TestGetForTaskMCPContract(t *testing.T) {
 		t.Fatal("missing meta.items_included")
 	}
 }
+
+func TestInvalidateAndSupersedeMCPContract(t *testing.T) {
+	session, _ := testSession(t)
+	created := callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use the outbox.",
+		"scope":     map[string]string{"kind": "repository", "key": "r1"},
+		"actor_id":  "alice",
+	})
+	entryID := structuredContent(t, created)["id"].(string)
+
+	invalidated := callTool(t, session, "memlore.invalidate", map[string]any{
+		"id":       entryID,
+		"actor_id": "alice",
+	})
+	if invalidated.IsError {
+		t.Fatalf("invalidate failed: %s", toolText(invalidated))
+	}
+	invPayload := structuredContent(t, invalidated)
+	if invPayload["verification_status"] != "invalidated" {
+		t.Fatalf("status = %v", invPayload["verification_status"])
+	}
+	if invPayload["invalidated_by"] != "alice" {
+		t.Fatalf("invalidated_by = %v", invPayload["invalidated_by"])
+	}
+
+	again := callTool(t, session, "memlore.invalidate", map[string]any{
+		"id":       entryID,
+		"actor_id": "bob",
+	})
+	if again.IsError {
+		t.Fatalf("re-invalidate failed: %s", toolText(again))
+	}
+	explained := callTool(t, session, "memlore.explain", map[string]any{"id": entryID})
+	audits := structuredContent(t, explained)["audits"].([]any)
+	invalidateCount := 0
+	for _, item := range audits {
+		if item.(map[string]any)["action"] == "invalidate" {
+			invalidateCount++
+		}
+	}
+	if invalidateCount != 1 {
+		t.Fatalf("invalidate audits = %d (%v)", invalidateCount, audits)
+	}
+
+	blank := callTool(t, session, "memlore.invalidate", map[string]any{"id": entryID, "actor_id": ""})
+	if !blank.IsError || !strings.Contains(toolText(blank), "validation_error:") {
+		t.Fatalf("blank actor invalidate = %v %q", blank.IsError, toolText(blank))
+	}
+
+	missing := callTool(t, session, "memlore.invalidate", map[string]any{
+		"id":       "00000000-0000-0000-0000-000000000000",
+		"actor_id": "alice",
+	})
+	if !missing.IsError || !strings.Contains(toolText(missing), "not_found:") {
+		t.Fatalf("missing invalidate = %v %q", missing.IsError, toolText(missing))
+	}
+
+	current := callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Old rule",
+		"scope":     map[string]string{"kind": "repository", "key": "r1"},
+		"actor_id":  "alice",
+	})
+	predID := structuredContent(t, current)["id"].(string)
+	superseded := callTool(t, session, "memlore.supersede", map[string]any{
+		"id":        predID,
+		"statement": "New rule",
+		"actor_id":  "bob",
+		"evidence":  []map[string]string{{"type": "adr", "value": "0003-lifecycle"}},
+	})
+	if superseded.IsError {
+		t.Fatalf("supersede failed: %s", toolText(superseded))
+	}
+	succPayload := structuredContent(t, superseded)
+	if succPayload["statement"] != "New rule" {
+		t.Fatalf("successor statement = %v", succPayload["statement"])
+	}
+	gotPred := structuredContent(t, callTool(t, session, "memlore.get", map[string]any{"id": predID}))
+	if gotPred["superseded_by_id"] != succPayload["id"] {
+		t.Fatalf("superseded_by_id = %v want %v", gotPred["superseded_by_id"], succPayload["id"])
+	}
+
+	predExplain := structuredContent(t, callTool(t, session, "memlore.explain", map[string]any{"id": predID}))
+	predAudits := predExplain["audits"].([]any)
+	if len(predAudits) < 2 || predAudits[len(predAudits)-1].(map[string]any)["action"] != "supersede" {
+		t.Fatalf("predecessor audits = %v", predAudits)
+	}
+
+	retry := callTool(t, session, "memlore.supersede", map[string]any{
+		"id":        predID,
+		"statement": "Another rule",
+		"actor_id":  "bob",
+	})
+	if !retry.IsError || !strings.Contains(toolText(retry), "validation_error:") {
+		t.Fatalf("re-supersede = %v %q", retry.IsError, toolText(retry))
+	}
+
+	invThenSup := callTool(t, session, "memlore.supersede", map[string]any{
+		"id":        entryID,
+		"statement": "Should fail",
+		"actor_id":  "alice",
+	})
+	if !invThenSup.IsError || !strings.Contains(toolText(invThenSup), "validation_error:") {
+		t.Fatalf("supersede invalidated = %v %q", invThenSup.IsError, toolText(invThenSup))
+	}
+}
+

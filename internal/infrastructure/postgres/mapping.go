@@ -33,6 +33,9 @@ func loreEntryToInsertParams(entry domain.LoreEntry) (sqlc.InsertLoreEntryParams
 		VerifiedBy:         textFromPtr(entry.VerifiedBy),
 		VerifiedAt:         timestamptzFromPtr(entry.VerifiedAt),
 		UpdatedAt:          timestamptzFromTime(entry.UpdatedAt),
+		SupersededByID:     textFromPtr(entry.SupersededByID),
+		InvalidatedBy:      textFromPtr(entry.InvalidatedBy),
+		InvalidatedAt:      timestamptzFromPtr(entry.InvalidatedAt),
 	}, nil
 }
 
@@ -54,6 +57,9 @@ func loreEntryToUpdateParams(entry domain.LoreEntry) (sqlc.UpdateLoreEntryParams
 		VerifiedBy:         textFromPtr(entry.VerifiedBy),
 		VerifiedAt:         timestamptzFromPtr(entry.VerifiedAt),
 		UpdatedAt:          timestamptzFromTime(entry.UpdatedAt),
+		SupersededByID:     textFromPtr(entry.SupersededByID),
+		InvalidatedBy:      textFromPtr(entry.InvalidatedBy),
+		InvalidatedAt:      timestamptzFromPtr(entry.InvalidatedAt),
 	}, nil
 }
 
@@ -79,6 +85,9 @@ func loreEntryFromRow(row sqlc.LoreEntry) (domain.LoreEntry, error) {
 		VerifiedBy:         ptrFromText(row.VerifiedBy),
 		VerifiedAt:         ptrFromTimestamptz(row.VerifiedAt),
 		UpdatedAt:          timeFromTimestamptz(row.UpdatedAt),
+		SupersededByID:     ptrFromText(row.SupersededByID),
+		InvalidatedBy:      ptrFromText(row.InvalidatedBy),
+		InvalidatedAt:      ptrFromTimestamptz(row.InvalidatedAt),
 	}, nil
 }
 
