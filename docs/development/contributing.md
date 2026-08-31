@@ -5,4 +5,6 @@
 3. Follow TDD for behavioral changes.
 4. Keep PRs small and independently verifiable.
 5. Update docs/ADRs in the same change when behavior or architecture shifts.
-6. Ensure `ruff`, `mypy`, and `pytest` pass before review.
+6. Ensure `go test ./...` and `go vet ./...` pass before review.
+   Graph-service changes also need `uv run ruff` / `mypy` / `pytest` in
+   `graph-service/`.

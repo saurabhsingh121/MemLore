@@ -6,19 +6,18 @@ alwaysApply: true
 # MemLore project context for Spec Kit
 
 - Core (target): Go 1.25+ — `cmd/`, `internal/`, `migrations/`, `db/queries/` (ADR 0005)
-- Legacy core (current): Python 3.12 — `src/memlore/` until Go slices verify
-- Graph service (target): Python 3.12 — `graph-service/` (thin Graphiti boundary)
-- Tests: `tests/{unit,integration,contract,e2e}` with pytest; TDD mandatory for behavior
+- Graph service: Python 3.12 — `graph-service/` (thin Graphiti boundary)
+- Tests: `go test ./...` for core; pytest in `graph-service/`
 - Governance DB: PostgreSQL; Knowledge: Graphiti + Neo4j; async sync via outbox
-- Adapters: FastAPI REST, MCP (`memlore.*`), CLI (`memlore`)
-- Tooling: uv, ruff, mypy --strict, Docker Compose
-- Constitution: `.specify/memory/constitution.md` (v1.0.0)
+- Adapters: REST + MCP (`memlore.*`) + CLI (`memlore`) — Go
+- Tooling: go test/vet, goose, sqlc, Docker Compose; uv/ruff/mypy in graph-service
+- Constitution: `.specify/memory/constitution.md` (v1.1.0)
 - Brand: MemLore (not Tavryn) per ADR 0004
 
 ## Active feature plan
 
-Read `specs/016-authority-factors/` for F003 authority factor evaluation.
-Completed: F101–F112, F106a, F111 (OIDC/RBAC optional-until-configured), Python F001/F002.
-Next after F003: F010 remainder (team/project membership).
+Completed F113 (`specs/017-retire-python-core/`): legacy `src/memlore/` removed.
+Completed: F101–F112, F106a, F111, F003, F113.
+Next: F010 remainder (team/project membership).
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

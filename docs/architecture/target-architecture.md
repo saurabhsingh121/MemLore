@@ -178,15 +178,15 @@ Agents interact with MemLore, not Graphiti directly.
 
 | Layer | Today (main) | Target |
 |-------|--------------|--------|
-| Core runtime | Python FastAPI | **Go** MemLore Core |
-| REST / MCP | Python adapters | Go adapters (strangler migration) |
+| Core runtime | **Go** MemLore Core | Go (unchanged) |
+| REST / MCP | Go `memlore serve` / `memlore mcp` | Go adapters |
 | Governance DB | PostgreSQL ✓ | PostgreSQL ✓ |
-| Graph service | Not built | Python thin service |
-| Graphiti / Neo4j | Docker only | graph-service integration |
-| Outbox / workers | Not built | Go worker |
-| Context compiler | Not built | Go application layer |
+| Graph service | Thin Python `graph-service/` | Same |
+| Graphiti / Neo4j | graph-service + Docker Compose | Same |
+| Outbox / workers | Go `memlore worker` | Go worker |
+| Context compiler | Go application layer | Same |
 
-Migration is incremental — see [migration-inventory.md](../development/migration-inventory.md).
+Strangler migration is complete (F113). Remaining product work is on the Go core (e.g. F010 membership). See [migration-inventory.md](../development/migration-inventory.md).
 
 ## Related documents
 

@@ -71,25 +71,15 @@ specs/[###-feature]/
 -->
 
 ```text
-src/memlore/
-├── domain/
-├── application/
-├── infrastructure/
-├── adapters/
-│   ├── rest/
-│   ├── mcp/
-│   └── cli/
-└── bootstrap/
-
-tests/
-├── unit/
-├── integration/
-├── contract/
-└── e2e/
+cmd/memlore/
+internal/{domain,application,adapters,infrastructure,bootstrap}
+migrations/
+db/queries/
+graph-service/
 ```
 
-**Structure Decision**: MemLore default layout above unless an ADR changes it.
-Document any deliberate deviation and rationale.
+**Structure Decision**: MemLore Core is Go (`cmd/`, `internal/`). Python lives
+only in `graph-service/`. Document any deliberate deviation and rationale.
 
 ## Complexity Tracking
 

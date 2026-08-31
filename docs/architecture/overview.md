@@ -42,17 +42,16 @@ transactional outbox (or equivalent reliable async mechanism).
 
 | Layer | Today | Target |
 |-------|-------|--------|
-| Core runtime | Python (FastAPI) | **Go** MemLore Core ([ADR-0005](../adr/0005-go-memlore-core.md)) |
-| REST / MCP | Python adapters | Go adapters (strangler migration) |
+| Core runtime | **Go** MemLore Core ([ADR-0005](../adr/0005-go-memlore-core.md)) | Go (unchanged) |
+| REST / MCP | Go `memlore serve` / `memlore mcp` | Go adapters |
 | Governance DB | PostgreSQL ✓ | PostgreSQL ✓ |
-| Graph service | Not built | Thin Python service → Graphiti → Neo4j |
-| Outbox / workers | Not built | Go worker |
+| Graph service | Thin Python `graph-service/` | Same |
+| Outbox / workers | Go `memlore worker` | Go worker |
 
-**Current delivery**: governance-plane lore CRUD/verify/audit on PostgreSQL via
-Python REST `/v1/lore-entries` and MCP tools `memlore.remember`, `memlore.get`,
-`memlore.verify`, `memlore.explain`, `memlore.search` (`uv run memlore mcp`).
-Knowledge-plane Graphiti/Neo4j sync is not wired. Go skeleton (F101) is specified
-on branch `003-go-core-skeleton`.
+**Current delivery**: governance-plane lore (CRUD, verify, invalidate, supersede,
+audit), dual-plane search, context compile, authority evaluation, and optional
+OIDC/RBAC on PostgreSQL via Go REST `/v1/*` and nine `memlore.*` MCP tools.
+Knowledge-plane Graphiti/Neo4j is isolated in `graph-service/`.
 
 ## Adapters
 

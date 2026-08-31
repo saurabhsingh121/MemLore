@@ -22,7 +22,7 @@ behavioral change. Pure docs/config-only tasks may omit tests.
 
 ## Path Conventions
 
-- **MemLore default**: `src/memlore/`, `tests/{unit,integration,contract,e2e}/`
+- **MemLore default**: `cmd/memlore/`, `internal/`, `graph-service/`
 - Adjust only when plan.md documents a deliberate deviation
 
 <!-- 
