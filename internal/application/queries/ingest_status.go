@@ -91,23 +91,33 @@ func (h *ListIngestCandidatesHandler) Handle(ctx context.Context, q ListIngestCa
 	current := appcontext.FilterCurrent(items)
 	out := make([]domain.LoreEntry, 0, len(current))
 	for _, e := range current {
+		if q.EvidenceType == domain.EvidenceTypeADR {
+			if e.Origin != domain.KnowledgeOriginArchitectureDecision {
+				continue
+			}
+			if !hasEvidenceType(e, domain.EvidenceTypeADR) {
+				continue
+			}
+			out = append(out, e)
+			continue
+		}
 		if e.Origin == domain.KnowledgeOriginRepositoryObservation {
-			if q.EvidenceType != "" {
-				has := false
-				for _, ev := range e.Evidence {
-					if ev.Type == q.EvidenceType {
-						has = true
-						break
-					}
-				}
-				if !has {
-					continue
-				}
+			if q.EvidenceType != "" && !hasEvidenceType(e, q.EvidenceType) {
+				continue
 			}
 			out = append(out, e)
 		}
 	}
 	return out, nil
+}
+
+func hasEvidenceType(e domain.LoreEntry, want domain.EvidenceType) bool {
+	for _, ev := range e.Evidence {
+		if ev.Type == want {
+			return true
+		}
+	}
+	return false
 }
 
 // ListPRIngestRunsQuery lists PR ingest runs for a repository scope.
@@ -160,4 +170,56 @@ func (h *GetPRIngestRunHandler) Handle(ctx context.Context, q GetPRIngestRunQuer
 	}
 	defer uow.Rollback(ctx)
 	return uow.PRIngest().GetRun(ctx, q.ID)
+}
+
+// ListADRIngestRunsQuery lists ADR ingest runs for a repository scope.
+type ListADRIngestRunsQuery struct {
+	Scope domain.Scope
+}
+
+// GetADRIngestRunQuery loads one ADR ingest run by id.
+type GetADRIngestRunQuery struct {
+	ID string
+}
+
+// ListADRIngestRunsHandler lists ADR runs newest first.
+type ListADRIngestRunsHandler struct {
+	begin ports.UnitOfWorkFactory
+}
+
+func NewListADRIngestRunsHandler(begin ports.UnitOfWorkFactory) *ListADRIngestRunsHandler {
+	return &ListADRIngestRunsHandler{begin: begin}
+}
+
+func (h *ListADRIngestRunsHandler) Handle(ctx context.Context, q ListADRIngestRunsQuery) ([]domain.ADRIngestRun, error) {
+	if q.Scope.Kind != domain.ScopeKindRepository {
+		return nil, &domain.ValidationError{Message: "ingest scope kind must be repository"}
+	}
+	uow, err := h.begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer uow.Rollback(ctx)
+	return uow.ADRIngest().ListRunsByScope(ctx, q.Scope)
+}
+
+// GetADRIngestRunHandler loads a single ADR ingest run.
+type GetADRIngestRunHandler struct {
+	begin ports.UnitOfWorkFactory
+}
+
+func NewGetADRIngestRunHandler(begin ports.UnitOfWorkFactory) *GetADRIngestRunHandler {
+	return &GetADRIngestRunHandler{begin: begin}
+}
+
+func (h *GetADRIngestRunHandler) Handle(ctx context.Context, q GetADRIngestRunQuery) (domain.ADRIngestRun, error) {
+	if q.ID == "" {
+		return domain.ADRIngestRun{}, &domain.ValidationError{Message: "run id is required"}
+	}
+	uow, err := h.begin(ctx)
+	if err != nil {
+		return domain.ADRIngestRun{}, err
+	}
+	defer uow.Rollback(ctx)
+	return uow.ADRIngest().GetRun(ctx, q.ID)
 }

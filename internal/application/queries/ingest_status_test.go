@@ -86,6 +86,43 @@ func TestListIngestCandidatesFiltersEvidenceType(t *testing.T) {
 	}
 }
 
+func TestListIngestCandidatesFiltersADREvidenceType(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	uow := memory.NewUnitOfWork()
+	begin := memory.BeginFactory(uow)
+	handler := commands.NewIngestADRsHandler(begin, clock.FixedClock{Instant: now}, &stubADRFiles{files: []ports.ADRFile{{
+		RelativePath: "docs/adr/0001-use-postgres.md",
+		Checksum:     "c1",
+		Content:      "# Use Postgres\n\n## Status\nAccepted\n\n## Decision\nUse PostgreSQL as the system of record.\n",
+	}}})
+	_, err := handler.Handle(context.Background(), commands.IngestADRsCommand{Scope: scope, Path: "/tmp/p", ActorID: "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	adrCands, err := queries.NewListIngestCandidatesHandler(begin).Handle(context.Background(), queries.ListIngestCandidatesQuery{
+		Scope: scope, EvidenceType: domain.EvidenceTypeADR,
+	})
+	if err != nil || len(adrCands) != 1 {
+		t.Fatalf("adr candidates = %+v err=%v", adrCands, err)
+	}
+	if adrCands[0].Origin != domain.KnowledgeOriginArchitectureDecision || adrCands[0].VerificationStatus != domain.VerificationVerified {
+		t.Fatalf("item = %+v", adrCands[0])
+	}
+	obs, err := queries.NewListIngestCandidatesHandler(begin).Handle(context.Background(), queries.ListIngestCandidatesQuery{Scope: scope})
+	if err != nil || len(obs) != 0 {
+		t.Fatalf("default candidates should omit ADR lore, got %+v err=%v", obs, err)
+	}
+}
+
+type stubADRFiles struct {
+	files []ports.ADRFile
+}
+
+func (s *stubADRFiles) ListADRFiles(_ context.Context, _ ports.ADRListQuery) ([]ports.ADRFile, error) {
+	return s.files, nil
+}
+
 type stubPRReader struct {
 	prs []domain.PullRequestSnapshot
 }

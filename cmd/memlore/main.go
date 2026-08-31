@@ -25,6 +25,7 @@ import (
 	"github.com/memlore/memlore/internal/bootstrap"
 	"github.com/memlore/memlore/internal/domain"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
+	"github.com/memlore/memlore/internal/infrastructure/fsadr"
 	"github.com/memlore/memlore/internal/infrastructure/gitcli"
 	"github.com/memlore/memlore/internal/infrastructure/githubhttp"
 	"github.com/memlore/memlore/internal/infrastructure/graphclient"
@@ -127,6 +128,20 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 				return 1
 			}
 			return 0
+		case "adr":
+			opts, err := cli.ParseIngestADRArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ingest adr failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runIngestADR(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "ingest adr failed: %v\n", err)
+				return 1
+			}
+			return 0
 		case "status":
 			opts, err := cli.ParseIngestStatusArgs(args[3:])
 			if err != nil {
@@ -165,7 +180,8 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore context --task <text> --repository <key>")
 	fmt.Fprintln(stdout, "  memlore ingest git --repository <key> --path <dir> [--actor <id>]")
 	fmt.Fprintln(stdout, "  memlore ingest pr --repository <key> [--pr <n>] [--actor <id>]")
-	fmt.Fprintln(stdout, "  memlore ingest status --repository <key> [--kind git|pr]")
+	fmt.Fprintln(stdout, "  memlore ingest adr --repository <key> --path <dir> [--adr-dir <rel>] [--actor <id>]")
+	fmt.Fprintln(stdout, "  memlore ingest status --repository <key> [--kind git|pr|adr]")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -453,6 +469,49 @@ func runIngestPR(opts cli.IngestPRArgs, stdout io.Writer, logger *slog.Logger) e
 	return err
 }
 
+func runIngestADR(opts cli.IngestADRArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	handler := commands.NewIngestADRsHandler(begin, clock.SystemClock{}, fsadr.NewReader())
+	logger.Info("memlore ingest adr started", "repository_id", opts.Repository, "path", opts.Path)
+	run, err := handler.Handle(context.Background(), commands.IngestADRsCommand{
+		Scope:     scope,
+		Path:      opts.Path,
+		ActorID:   opts.Actor,
+		ExtraDirs: opts.ADRDirs,
+	})
+	if err != nil {
+		logger.Error("memlore ingest adr failed", "repository_id", opts.Repository, "error", err)
+		return err
+	}
+	if run.Status == domain.IngestRunFailed {
+		logger.Error("memlore ingest adr failed", "repository_id", opts.Repository, "run_id", run.ID, "error", run.ErrorSummary)
+	} else {
+		logger.Info("memlore ingest adr completed",
+			"repository_id", opts.Repository,
+			"run_id", run.ID,
+			"files_seen", run.FilesSeen,
+			"lore_stored", run.LoreStored,
+		)
+	}
+	_, err = io.WriteString(stdout, cli.FormatADRIngestStatus(opts.Repository, &run))
+	return err
+}
+
 func runIngestStatus(opts cli.IngestStatusArgs, stdout io.Writer, _ *slog.Logger) error {
 	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
 	dsn = bootstrap.NormalizePostgresDSN(dsn)
@@ -481,6 +540,18 @@ func runIngestStatus(opts cli.IngestStatusArgs, stdout io.Writer, _ *slog.Logger
 			latest = &prRuns[0]
 		}
 		_, err = io.WriteString(stdout, cli.FormatPRIngestStatus(opts.Repository, latest))
+		return err
+	}
+	if opts.Kind == "adr" {
+		adrRuns, err := queries.NewListADRIngestRunsHandler(begin).Handle(context.Background(), queries.ListADRIngestRunsQuery{Scope: scope})
+		if err != nil {
+			return err
+		}
+		var latest *domain.ADRIngestRun
+		if len(adrRuns) > 0 {
+			latest = &adrRuns[0]
+		}
+		_, err = io.WriteString(stdout, cli.FormatADRIngestStatus(opts.Repository, latest))
 		return err
 	}
 	var latest *domain.IngestRun

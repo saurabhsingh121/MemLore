@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/memlore/memlore/internal/domain"
 )
@@ -145,6 +146,99 @@ func TestObservationalLoreEntryRejectsHumanOrigin(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected validation error")
+	}
+}
+
+func TestArchitectureDecisionLoreEntryIsVerifiedWithADREvidence(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	ev, err := domain.NewEvidenceReference(domain.EvidenceTypeADR, "0001-use-postgres")
+	if err != nil {
+		t.Fatalf("evidence: %v", err)
+	}
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	entry, err := domain.NewArchitectureDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Use PostgreSQL as the system of record.",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Evidence:  []domain.EvidenceReference{ev},
+		Now:       now,
+	})
+	if err != nil {
+		t.Fatalf("NewArchitectureDecisionLoreEntry: %v", err)
+	}
+	if entry.Origin != domain.KnowledgeOriginArchitectureDecision {
+		t.Fatalf("origin = %q", entry.Origin)
+	}
+	if entry.VerificationStatus != domain.VerificationVerified {
+		t.Fatalf("status = %q", entry.VerificationStatus)
+	}
+	if entry.VerifiedBy == nil || *entry.VerifiedBy != "alice" {
+		t.Fatalf("verified_by = %v", entry.VerifiedBy)
+	}
+	if entry.VerifiedAt == nil || !entry.VerifiedAt.Equal(now) {
+		t.Fatalf("verified_at = %v", entry.VerifiedAt)
+	}
+}
+
+func TestArchitectureDecisionLoreEntryRequiresADREvidence(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	_, err := domain.NewArchitectureDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Rule",
+		Scope:     scope,
+		CreatedBy: "alice",
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) || ve.Message != "architecture decision lore requires adr evidence" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestArchitectureDecisionLoreEntryRejectsObservationalOrigin(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	ev, _ := domain.NewEvidenceReference(domain.EvidenceTypeADR, "0001")
+	_, err := domain.NewArchitectureDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Rule",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Origin:    domain.KnowledgeOriginRepositoryObservation,
+		Evidence:  []domain.EvidenceReference{ev},
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
+func TestObservationalLoreEntryRejectsADREvidenceAlone(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	ev, _ := domain.NewEvidenceReference(domain.EvidenceTypeADR, "0001-use-postgres")
+	_, err := domain.NewObservationalLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Rule",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Evidence:  []domain.EvidenceReference{ev},
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
+func TestLoreEntryRejectsArchitectureDecisionOriginOnCreate(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	_, err := domain.NewLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Rule",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Origin:    domain.KnowledgeOriginArchitectureDecision,
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) || ve.Message != "create origin must be human_authored" {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

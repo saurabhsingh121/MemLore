@@ -35,6 +35,7 @@ type UnitOfWork interface {
 	Outbox() OutboxRepository
 	Ingest() IngestRepository
 	PRIngest() PRIngestRepository
+	ADRIngest() ADRIngestRepository
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }

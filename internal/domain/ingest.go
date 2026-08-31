@@ -19,13 +19,31 @@ const (
 
 // Skip reasons for processed SHAs that did not produce lore.
 const (
-	IngestSkipMerge       = "merge"
-	IngestSkipEmpty       = "empty"
-	IngestSkipNoisy       = "noisy"
-	IngestSkipNoRationale = "no_rationale"
-	IngestSkipTooLong     = "too_long"
-	IngestSkipUnmerged    = "unmerged"
-	IngestSkipBot         = "bot"
+	IngestSkipMerge         = "merge"
+	IngestSkipEmpty         = "empty"
+	IngestSkipNoisy         = "noisy"
+	IngestSkipNoRationale   = "no_rationale"
+	IngestSkipTooLong       = "too_long"
+	IngestSkipUnmerged      = "unmerged"
+	IngestSkipBot           = "bot"
+	IngestSkipTemplate      = "template"
+	IngestSkipReadme        = "readme"
+	IngestSkipDraft         = "draft"
+	IngestSkipRejected      = "rejected"
+	IngestSkipNoDecision    = "no_decision"
+	IngestSkipUnknownStatus = "unknown_status"
+	IngestSkipNotADR        = "not_adr"
+)
+
+// DefaultADRDirs are scanned relative to the working-copy root.
+var DefaultADRDirs = []string{"docs/adr", "adr", "architecture/decisions"}
+
+// ADR status classes used by ingest policy.
+const (
+	ADRStatusAccepted   = "accepted"
+	ADRStatusSkip       = "skip"
+	ADRStatusHistorical = "historical"
+	ADRStatusUnknown    = "unknown"
 )
 
 // GitCommitSnapshot is a commit read from a local repository.
@@ -278,4 +296,166 @@ func (r PRIngestRun) MarkFailed(now time.Time, summary string) PRIngestRun {
 	r.FinishedAt = &t
 	r.ErrorSummary = strings.TrimSpace(summary)
 	return r
+}
+
+// ADRSnapshot is an ADR file read from a local working copy.
+type ADRSnapshot struct {
+	RelativePath string
+	Checksum     string
+	Title        string
+	StatusRaw    string
+	StatusClass  string
+	Decision     string
+	Context      string
+	Alternatives string
+	Consequences string
+	Supersedes   []string
+	Components   []string
+	ADRID        string
+	Body         string
+}
+
+// ADRIngestRun is an observable ADR ingest operation for one repository.
+type ADRIngestRun struct {
+	ID             string
+	Scope          Scope
+	ActorID        string
+	LocalPath      string
+	ExtraDirs      []string
+	Status         IngestRunStatus
+	FilesSeen      int
+	FilesSkipped   int
+	LoreStored     int
+	LoreSuperseded int
+	ErrorSummary   string
+	StartedAt      time.Time
+	FinishedAt     *time.Time
+}
+
+// ADRIngestCursor is the per-repository watermark of last processed ADR.
+type ADRIngestCursor struct {
+	Scope        Scope
+	LastPath     string
+	LastChecksum string
+	UpdatedAt    time.Time
+}
+
+// ProcessedADR records that an ADR file (path + checksum) was considered.
+type ProcessedADR struct {
+	Scope        Scope
+	RelativePath string
+	Checksum     string
+	ADRID        string
+	LoreEntryID  string
+	Skipped      bool
+	SkipReason   string
+	ProcessedAt  time.Time
+}
+
+// NewADRIngestRunInput is input for starting an ADR ingest run.
+type NewADRIngestRunInput struct {
+	Scope     Scope
+	ActorID   string
+	LocalPath string
+	ExtraDirs []string
+	ID        string
+	Now       time.Time
+}
+
+// NewADRIngestRun creates a running ADR ingest run.
+func NewADRIngestRun(in NewADRIngestRunInput) (ADRIngestRun, error) {
+	actor := strings.TrimSpace(in.ActorID)
+	path := strings.TrimSpace(in.LocalPath)
+	if actor == "" {
+		return ADRIngestRun{}, validationError("actor must be non-empty")
+	}
+	if path == "" {
+		return ADRIngestRun{}, validationError("path must be non-empty")
+	}
+	if in.Scope.Kind != ScopeKindRepository {
+		return ADRIngestRun{}, validationError("ingest scope kind must be repository")
+	}
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		id = uuid.NewString()
+	}
+	now := in.Now
+	if now.IsZero() {
+		now = time.Now().UTC()
+	} else {
+		now = now.UTC()
+	}
+	extras := make([]string, 0, len(in.ExtraDirs))
+	for _, d := range in.ExtraDirs {
+		if t := strings.TrimSpace(d); t != "" {
+			extras = append(extras, t)
+		}
+	}
+	return ADRIngestRun{
+		ID:        id,
+		Scope:     in.Scope,
+		ActorID:   actor,
+		LocalPath: path,
+		ExtraDirs: extras,
+		Status:    IngestRunRunning,
+		StartedAt: now,
+	}, nil
+}
+
+// MarkSucceeded completes a successful ADR run.
+func (r ADRIngestRun) MarkSucceeded(now time.Time) ADRIngestRun {
+	t := now.UTC()
+	r.Status = IngestRunSucceeded
+	r.FinishedAt = &t
+	r.ErrorSummary = ""
+	return r
+}
+
+// MarkFailed completes a failed ADR run.
+func (r ADRIngestRun) MarkFailed(now time.Time, summary string) ADRIngestRun {
+	t := now.UTC()
+	r.Status = IngestRunFailed
+	r.FinishedAt = &t
+	r.ErrorSummary = strings.TrimSpace(summary)
+	return r
+}
+
+// ClassifyADRStatus maps a raw ADR status string to a policy class.
+func ClassifyADRStatus(raw string) string {
+	token := strings.ToLower(strings.TrimSpace(raw))
+	if token == "" {
+		return ADRStatusUnknown
+	}
+	for _, sep := range []string{",", ";", "—", "-", "(", "\n"} {
+		if i := strings.Index(token, sep); i > 0 {
+			token = strings.TrimSpace(token[:i])
+			break
+		}
+	}
+	fields := strings.Fields(token)
+	if len(fields) == 0 {
+		return ADRStatusUnknown
+	}
+	token = fields[0]
+	switch token {
+	case "accepted", "adopted", "approved":
+		return ADRStatusAccepted
+	case "draft", "proposed", "rejected", "withdrawn":
+		return ADRStatusSkip
+	case "deprecated", "superseded", "superceded":
+		return ADRStatusHistorical
+	default:
+		return ADRStatusUnknown
+	}
+}
+
+// ADRIdentityFromPath returns the filename stem used as adr evidence.
+func ADRIdentityFromPath(rel string) string {
+	rel = strings.TrimSpace(strings.ReplaceAll(rel, "\\", "/"))
+	parts := strings.Split(rel, "/")
+	base := parts[len(parts)-1]
+	if i := strings.LastIndex(base, "."); i > 0 {
+		return base[:i]
+	}
+	return base
 }

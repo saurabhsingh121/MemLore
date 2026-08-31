@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M19 — product flywheel (next: F032 ADR ingest or F035 review queue; F022 is next Epic D compiler follow-up)  
+**Current Milestone**: M19 — product flywheel (next: F035 review queue or F040 decision model; F022 is next Epic D compiler follow-up)  
 **Current Release Target**: v0.9.0 engineering-intelligence flywheel  
 **Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
 
@@ -219,7 +219,7 @@ validity, evidence, and implementation awareness.
 |----|---------|----------|--------|-------|
 | F030 | Git commit ingestion | P0 | DONE | `specs/030-git-commit-ingest/`; observational, not canonical |
 | F031 | Pull request ingestion | P0 | DONE | `specs/031-pull-request-ingest/`; observational, not canonical |
-| F032 | ADR auto-ingestion | P0 | PLANNED | Accepted ADRs → high source authority |
+| F032 | ADR auto-ingestion | P0 | DONE | `specs/032-adr-ingest/`; accepted ADRs → verified `architecture_decision` |
 | F033 | Documentation ingestion | P1 | PLANNED | Architecture/runbooks/standards only |
 | F034 | Agent session knowledge extraction | P1 | PLANNED | Labeled `agent_observation` / `agent_inference` |
 | F035 | Suggested Lore review queue | P0 | PLANNED | CLI + REST; nothing auto-becomes canonical |
@@ -430,13 +430,13 @@ canonical writes. No new MCP tool.
 - [x] Linked issues/tickets are stored as evidence refs when present
 - [x] Unmerged PRs are skipped (not treated as landed implementation)
 
-**Next step**: Specify **F032** (ADR ingest) or **F035** (suggested-lore review queue).
+**Next step**: Specify **F035** (suggested-lore review queue) or **F040** (first-class decision model).
 
 ### F032 — ADR Auto-Ingestion
 
-**Status**: PLANNED  
+**Status**: DONE  
 **Priority**: P0  
-**Depends on**: F001 (lore model), F003 (authority), F008 (supersession)
+**Depends on**: F001 (lore model), F003 (authority), F008 (supersession), F030/F031 (ingest producer pattern)
 
 **Goal**: Discover and ingest ADRs from configured paths (`docs/adr/`, `adr/`,
 `architecture/decisions/`, and repo-configured extras). Extract decision,
@@ -446,15 +446,15 @@ components.
 **Product value**: Turns the team’s existing decision corpus into governed lore
 without copy-paste.
 
-**Acceptance criteria** (draft):
+**Acceptance criteria**:
 
-- [ ] Configured paths are scanned; new/changed ADRs produce candidates
-- [ ] Accepted ADRs receive high source authority (not unverified agent inference)
-- [ ] Supersession relationships in ADR metadata map to lore supersession where possible
-- [ ] Original ADR path remains the evidence source
-- [ ] Human review (F035) still applies if extraction is uncertain; accepted-file ingest may be auto-trusted only when specify says so
+- [x] Configured paths are scanned; new/changed ADRs produce lore (accepted) or historical records
+- [x] Accepted ADRs receive high source authority (verified `architecture_decision`, evidence `adr`)
+- [x] Supersession relationships in ADR metadata map to lore supersession where possible (ingest-created only)
+- [x] Original ADR path remains the evidence source
+- [x] Uncertain extracts are skipped (F035 still applies later); accepted-file ingest is auto-trusted per spec
 
-**Next step**: Specify after or with F030/F031; needed before F040/F044 shine.
+**Next step**: Specify **F035** or **F040**; F033 docs ingest remains later.
 
 ### F033 — Documentation Ingestion
 
@@ -618,8 +618,7 @@ this slice (F050 / `include_stale` not added). Conflicts stay on the existing
 - [x] REST and MCP stay in parity
 - [x] Agent identity is recorded for later F060 feedback, not used as authority
 
-**Next step**: Specify **F022** (packet profiles) or **F032** (ADR ingest) /
-**F035** (suggested-lore review queue) per flywheel sequence.
+**Next step**: Specify **F022** (packet profiles) or **F035** (suggested-lore review queue) per flywheel sequence.
 
 ### F022 — Context Packet Profiles
 
@@ -1248,6 +1247,15 @@ requirement.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F032 ADR auto-ingestion
+
+- Local working-copy ADR dirs (`docs/adr/`, `adr/`, `architecture/decisions/` + extras)
+- Accepted/adopted ADRs → verified `architecture_decision` lore with evidence `adr`
+- Additive `adr_ingest_*` tables (path + checksum idempotency); draft/template skip
+- CLI `memlore ingest adr` / `ingest status --kind adr`; REST `/v1/ingest/adr`
+- MCP unchanged (10 tools); compile ranking unchanged (F003 characterization)
+- Spec: `specs/032-adr-ingest/`; F032 marked DONE
+
 ### 2026-09-01 — F031 pull request ingestion
 
 - Merged GitHub PRs only; observational `repository_observation` lore
@@ -1295,9 +1303,9 @@ requirement.
 
 ### Immediate recommended tasks
 
-1. Specify **F032** (ADR ingest) or **F035** (suggested-lore review queue)
+1. Specify **F035** (suggested-lore review queue) or **F040** (first-class decision model)
 2. Or specify **F022/F023** compiler profiles/budget if staying on agent briefing
-3. Then remaining Epic C ingest after F032/F035 as sequenced
+3. Then remaining Epic C ingest (F033 docs) after F035 as sequenced
 4. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
 5. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 
