@@ -20,7 +20,8 @@ type GetIngestRunQuery struct {
 
 // ListIngestCandidatesQuery lists current observational lore for a repository.
 type ListIngestCandidatesQuery struct {
-	Scope domain.Scope
+	Scope        domain.Scope
+	EvidenceType domain.EvidenceType // optional filter (pr or commit)
 }
 
 // ListIngestRunsHandler lists runs newest first.
@@ -91,8 +92,72 @@ func (h *ListIngestCandidatesHandler) Handle(ctx context.Context, q ListIngestCa
 	out := make([]domain.LoreEntry, 0, len(current))
 	for _, e := range current {
 		if e.Origin == domain.KnowledgeOriginRepositoryObservation {
+			if q.EvidenceType != "" {
+				has := false
+				for _, ev := range e.Evidence {
+					if ev.Type == q.EvidenceType {
+						has = true
+						break
+					}
+				}
+				if !has {
+					continue
+				}
+			}
 			out = append(out, e)
 		}
 	}
 	return out, nil
+}
+
+// ListPRIngestRunsQuery lists PR ingest runs for a repository scope.
+type ListPRIngestRunsQuery struct {
+	Scope domain.Scope
+}
+
+// GetPRIngestRunQuery loads one PR ingest run by id.
+type GetPRIngestRunQuery struct {
+	ID string
+}
+
+// ListPRIngestRunsHandler lists PR runs newest first.
+type ListPRIngestRunsHandler struct {
+	begin ports.UnitOfWorkFactory
+}
+
+func NewListPRIngestRunsHandler(begin ports.UnitOfWorkFactory) *ListPRIngestRunsHandler {
+	return &ListPRIngestRunsHandler{begin: begin}
+}
+
+func (h *ListPRIngestRunsHandler) Handle(ctx context.Context, q ListPRIngestRunsQuery) ([]domain.PRIngestRun, error) {
+	if q.Scope.Kind != domain.ScopeKindRepository {
+		return nil, &domain.ValidationError{Message: "ingest scope kind must be repository"}
+	}
+	uow, err := h.begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer uow.Rollback(ctx)
+	return uow.PRIngest().ListRunsByScope(ctx, q.Scope)
+}
+
+// GetPRIngestRunHandler loads a single PR ingest run.
+type GetPRIngestRunHandler struct {
+	begin ports.UnitOfWorkFactory
+}
+
+func NewGetPRIngestRunHandler(begin ports.UnitOfWorkFactory) *GetPRIngestRunHandler {
+	return &GetPRIngestRunHandler{begin: begin}
+}
+
+func (h *GetPRIngestRunHandler) Handle(ctx context.Context, q GetPRIngestRunQuery) (domain.PRIngestRun, error) {
+	if q.ID == "" {
+		return domain.PRIngestRun{}, &domain.ValidationError{Message: "run id is required"}
+	}
+	uow, err := h.begin(ctx)
+	if err != nil {
+		return domain.PRIngestRun{}, err
+	}
+	defer uow.Rollback(ctx)
+	return uow.PRIngest().GetRun(ctx, q.ID)
 }

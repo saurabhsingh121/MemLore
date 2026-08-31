@@ -91,6 +91,42 @@ type OutboxEvent struct {
 	LastError      pgtype.Text
 }
 
+type PrIngestCursor struct {
+	ScopeKind    string
+	ScopeKey     string
+	LastPr       int32
+	LastMergedAt pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+}
+
+type PrIngestPr struct {
+	ScopeKind   string
+	ScopeKey    string
+	PrNumber    int32
+	NodeID      pgtype.Text
+	LoreEntryID pgtype.Text
+	Skipped     bool
+	SkipReason  pgtype.Text
+	ProcessedAt pgtype.Timestamptz
+}
+
+type PrIngestRun struct {
+	ID               string
+	ScopeKind        string
+	ScopeKey         string
+	ActorID          string
+	PrNumber         int32
+	Status           string
+	PrsSeen          int32
+	PrsSkipped       int32
+	CandidatesStored int32
+	CursorPr         pgtype.Int4
+	CursorAt         pgtype.Timestamptz
+	ErrorSummary     pgtype.Text
+	StartedAt        pgtype.Timestamptz
+	FinishedAt       pgtype.Timestamptz
+}
+
 type Project struct {
 	ID        string
 	Key       string

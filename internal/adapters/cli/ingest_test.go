@@ -28,6 +28,46 @@ func TestParseIngestStatusArgsRequiresRepo(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected repository error")
 	}
+	got, err := cli.ParseIngestStatusArgs([]string{"--repository", "github.com/acme/payments"})
+	if err != nil || got.Kind != "git" {
+		t.Fatalf("default kind: %+v err=%v", got, err)
+	}
+	pr, err := cli.ParseIngestStatusArgs([]string{"--repository", "r1", "--kind", "pr"})
+	if err != nil || pr.Kind != "pr" {
+		t.Fatalf("kind pr: %+v err=%v", pr, err)
+	}
+}
+
+func TestParseIngestPRArgs(t *testing.T) {
+	_, err := cli.ParseIngestPRArgs(nil)
+	if err == nil {
+		t.Fatal("expected repository error")
+	}
+	got, err := cli.ParseIngestPRArgs([]string{"--repository", "github.com/acme/payments", "--pr", "1842", "--max-prs", "5", "--actor", "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Repository != "github.com/acme/payments" || got.PR != 1842 || got.MaxPRs != 5 || got.Actor != "alice" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestFormatPRIngestStatus(t *testing.T) {
+	if !strings.Contains(cli.FormatPRIngestStatus("r1", nil), "(none)") {
+		t.Fatal("expected none")
+	}
+	at := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	run := &domain.PRIngestRun{
+		ID: "run-1", Status: domain.IngestRunSucceeded,
+		PRsSeen: 12, PRsSkipped: 10, CandidatesStored: 2,
+		CursorPR: 1842, CursorAt: &at,
+	}
+	out := cli.FormatPRIngestStatus("github.com/acme/payments", run)
+	for _, want := range []string{"Repository: github.com/acme/payments", "Latest PR run: succeeded", "prs seen: 12", "candidates stored: 2", "#1842"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in %s", want, out)
+		}
+	}
 }
 
 func TestFormatIngestStatus(t *testing.T) {

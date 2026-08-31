@@ -60,7 +60,7 @@ isolated in `graph-service/`.
 (`get_for_task` / `why`) → use (coding agent) → detect drift (PR check) →
 human correction → learn. See
 [FEATURE_DEVELOPMENT.md](../development/FEATURE_DEVELOPMENT.md). Next specify:
-F031 PR ingest or F035 review queue, or F022 packet profiles. P0 human queues are CLI + REST; a
+F032 ADR ingest or F035 review queue, or F022 packet profiles. P0 human queues are CLI + REST; a
 product web UI is F120 (P2).
 
 ## Adapters

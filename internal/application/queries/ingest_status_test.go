@@ -58,6 +58,42 @@ func TestListIngestRunsAndCandidates(t *testing.T) {
 	}
 }
 
+func TestListIngestCandidatesFiltersEvidenceType(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	uow := memory.NewUnitOfWork()
+	begin := memory.BeginFactory(uow)
+	handler := commands.NewIngestPullRequestsHandler(begin, clock.FixedClock{Instant: now}, &stubPRReader{prs: []domain.PullRequestSnapshot{{
+		Number: 1842, Owner: "acme", Repo: "payments",
+		Title: "Use outbox", Body: "because dual-writes race",
+		Merged: true, MergedAt: &now, AuthorLogin: "dev",
+	}}})
+	_, err := handler.Handle(context.Background(), commands.IngestPullRequestsCommand{Scope: scope, ActorID: "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prCands, err := queries.NewListIngestCandidatesHandler(begin).Handle(context.Background(), queries.ListIngestCandidatesQuery{
+		Scope: scope, EvidenceType: domain.EvidenceTypePR,
+	})
+	if err != nil || len(prCands) != 1 {
+		t.Fatalf("pr candidates = %+v err=%v", prCands, err)
+	}
+	commitCands, err := queries.NewListIngestCandidatesHandler(begin).Handle(context.Background(), queries.ListIngestCandidatesQuery{
+		Scope: scope, EvidenceType: domain.EvidenceTypeCommit,
+	})
+	if err != nil || len(commitCands) != 0 {
+		t.Fatalf("commit filter = %+v err=%v", commitCands, err)
+	}
+}
+
+type stubPRReader struct {
+	prs []domain.PullRequestSnapshot
+}
+
+func (s *stubPRReader) ListPullRequests(_ context.Context, _ ports.PullRequestQuery) ([]domain.PullRequestSnapshot, error) {
+	return s.prs, nil
+}
+
 func TestListIngestRunsRejectsNonRepository(t *testing.T) {
 	scope, _ := domain.NewScope(domain.ScopeKindTeam, "t1")
 	uow := memory.NewUnitOfWork()

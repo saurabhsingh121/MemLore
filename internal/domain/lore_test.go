@@ -105,8 +105,31 @@ func TestObservationalLoreEntryRequiresCommitEvidence(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 	var ve *domain.ValidationError
-	if !errors.As(err, &ve) || ve.Message != "observational lore requires commit evidence" {
+	if !errors.As(err, &ve) || ve.Message != "observational lore requires commit or pr evidence" {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestObservationalLoreEntryAcceptsPREvidence(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	ev, err := domain.NewEvidenceReference(domain.EvidenceTypePR, "acme/payments#1842")
+	if err != nil {
+		t.Fatalf("evidence: %v", err)
+	}
+	entry, err := domain.NewObservationalLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Use the outbox because dual-writes race.",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Evidence:  []domain.EvidenceReference{ev},
+	})
+	if err != nil {
+		t.Fatalf("NewObservationalLoreEntry: %v", err)
+	}
+	if entry.Origin != domain.KnowledgeOriginRepositoryObservation {
+		t.Fatalf("origin = %q", entry.Origin)
+	}
+	if entry.VerificationStatus != domain.VerificationUnverified {
+		t.Fatalf("status = %q", entry.VerificationStatus)
 	}
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/memlore/memlore/internal/application/queries"
 	"github.com/memlore/memlore/internal/domain"
 	"github.com/memlore/memlore/internal/infrastructure/gitcli"
+	"github.com/memlore/memlore/internal/infrastructure/githubhttp"
 )
 
 // Handlers exposes lore REST endpoints.
@@ -32,8 +33,11 @@ type Handlers struct {
 	RepositoryProfile *queries.RepositoryProfileHandler
 	ExplainLore       *queries.ExplainLoreHandler
 	IngestGit         *commands.IngestGitHandler
+	IngestPR          *commands.IngestPullRequestsHandler
 	ListIngestRuns    *queries.ListIngestRunsHandler
 	GetIngestRun      *queries.GetIngestRunHandler
+	ListPRIngestRuns  *queries.ListPRIngestRunsHandler
+	GetPRIngestRun    *queries.GetPRIngestRunHandler
 	ListIngestCands   *queries.ListIngestCandidatesHandler
 	Auth              *appauth.Service
 	Authz             *authz.Gate
@@ -58,8 +62,11 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
 		IngestGit:         commands.NewIngestGitHandler(begin, clock, gitcli.NewReader()),
+		IngestPR:          commands.NewIngestPullRequestsHandler(begin, clock, githubhttp.NewReader("", githubhttp.TokenFromEnv(), nil)),
 		ListIngestRuns:    queries.NewListIngestRunsHandler(begin),
 		GetIngestRun:      queries.NewGetIngestRunHandler(begin),
+		ListPRIngestRuns:  queries.NewListPRIngestRunsHandler(begin),
+		GetPRIngestRun:    queries.NewGetPRIngestRunHandler(begin),
 		ListIngestCands:   queries.NewListIngestCandidatesHandler(begin),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
 		Version:           version,
@@ -84,8 +91,11 @@ func (h *Handlers) Router() http.Handler {
 		r.Post("/context/compile", h.compileContext)
 		r.Post("/repository-profile", h.repositoryProfile)
 		r.Post("/ingest/git", h.ingestGit)
+		r.Post("/ingest/pr", h.ingestPR)
 		r.Get("/ingest/runs", h.listIngestRuns)
 		r.Get("/ingest/runs/{id}", h.getIngestRun)
+		r.Get("/ingest/pr-runs", h.listPRIngestRuns)
+		r.Get("/ingest/pr-runs/{id}", h.getPRIngestRun)
 		r.Get("/ingest/candidates", h.listIngestCandidates)
 
 		r.Post("/admin/teams", h.adminCreateTeam)

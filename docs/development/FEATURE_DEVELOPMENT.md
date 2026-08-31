@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M19 — product flywheel (next: F031 PR ingest or F035 review queue; F022 is next Epic D compiler follow-up)  
+**Current Milestone**: M19 — product flywheel (next: F032 ADR ingest or F035 review queue; F022 is next Epic D compiler follow-up)  
 **Current Release Target**: v0.9.0 engineering-intelligence flywheel  
 **Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
 
@@ -218,7 +218,7 @@ validity, evidence, and implementation awareness.
 | ID | Feature | Priority | Status | Notes |
 |----|---------|----------|--------|-------|
 | F030 | Git commit ingestion | P0 | DONE | `specs/030-git-commit-ingest/`; observational, not canonical |
-| F031 | Pull request ingestion | P0 | PLANNED | GitHub-first; evidence links to the PR |
+| F031 | Pull request ingestion | P0 | DONE | `specs/031-pull-request-ingest/`; observational, not canonical |
 | F032 | ADR auto-ingestion | P0 | PLANNED | Accepted ADRs → high source authority |
 | F033 | Documentation ingestion | P1 | PLANNED | Architecture/runbooks/standards only |
 | F034 | Agent session knowledge extraction | P1 | PLANNED | Labeled `agent_observation` / `agent_inference` |
@@ -283,7 +283,7 @@ GitHub is the first forge. Feature writeups live with their product epic.
 
 | ID | Feature | Home epic | Priority | Status |
 |----|---------|-----------|----------|--------|
-| F031 | Pull request ingestion | C | P0 | PLANNED |
+| F031 | Pull request ingestion | C | P0 | DONE |
 | F054 | GitHub PR check | F | P0 | PLANNED |
 | F074 | GitHub review bot | G | P1 | PLANNED |
 
@@ -405,10 +405,11 @@ canonical writes. No new MCP tool.
 
 ### F031 — Pull Request Ingestion
 
-**Status**: PLANNED  
+**Status**: DONE  
 **Priority**: P0  
-**Depends on**: F030 (shared ingest pipeline likely), Epic H GitHub adapter
-**Home also**: Epic H
+**Depends on**: F030 (observational ingest producer), Epic H GitHub-first  
+**Home also**: Epic H  
+**Spec**: `specs/031-pull-request-ingest/`
 
 **Goal**: Ingest PR title, description, linked issues, changed files, review
 discussion, merged state, author, and timestamps. PRs are high-quality sources
@@ -416,15 +417,20 @@ for why code changed.
 
 **Product value**: Review discussion is often the real decision record.
 
-**Acceptance criteria** (draft):
+**Surfaces**: CLI `memlore ingest pr` / `memlore ingest status --kind pr`; REST
+`POST /v1/ingest/pr`, `GET /v1/ingest/pr-runs`, candidates with
+`evidence_type=pr`. Existing `memlore worker` publishes outbox. No silent
+canonical writes. No new MCP tool.
 
-- [ ] Merged PRs from a configured GitHub repository can be ingested
-- [ ] Candidates preserve evidence links to the original PR (and review comments used)
-- [ ] Git-derived and PR-derived candidates remain observational until F035 accept
-- [ ] Linked issues/tickets are stored as evidence refs when present
-- [ ] Unmerged PRs are either skipped or clearly labeled as not-landed (specify)
+**Acceptance criteria**:
 
-**Next step**: Specify with F030 as a shared acquisition slice if practical.
+- [x] Merged PRs from a configured GitHub repository can be ingested
+- [x] Candidates preserve evidence links to the original PR (and review comments used)
+- [x] Git-derived and PR-derived candidates remain observational until F035 accept
+- [x] Linked issues/tickets are stored as evidence refs when present
+- [x] Unmerged PRs are skipped (not treated as landed implementation)
+
+**Next step**: Specify **F032** (ADR ingest) or **F035** (suggested-lore review queue).
 
 ### F032 — ADR Auto-Ingestion
 
@@ -612,7 +618,7 @@ this slice (F050 / `include_stale` not added). Conflicts stay on the existing
 - [x] REST and MCP stay in parity
 - [x] Agent identity is recorded for later F060 feedback, not used as authority
 
-**Next step**: Specify **F022** (packet profiles) or **F031** (PR ingest) /
+**Next step**: Specify **F022** (packet profiles) or **F032** (ADR ingest) /
 **F035** (suggested-lore review queue) per flywheel sequence.
 
 ### F022 — Context Packet Profiles
@@ -1242,6 +1248,15 @@ requirement.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F031 pull request ingestion
+
+- Merged GitHub PRs only; observational `repository_observation` lore
+- Evidence type `pr` (`owner/repo#N`); optional `url` for used review comments and linked issues
+- Additive `pr_ingest_*` tables (not `git_ingest_shas`); PR-number idempotency
+- CLI `memlore ingest pr` / `ingest status --kind pr`; REST `/v1/ingest/pr`
+- MCP unchanged (10 tools); compile ranking unchanged
+- Spec: `specs/031-pull-request-ingest/`; F031 marked DONE
+
 ### 2026-09-01 — F030 git commit ingestion
 
 - Local git directory ingest; observational `repository_observation` lore
@@ -1280,9 +1295,9 @@ requirement.
 
 ### Immediate recommended tasks
 
-1. Specify **F031** (PR ingest) or **F035** (suggested-lore review queue)
+1. Specify **F032** (ADR ingest) or **F035** (suggested-lore review queue)
 2. Or specify **F022/F023** compiler profiles/budget if staying on agent briefing
-3. Then remaining Epic C ingest (F032 ADR) after F031/F035 as sequenced
+3. Then remaining Epic C ingest after F032/F035 as sequenced
 4. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
 5. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 
