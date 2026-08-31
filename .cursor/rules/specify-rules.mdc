@@ -16,9 +16,11 @@ alwaysApply: true
 
 ## Active feature plan
 
-F021 agent context bootstrap is DONE (`specs/021-agent-context-bootstrap/`).
-Next to specify: F030 — Git Commit Ingestion (flywheel) or F022 — Context
-Packet Profiles (Epic D). F007 compile v1 and F020 repository profile remain DONE.
+F030 Git Commit Ingestion is DONE (`specs/030-git-commit-ingest/`).
+F021 agent context bootstrap is DONE. Next: F031 PR ingest or F035
+suggested-lore review queue (Epic C), or F022 packet profiles (Epic D).
+F007 compile v1 and F020 repository profile remain DONE.
+Do not reopen F007/F020/F021 contracts.
 Foundation complete (v0.8.0): F001–F010, F003, F101–F114, F113.
 Product roadmap is epic-based (A–J). Frozen IDs F101–F114 are never reused;
 remapped product IDs: F115–F119, F122.

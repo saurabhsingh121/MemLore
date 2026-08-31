@@ -32,14 +32,15 @@ func ParseScopeKind(value string) (ScopeKind, error) {
 type EvidenceType string
 
 const (
-	EvidenceTypeURL  EvidenceType = "url"
-	EvidenceTypePath EvidenceType = "path"
-	EvidenceTypeADR  EvidenceType = "adr"
+	EvidenceTypeURL    EvidenceType = "url"
+	EvidenceTypePath   EvidenceType = "path"
+	EvidenceTypeADR    EvidenceType = "adr"
+	EvidenceTypeCommit EvidenceType = "commit"
 )
 
 func ParseEvidenceType(value string) (EvidenceType, error) {
 	switch EvidenceType(value) {
-	case EvidenceTypeURL, EvidenceTypePath, EvidenceTypeADR:
+	case EvidenceTypeURL, EvidenceTypePath, EvidenceTypeADR, EvidenceTypeCommit:
 		return EvidenceType(value), nil
 	default:
 		return "", validationError("invalid evidence type")

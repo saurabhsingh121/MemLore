@@ -53,6 +53,8 @@ func handleDomainError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusUnauthorized, "unauthorized", e.Message)
 	case *domain.ForbiddenError:
 		writeError(w, http.StatusForbidden, "forbidden", e.Message)
+	case *domain.ConflictError:
+		writeError(w, http.StatusConflict, "conflict", e.Message)
 	default:
 		fmt.Fprintf(os.Stderr, "memlore http internal error: %v\n", err)
 		writeError(w, http.StatusInternalServerError, "internal_error", "unexpected error")

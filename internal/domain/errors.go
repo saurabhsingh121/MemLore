@@ -8,6 +8,7 @@ var (
 	ErrNotFound     = errors.New("not found")
 	ErrUnauthorized = errors.New("unauthorized")
 	ErrForbidden    = errors.New("forbidden")
+	ErrConflict     = errors.New("conflict")
 )
 
 // ValidationError indicates input failed domain rules.
@@ -69,6 +70,22 @@ func (e *ForbiddenError) Error() string {
 
 func (e *ForbiddenError) Is(target error) bool {
 	return target == ErrForbidden
+}
+
+// ConflictError indicates a conflicting in-flight operation (e.g. ingest already running).
+type ConflictError struct {
+	Message string
+}
+
+func (e *ConflictError) Error() string {
+	if e.Message == "" {
+		return "conflict"
+	}
+	return e.Message
+}
+
+func (e *ConflictError) Is(target error) bool {
+	return target == ErrConflict
 }
 
 func validationError(message string) error {

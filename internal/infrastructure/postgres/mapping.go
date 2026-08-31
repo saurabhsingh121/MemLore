@@ -228,3 +228,90 @@ func stringFromText(value pgtype.Text) string {
 	}
 	return value.String
 }
+
+func ingestRunToInsertParams(run domain.IngestRun) sqlc.InsertGitIngestRunParams {
+	return sqlc.InsertGitIngestRunParams{
+		ID:               run.ID,
+		ScopeKind:        string(run.Scope.Kind),
+		ScopeKey:         run.Scope.Key,
+		ActorID:          run.ActorID,
+		LocalPath:        run.LocalPath,
+		Status:           string(run.Status),
+		CommitsSeen:      int32(run.CommitsSeen),
+		CommitsSkipped:   int32(run.CommitsSkipped),
+		CandidatesStored: int32(run.CandidatesStored),
+		CursorSha:        textFromString(run.CursorSHA),
+		CursorAt:         timestamptzFromPtr(run.CursorAt),
+		ErrorSummary:     textFromString(run.ErrorSummary),
+		StartedAt:        timestamptzFromTime(run.StartedAt),
+		FinishedAt:       timestamptzFromPtr(run.FinishedAt),
+	}
+}
+
+func ingestRunToUpdateParams(run domain.IngestRun) sqlc.UpdateGitIngestRunParams {
+	return sqlc.UpdateGitIngestRunParams{
+		ID:               run.ID,
+		Status:           string(run.Status),
+		CommitsSeen:      int32(run.CommitsSeen),
+		CommitsSkipped:   int32(run.CommitsSkipped),
+		CandidatesStored: int32(run.CandidatesStored),
+		CursorSha:        textFromString(run.CursorSHA),
+		CursorAt:         timestamptzFromPtr(run.CursorAt),
+		ErrorSummary:     textFromString(run.ErrorSummary),
+		FinishedAt:       timestamptzFromPtr(run.FinishedAt),
+	}
+}
+
+func ingestRunFromRow(row sqlc.GitIngestRun) (domain.IngestRun, error) {
+	kind, err := domain.ParseScopeKind(row.ScopeKind)
+	if err != nil {
+		return domain.IngestRun{}, err
+	}
+	return domain.IngestRun{
+		ID:               row.ID,
+		Scope:            domain.Scope{Kind: kind, Key: row.ScopeKey},
+		ActorID:          row.ActorID,
+		LocalPath:        row.LocalPath,
+		Status:           domain.IngestRunStatus(row.Status),
+		CommitsSeen:      int(row.CommitsSeen),
+		CommitsSkipped:   int(row.CommitsSkipped),
+		CandidatesStored: int(row.CandidatesStored),
+		CursorSHA:        stringFromText(row.CursorSha),
+		CursorAt:         ptrFromTimestamptz(row.CursorAt),
+		ErrorSummary:     stringFromText(row.ErrorSummary),
+		StartedAt:        timeFromTimestamptz(row.StartedAt),
+		FinishedAt:       ptrFromTimestamptz(row.FinishedAt),
+	}, nil
+}
+
+func ingestCursorFromRow(row sqlc.GitIngestCursor) domain.IngestCursor {
+	return domain.IngestCursor{
+		Scope:           domain.Scope{Kind: domain.ScopeKind(row.ScopeKind), Key: row.ScopeKey},
+		LastSHA:         row.LastSha,
+		LastCommittedAt: timeFromTimestamptz(row.LastCommittedAt),
+		UpdatedAt:       timeFromTimestamptz(row.UpdatedAt),
+	}
+}
+
+func processedSHAToInsertParams(row domain.ProcessedSHA) sqlc.InsertGitIngestSHAParams {
+	return sqlc.InsertGitIngestSHAParams{
+		ScopeKind:   string(row.Scope.Kind),
+		ScopeKey:    row.Scope.Key,
+		Sha:         row.SHA,
+		LoreEntryID: textFromString(row.LoreEntryID),
+		Skipped:     row.Skipped,
+		SkipReason:  textFromString(row.SkipReason),
+		ProcessedAt: timestamptzFromTime(row.ProcessedAt),
+	}
+}
+
+func processedSHAFromRow(row sqlc.GitIngestSha) domain.ProcessedSHA {
+	return domain.ProcessedSHA{
+		Scope:       domain.Scope{Kind: domain.ScopeKind(row.ScopeKind), Key: row.ScopeKey},
+		SHA:         row.Sha,
+		LoreEntryID: stringFromText(row.LoreEntryID),
+		Skipped:     row.Skipped,
+		SkipReason:  stringFromText(row.SkipReason),
+		ProcessedAt: timeFromTimestamptz(row.ProcessedAt),
+	}
+}

@@ -16,6 +16,41 @@ type AuditRecord struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type GitIngestCursor struct {
+	ScopeKind       string
+	ScopeKey        string
+	LastSha         string
+	LastCommittedAt pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type GitIngestRun struct {
+	ID               string
+	ScopeKind        string
+	ScopeKey         string
+	ActorID          string
+	LocalPath        string
+	Status           string
+	CommitsSeen      int32
+	CommitsSkipped   int32
+	CandidatesStored int32
+	CursorSha        pgtype.Text
+	CursorAt         pgtype.Timestamptz
+	ErrorSummary     pgtype.Text
+	StartedAt        pgtype.Timestamptz
+	FinishedAt       pgtype.Timestamptz
+}
+
+type GitIngestSha struct {
+	ScopeKind   string
+	ScopeKey    string
+	Sha         string
+	LoreEntryID pgtype.Text
+	Skipped     bool
+	SkipReason  pgtype.Text
+	ProcessedAt pgtype.Timestamptz
+}
+
 type LoreEntry struct {
 	ID                 string
 	Statement          string

@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M19 — product flywheel (next: F030; F022 is next Epic D compiler follow-up)  
+**Current Milestone**: M19 — product flywheel (next: F031 PR ingest or F035 review queue; F022 is next Epic D compiler follow-up)  
 **Current Release Target**: v0.9.0 engineering-intelligence flywheel  
 **Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
 
@@ -217,7 +217,7 @@ validity, evidence, and implementation awareness.
 
 | ID | Feature | Priority | Status | Notes |
 |----|---------|----------|--------|-------|
-| F030 | Git commit ingestion | P0 | PLANNED | Observational evidence, not canonical truth |
+| F030 | Git commit ingestion | P0 | DONE | `specs/030-git-commit-ingest/`; observational, not canonical |
 | F031 | Pull request ingestion | P0 | PLANNED | GitHub-first; evidence links to the PR |
 | F032 | ADR auto-ingestion | P0 | PLANNED | Accepted ADRs → high source authority |
 | F033 | Documentation ingestion | P1 | PLANNED | Architecture/runbooks/standards only |
@@ -379,7 +379,7 @@ source type applies (accepted ADRs in F032).
 
 ### F030 — Git Commit Ingestion
 
-**Status**: PLANNED  
+**Status**: DONE  
 **Priority**: P0  
 **Depends on**: F004/F107 (outbox), F005/F106 (graph ingest)
 
@@ -389,18 +389,19 @@ technical constraints).
 
 **Product value**: Recovers *why* from history that never became an ADR.
 
-**Surfaces**: Background worker; REST status/list; no silent canonical writes.
+**Surfaces**: CLI `memlore ingest git` / `memlore ingest status`; REST trigger
+and run/candidate list; existing `memlore worker` publishes outbox. No silent
+canonical writes. No new MCP tool.
 
-**Acceptance criteria** (draft; refined at specify):
+**Acceptance criteria**:
 
-- [ ] Commits from a configured repository can be ingested with author, SHA, timestamp, message, and changed-path metadata
-- [ ] Extracted candidates are stored as observational evidence, not `canonical` / human-verified
-- [ ] Each candidate preserves an evidence link to the commit SHA
-- [ ] Re-ingest of the same SHA is idempotent
-- [ ] Failed ingest retries without duplicating accepted lore
+- [x] Commits from a configured local git directory can be ingested with author, SHA, timestamp, message, and changed-path metadata
+- [x] Extracted candidates are stored as observational evidence, not `canonical` / human-verified
+- [x] Each candidate preserves an evidence link to the commit SHA (`evidence.type=commit`)
+- [x] Re-ingest of the same SHA is idempotent
+- [x] Failed ingest retries without duplicating accepted lore
 
-**Next step**: Specify after F020/F021 shape the consumption side — or in
-parallel once F020 is specified, if capture is the chosen first vertical.
+**Spec**: `specs/030-git-commit-ingest/`
 
 ### F031 — Pull Request Ingestion
 
@@ -611,8 +612,8 @@ this slice (F050 / `include_stale` not added). Conflicts stay on the existing
 - [x] REST and MCP stay in parity
 - [x] Agent identity is recorded for later F060 feedback, not used as authority
 
-**Next step**: Specify **F022** (packet profiles) or **F030** (git commit
-ingestion) per flywheel sequence.
+**Next step**: Specify **F022** (packet profiles) or **F031** (PR ingest) /
+**F035** (suggested-lore review queue) per flywheel sequence.
 
 ### F022 — Context Packet Profiles
 
@@ -1241,6 +1242,14 @@ requirement.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F030 git commit ingestion
+
+- Local git directory ingest; observational `repository_observation` lore
+- Evidence type `commit` (full SHA); skip noisy merges/chores; SHA idempotency
+- CLI `memlore ingest git` / `memlore ingest status`; REST `/v1/ingest/git`
+- MCP unchanged (10 tools); compile ranking unchanged
+- Spec: `specs/030-git-commit-ingest/`; F030 marked DONE
+
 ### 2026-09-01 — F021 agent context bootstrap
 
 - Extends F007 compile with named packet sections and optional files/ticket/agent_id
@@ -1271,9 +1280,9 @@ requirement.
 
 ### Immediate recommended tasks
 
-1. Specify **F030** (git commit ingestion) — next flywheel capture step after F021
+1. Specify **F031** (PR ingest) or **F035** (suggested-lore review queue)
 2. Or specify **F022/F023** compiler profiles/budget if staying on agent briefing
-3. Then F031–F032 ingest + F035 review queue
+3. Then remaining Epic C ingest (F032 ADR) after F031/F035 as sequenced
 4. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
 5. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 

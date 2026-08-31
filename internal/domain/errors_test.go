@@ -13,3 +13,10 @@ func TestValidationErrorIsValidationSentinel(t *testing.T) {
 		t.Fatal("expected ValidationError to match ErrValidation")
 	}
 }
+
+func TestConflictErrorIsConflictSentinel(t *testing.T) {
+	err := &domain.ConflictError{Message: "ingest already running"}
+	if !errors.Is(err, domain.ErrConflict) {
+		t.Fatal("expected ConflictError to match ErrConflict")
+	}
+}

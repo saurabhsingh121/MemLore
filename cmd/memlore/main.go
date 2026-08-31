@@ -25,6 +25,7 @@ import (
 	"github.com/memlore/memlore/internal/bootstrap"
 	"github.com/memlore/memlore/internal/domain"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
+	"github.com/memlore/memlore/internal/infrastructure/gitcli"
 	"github.com/memlore/memlore/internal/infrastructure/graphclient"
 	"github.com/memlore/memlore/internal/infrastructure/postgres"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -91,6 +92,41 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "ingest":
+		if len(args) < 3 {
+			printUsage(stdout)
+			return 1
+		}
+		switch args[2] {
+		case "git":
+			opts, err := cli.ParseIngestGitArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ingest git failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runIngestGit(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "ingest git failed: %v\n", err)
+				return 1
+			}
+			return 0
+		case "status":
+			opts, err := cli.ParseIngestStatusArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ingest status failed: %v\n", err)
+				return 1
+			}
+			if err := runIngestStatus(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "ingest status failed: %v\n", err)
+				return 1
+			}
+			return 0
+		default:
+			fmt.Fprintf(os.Stderr, "unknown ingest command: %s\n", args[2])
+			return 1
+		}
 	case "worker":
 		if err := runWorker(logger); err != nil {
 			fmt.Fprintf(os.Stderr, "worker failed: %v\n", err)
@@ -112,6 +148,8 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore mcp")
 	fmt.Fprintln(stdout, "  memlore profile --repository <key>")
 	fmt.Fprintln(stdout, "  memlore context --task <text> --repository <key>")
+	fmt.Fprintln(stdout, "  memlore ingest git --repository <key> --path <dir> [--actor <id>]")
+	fmt.Fprintln(stdout, "  memlore ingest status --repository <key>")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -309,6 +347,75 @@ func runContext(opts cli.ContextArgs, stdout io.Writer, logger *slog.Logger) err
 		return err
 	}
 	_, err = io.WriteString(stdout, cli.FormatContext(presenters.ToContextPacket(result)))
+	return err
+}
+
+func runIngestGit(opts cli.IngestGitArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	handler := commands.NewIngestGitHandler(begin, clock.SystemClock{}, gitcli.NewReader())
+	logger.Info("memlore ingest git started", "repository_id", opts.Repository, "path", opts.Path)
+	run, err := handler.Handle(context.Background(), commands.IngestGitCommand{
+		Scope:      scope,
+		Path:       opts.Path,
+		ActorID:    opts.Actor,
+		MaxCommits: opts.MaxCommits,
+	})
+	if err != nil {
+		logger.Error("memlore ingest git failed", "repository_id", opts.Repository, "error", err)
+		return err
+	}
+	if run.Status == domain.IngestRunFailed {
+		logger.Error("memlore ingest git failed", "repository_id", opts.Repository, "run_id", run.ID, "error", run.ErrorSummary)
+	} else {
+		logger.Info("memlore ingest git completed",
+			"repository_id", opts.Repository,
+			"run_id", run.ID,
+			"commits_seen", run.CommitsSeen,
+			"candidates_stored", run.CandidatesStored,
+		)
+	}
+	_, err = io.WriteString(stdout, cli.FormatIngestStatus(opts.Repository, &run))
+	return err
+}
+
+func runIngestStatus(opts cli.IngestStatusArgs, stdout io.Writer, _ *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	runs, err := queries.NewListIngestRunsHandler(begin).Handle(context.Background(), queries.ListIngestRunsQuery{Scope: scope})
+	if err != nil {
+		return err
+	}
+	var latest *domain.IngestRun
+	if len(runs) > 0 {
+		latest = &runs[0]
+	}
+	_, err = io.WriteString(stdout, cli.FormatIngestStatus(opts.Repository, latest))
 	return err
 }
 

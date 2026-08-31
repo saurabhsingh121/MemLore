@@ -33,6 +33,7 @@ type UnitOfWork interface {
 	LoreEntries() LoreRepository
 	Audits() AuditRepository
 	Outbox() OutboxRepository
+	Ingest() IngestRepository
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
