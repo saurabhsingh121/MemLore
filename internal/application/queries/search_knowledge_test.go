@@ -90,21 +90,119 @@ func TestSearchKnowledgeParallelGovernanceAndGraph(t *testing.T) {
 	}
 }
 
-func TestSearchKnowledgeWithoutScopeSkipsGovernance(t *testing.T) {
+func TestSearchKnowledgeFiltersIrrelevantGovernance(t *testing.T) {
 	uow := memory.NewUnitOfWork()
 	begin := memory.BeginFactory(uow)
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	create := commands.NewCreateLoreHandler(begin, clock.FixedClock{Instant: now})
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	for _, stmt := range []string{
+		"Use transactional outbox for payments.",
+		"Prefer blue-green deploys.",
+		"Always pin dependency versions.",
+		"Keep CHANGELOG updated.",
+		"Run go test in CI.",
+		"Document public APIs.",
+	} {
+		if _, err := create.Handle(context.Background(), commands.CreateLoreCommand{
+			Statement: stmt,
+			Scope:     scope,
+			ActorID:   "alice",
+		}); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+	}
+	handler := queries.NewSearchKnowledgeHandler(begin, &memory.KnowledgeGraph{}, nil)
+	result, err := handler.Handle(context.Background(), queries.SearchKnowledgeQuery{
+		Query: "outbox",
+		Scope: &scope,
+		Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	if len(result.Governance) != 1 {
+		t.Fatalf("governance len=%d items=%+v", len(result.Governance), result.Governance)
+	}
+	if !domain.StatementMatchesQuery(result.Governance[0].Entry.Statement, "outbox") {
+		t.Fatalf("unexpected hit %q", result.Governance[0].Entry.Statement)
+	}
+}
+
+func TestSearchKnowledgeCollapsesGraphReceipt(t *testing.T) {
+	uow := memory.NewUnitOfWork()
+	begin := memory.BeginFactory(uow)
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	create := commands.NewCreateLoreHandler(begin, clock.FixedClock{Instant: now})
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	entry, err := create.Handle(context.Background(), commands.CreateLoreCommand{
+		Statement: "Use transactional outbox.",
+		Scope:     scope,
+		ActorID:   "alice",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	graph := &memory.KnowledgeGraph{
+		SearchFacts: []ports.GraphFact{
+			{
+				ID:             "fact-1",
+				Statement:      "Use transactional outbox.",
+				Score:          0.91,
+				ProvenanceRefs: []string{entry.ID},
+			},
+			{
+				ID:        "fact-only",
+				Statement: "Graph-only observation",
+				Score:     0.5,
+			},
+		},
+	}
+	handler := queries.NewSearchKnowledgeHandler(begin, graph, nil)
+	result, err := handler.Handle(context.Background(), queries.SearchKnowledgeQuery{
+		Query: "outbox",
+		Scope: &scope,
+	})
+	if err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	if len(result.Governance) != 1 || result.Governance[0].Receipt == nil {
+		t.Fatalf("governance = %+v", result.Governance)
+	}
+	if result.Governance[0].Receipt.ID != "fact-1" {
+		t.Fatalf("receipt = %+v", result.Governance[0].Receipt)
+	}
+	if len(result.Graph) != 1 || result.Graph[0].ID != "fact-only" {
+		t.Fatalf("graph = %+v", result.Graph)
+	}
+}
+
+func TestSearchKnowledgeWithoutScopeSearchesGovernance(t *testing.T) {
+	uow := memory.NewUnitOfWork()
+	begin := memory.BeginFactory(uow)
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	create := commands.NewCreateLoreHandler(begin, clock.FixedClock{Instant: now})
+	scope, _ := domain.NewScope(domain.ScopeKindTeam, "platform")
+	_, err := create.Handle(context.Background(), commands.CreateLoreCommand{
+		Statement: "Use transactional outbox.",
+		Scope:     scope,
+		ActorID:   "alice",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
 	graph := &memory.KnowledgeGraph{
 		SearchFacts: []ports.GraphFact{{ID: "f1", Statement: "fact", Score: 0.5}},
 	}
 	handler := queries.NewSearchKnowledgeHandler(begin, graph, nil)
 
 	result, err := handler.Handle(context.Background(), queries.SearchKnowledgeQuery{
-		Query: "anything",
+		Query: "outbox",
 	})
 	if err != nil {
 		t.Fatalf("Handle: %v", err)
 	}
-	if len(result.Governance) != 0 {
+	if len(result.Governance) != 1 {
 		t.Fatalf("governance = %+v", result.Governance)
 	}
 	if len(result.Graph) != 1 {
@@ -122,7 +220,7 @@ func TestSearchKnowledgeGraphDownReturnsGovernanceWithWarning(t *testing.T) {
 	create := commands.NewCreateLoreHandler(begin, clock.FixedClock{Instant: now})
 	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
 	_, err := create.Handle(context.Background(), commands.CreateLoreCommand{
-		Statement: "Rule",
+		Statement: "Rule about outbox",
 		Scope:     scope,
 		ActorID:   "alice",
 	})
@@ -134,7 +232,7 @@ func TestSearchKnowledgeGraphDownReturnsGovernanceWithWarning(t *testing.T) {
 	handler := queries.NewSearchKnowledgeHandler(begin, graph, nil)
 
 	result, err := handler.Handle(context.Background(), queries.SearchKnowledgeQuery{
-		Query: "rule",
+		Query: "outbox",
 		Scope: &scope,
 	})
 	if err != nil {

@@ -16,8 +16,9 @@ alwaysApply: true
 
 ## Active feature plan
 
-Active: F010 remainder / F114 membership authz — `specs/018-membership-authz/`.
+Active: F006 remainder — `specs/019-semantic-graph-retrieval/`.
+Completed F114 (`specs/018-membership-authz/`): membership-scoped authz.
 Completed F113 (`specs/017-retire-python-core/`): legacy `src/memlore/` removed.
-Completed: F101–F112, F106a, F111, F003, F113.
+Completed: F101–F112, F106a, F111, F003, F113, F010/F114.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

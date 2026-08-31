@@ -1,8 +1,8 @@
 # MemLore Feature Development Tracker
 
-**Last Updated**: 2026-08-31  
-**Current Milestone**: M17 — membership-scoped authorization  
-**Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
+**Last Updated**: 2026-09-01  
+**Current Milestone**: M18 — fuller semantic search + graph retrieval (F006)  
+**Current Release Target**: v0.8.0 knowledge plane; governance production-ready
 
 ---
 
@@ -31,7 +31,7 @@
 | F113 | Retire legacy Python core | DONE | ✓ | ✓ | ✓ | 0005 | Removed `src/memlore/`; graph-service kept |
 | F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
-| F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
+| F006 | Semantic search + graph retrieval | DONE | ✓ | ✓ | ✓ | — | F108 + `019-semantic-graph-retrieval` |
 | F007 | Context compiler + `get_for_task` | DONE | ✓ | ✓ | ✓ | — | F109 + F112 (temporal filter + conflicts) |
 | F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 |
 | F009 | Conflict detection | DONE | ✓ | ✓ | ✓ | — | Implemented as F112 |
@@ -653,6 +653,12 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F006 fuller semantic search + graph retrieval
+
+- Query-relevant governance (token/substring match); scope-less membership-aware search
+- Prefer governance + `graph_receipt` collapse for provenance-linked graph facts
+- Contract: `specs/019-semantic-graph-retrieval/`; F006 marked DONE
+
 ### 2026-08-27 — F109 context compiler + get_for_task
 
 - `CompileContextHandler` with authority ranking, dedup, token budgeting
@@ -699,8 +705,8 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ### Immediate recommended tasks
 
-1. Team/project membership-scoped authorization (F010 remainder)
-2. Dogfood OIDC-on with HMAC or IdP JWKS
+1. Dogfood OIDC-on with HMAC or IdP JWKS
+2. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 
 ---
 

@@ -41,3 +41,25 @@ SELECT
 FROM lore_entries
 WHERE scope_kind = $1 AND scope_key = $2
 ORDER BY created_at DESC;
+
+-- name: SearchLoreEntriesByStatementScoped :many
+SELECT
+    id, statement, scope_kind, scope_key, origin, verification_status,
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
+FROM lore_entries
+WHERE scope_kind = $1
+  AND scope_key = $2
+  AND statement ILIKE '%' || $3 || '%'
+ORDER BY created_at DESC
+LIMIT $4;
+
+-- name: SearchLoreEntriesByStatementAll :many
+SELECT
+    id, statement, scope_kind, scope_key, origin, verification_status,
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
+FROM lore_entries
+WHERE statement ILIKE '%' || $1 || '%'
+ORDER BY created_at DESC
+LIMIT $2;

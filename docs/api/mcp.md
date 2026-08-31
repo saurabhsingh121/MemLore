@@ -21,7 +21,7 @@ when OIDC is on.
 | `memlore.verify` | Verify (self-verify allowed; idempotent re-verify) | implemented |
 | `memlore.explain` | Lore fields, chronological audits, and explainable authority evaluation (no NL summary) | implemented |
 | `memlore.search` | Exact scope list (`kind`+`key`); current only unless `include_stale` | implemented |
-| `memlore.knowledge_search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) | implemented |
+| `memlore.knowledge_search` | Dual-plane knowledge search (query-relevant governance + graph; optional `include_stale`; optional `graph_receipt`) | implemented |
 | `memlore.get_for_task` | Compiled context packet for a task (`conflicts` array; never packs stale) | implemented |
 | `memlore.supersede` | Replace while preserving history | implemented |
 | `memlore.invalidate` | Mark invalid without deleting evidence | implemented |
@@ -62,7 +62,7 @@ Infrastructure failures are generic tool failures without leaking internals.
 
 See `specs/002-mcp-lore-tools/contracts/mcp-lore-tools.md` for argument and
 payload schemas. Knowledge search:
-`specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md`.
+`specs/019-semantic-graph-retrieval/contracts/knowledge-search-v2.md`.
 Context compile: `specs/012-context-compiler/contracts/context-compile.md`.
 Invalidate and supersede:
 `specs/013-supersede-invalidate/contracts/lifecycle-lore.md`.
