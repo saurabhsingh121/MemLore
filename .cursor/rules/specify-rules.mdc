@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/014-conflict-filtering/` for completed F112 temporal filter + conflicts.
-Next: F111 auth (OIDC/RBAC).
-Completed: F101–F110, F112, F106a, Python F001/F002.
+Read `specs/015-oidc-rbac/` for completed F111 OIDC + RBAC (F010 partial).
+Next: F010 remainder (team/project membership) or F003 authority factors.
+Completed: F101–F112, F106a, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

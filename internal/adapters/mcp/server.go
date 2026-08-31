@@ -3,18 +3,26 @@ package mcpadapter
 import (
 	"log/slog"
 
+	appauth "github.com/memlore/memlore/internal/application/auth"
 	"github.com/memlore/memlore/internal/application/ports"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// NewServer registers memlore lore MCP tools on a stdio-ready server.
+// NewServer registers memlore lore MCP tools on a stdio-ready server (local auth mode).
 func NewServer(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph, version string, logger *slog.Logger) *sdkmcp.Server {
+	return NewServerFromTools(NewTools(begin, clock, graph), version, logger)
+}
+
+// NewServerFromTools registers the provided tools (with optional Auth configured).
+func NewServerFromTools(tools *Tools, version string, logger *slog.Logger) *sdkmcp.Server {
+	if tools.Auth == nil {
+		tools.Auth = appauth.NewService(appauth.Config{}, nil)
+	}
 	opts := &sdkmcp.ServerOptions{}
 	if logger != nil {
 		opts.Logger = logger
 	}
 	server := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "memlore", Version: version}, opts)
-	tools := NewTools(begin, clock, graph)
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "memlore.remember",

@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	authadapter "github.com/memlore/memlore/internal/adapters/auth"
 	httpadapter "github.com/memlore/memlore/internal/adapters/http"
 	mcpadapter "github.com/memlore/memlore/internal/adapters/mcp"
+	appauth "github.com/memlore/memlore/internal/application/auth"
 	"github.com/memlore/memlore/internal/bootstrap"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
@@ -96,7 +98,13 @@ func runServe(addr string, logger *slog.Logger) error {
 	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
 	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
 	graph := graphclient.NewClient(graphURL, nil)
-	handler := httpadapter.NewHandlers(begin, clock.SystemClock{}, graph, Version).Router()
+	handlers := httpadapter.NewHandlers(begin, clock.SystemClock{}, graph, Version)
+	authSvc, err := newAuthService()
+	if err != nil {
+		return err
+	}
+	handlers.Auth = authSvc
+	handler := handlers.Router()
 	server := &http.Server{
 		Addr:              addr,
 		Handler:           handler,
@@ -193,9 +201,24 @@ func runMCP(logger *slog.Logger) error {
 	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
 	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
 	graph := graphclient.NewClient(graphURL, nil)
-	server := mcpadapter.NewServer(begin, clock.SystemClock{}, graph, Version, logger)
-	logger.Info("memlore mcp listening on stdio")
+	tools := mcpadapter.NewTools(begin, clock.SystemClock{}, graph)
+	authSvc, err := newAuthService()
+	if err != nil {
+		return err
+	}
+	tools.Auth = authSvc
+	server := mcpadapter.NewServerFromTools(tools, Version, logger)
+	logger.Info("memlore mcp listening on stdio", "oidc", authSvc.Config.Enabled())
 	return server.Run(context.Background(), &sdkmcp.StdioTransport{})
+}
+
+func newAuthService() (*appauth.Service, error) {
+	cfg := appauth.ConfigFromEnv()
+	verifier, err := authadapter.NewVerifier(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("auth config: %w", err)
+	}
+	return appauth.NewService(cfg, verifier), nil
 }
 
 func envOr(key, fallback string) string {

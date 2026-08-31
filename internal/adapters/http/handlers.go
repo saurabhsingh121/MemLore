@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/memlore/memlore/internal/adapters/presenters"
+	appauth "github.com/memlore/memlore/internal/application/auth"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
@@ -26,6 +27,7 @@ type Handlers struct {
 	ListAudits      *queries.ListAuditsHandler
 	SearchKnowledge *queries.SearchKnowledgeHandler
 	CompileContext  *queries.CompileContextHandler
+	Auth            *appauth.Service
 	Version         string
 }
 
@@ -42,6 +44,7 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		ListAudits:      queries.NewListAuditsHandler(begin),
 		SearchKnowledge: search,
 		CompileContext:  queries.NewCompileContextHandler(search),
+		Auth:            appauth.NewService(appauth.Config{}, nil),
 		Version:         version,
 	}
 }
@@ -51,6 +54,7 @@ func (h *Handlers) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/health", h.health)
 	r.Route("/v1", func(r chi.Router) {
+		r.Use(h.oidcMiddleware)
 		r.Post("/lore-entries", h.createLoreEntry)
 		r.Get("/lore-entries", h.listLoreEntries)
 		r.Get("/lore-entries/{id}", h.getLoreEntry)
@@ -73,7 +77,7 @@ func (h *Handlers) health(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *Handlers) createLoreEntry(w http.ResponseWriter, r *http.Request) {
-	actor, err := requireActor(r)
+	actor, err := h.actorFor(r, domain.PermWrite)
 	if err != nil {
 		handleDomainError(w, err)
 		return
@@ -112,7 +116,7 @@ func (h *Handlers) getLoreEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) verifyLoreEntry(w http.ResponseWriter, r *http.Request) {
-	actor, err := requireActor(r)
+	actor, err := h.actorFor(r, domain.PermVerify)
 	if err != nil {
 		handleDomainError(w, err)
 		return
@@ -130,7 +134,7 @@ func (h *Handlers) verifyLoreEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) invalidateLoreEntry(w http.ResponseWriter, r *http.Request) {
-	actor, err := requireActor(r)
+	actor, err := h.actorFor(r, domain.PermInvalidate)
 	if err != nil {
 		handleDomainError(w, err)
 		return
@@ -148,7 +152,7 @@ func (h *Handlers) invalidateLoreEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) supersedeLoreEntry(w http.ResponseWriter, r *http.Request) {
-	actor, err := requireActor(r)
+	actor, err := h.actorFor(r, domain.PermWrite)
 	if err != nil {
 		handleDomainError(w, err)
 		return

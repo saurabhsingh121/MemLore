@@ -6,8 +6,13 @@ internals are not part of the product contract.
 **Transport (this slice)**: local **stdio** via `memlore mcp` (Go binary; build with `scripts/install-memlore.sh`).
 Streamable HTTP MCP is out of scope.
 
-Mutating tools require an explicit non-empty `actor_id` argument. Actor is not
-inferred from the environment.
+Mutating tools require an explicit non-empty `actor_id` argument **in local
+mode** (OIDC unset). When OIDC is configured, pass `access_token` (or set
+`MEMLORE_ACCESS_TOKEN`); `actor_id` is ignored for identity. Roles:
+`reader` / `writer` / `admin` (see `specs/015-oidc-rbac/`).
+
+Actor is not inferred from the environment except via `MEMLORE_ACCESS_TOKEN`
+when OIDC is on.
 
 | Tool | Purpose | Status |
 |------|---------|--------|
@@ -61,3 +66,4 @@ Invalidate and supersede:
 `specs/013-supersede-invalidate/contracts/lifecycle-lore.md`.
 Temporal filter + conflicts:
 `specs/014-conflict-filtering/contracts/`.
+Auth + RBAC: `specs/015-oidc-rbac/contracts/auth-rbac.md`.
