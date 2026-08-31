@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-31  
-**Current Milestone**: M13 — F112 temporal filtering + conflict detection complete  
+**Current Milestone**: M14 — F111 OIDC + RBAC complete  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -34,7 +34,7 @@
 | F007 | Context compiler + `get_for_task` | DONE | ✓ | ✓ | ✓ | — | F109 + F112 (temporal filter + conflicts) |
 | F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 |
 | F009 | Conflict detection | DONE | ✓ | ✓ | ✓ | — | Implemented as F112 |
-| F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
+| F010 | Auth (OIDC) + team/project scopes | PARTIAL | ✓ | ✓ | ✓ | — | F111 authn+RBAC; membership deferred |
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
 | F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |
@@ -45,6 +45,7 @@
 | F107 | Transactional outbox + graph sync worker | DONE | ✓ | ✓ | ✓ | — | `memlore worker`, outbox migration |
 | F110 | Invalidate + supersede lifecycle | DONE | ✓ | ✓ | ✓ | 0003 | REST + MCP |
 | F112 | Temporal filter + conflict detection | DONE | ✓ | ✓ | ✓ | — | Filter stale from retrieval; surface conflicts |
+| F111 | OIDC + RBAC | DONE | ✓ | ✓ | ✓ | — | Optional OIDC; reader/writer/admin; membership deferred |
 
 ---
 
@@ -369,7 +370,33 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F111 — OIDC/RBAC.
+Complete (see F111 / F112). Next product work: F010 membership or F003.
+
+---
+
+## F111 — OIDC authentication + RBAC
+
+**Status**: DONE  
+**Branch**: `015-oidc-rbac`  
+**Spec**: `specs/015-oidc-rbac/`  
+**Implements**: Product F010 (partial — no team/project membership yet)
+
+### Goal
+
+Optional OIDC Bearer JWT auth with reader/writer/admin RBAC. Local mode
+preserves `X-Memlore-Actor` / `actor_id` when OIDC is unset.
+
+### Acceptance Criteria
+
+- [x] OIDC optional until configured
+- [x] Actor from token `sub` when OIDC on; header spoofing ignored
+- [x] Role matrix enforced (reader/writer/admin)
+- [x] REST + MCP parity; `/health` open
+- [x] `go test ./...` green
+
+### Next Step
+
+F010 remainder — team/project membership-scoped authorization. Or F003.
 
 ---
 
@@ -403,7 +430,7 @@ conflict groups on compiled context. History remains via get/explain.
 
 ### Next Step
 
-F111 — OIDC/RBAC.
+F111 OIDC/RBAC (DONE).
 
 ---
 
@@ -438,7 +465,7 @@ successor that preserves the predecessor. REST and MCP (`memlore.invalidate`,
 
 ### Next Step
 
-F111 — OIDC/RBAC.
+F111 OIDC/RBAC (DONE).
 
 ---
 
@@ -633,8 +660,9 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ### Immediate recommended tasks
 
-1. OIDC / RBAC (F111)
-2. Dogfood via `./bin/memlore mcp` with conflicting current lore + `get_for_task`
+1. Team/project membership-scoped authorization (F010 remainder)
+2. Full authority factor model (F003)
+3. Dogfood OIDC-on with HMAC or IdP JWKS
 
 ---
 

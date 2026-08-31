@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/memlore/memlore/internal/adapters/presenters"
+	appauth "github.com/memlore/memlore/internal/application/auth"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
@@ -22,6 +23,7 @@ type Tools struct {
 	ListAudits      *queries.ListAuditsHandler
 	SearchKnowledge *queries.SearchKnowledgeHandler
 	CompileContext  *queries.CompileContextHandler
+	Auth            *appauth.Service
 }
 
 // NewTools constructs MCP tool handlers from a unit-of-work factory and clock.
@@ -37,6 +39,7 @@ func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Know
 		ListAudits:      queries.NewListAuditsHandler(begin),
 		SearchKnowledge: search,
 		CompileContext:  queries.NewCompileContextHandler(search),
+		Auth:            appauth.NewService(appauth.Config{}, nil),
 	}
 }
 
@@ -51,40 +54,47 @@ type evidenceInput struct {
 }
 
 type rememberInput struct {
-	Statement string          `json:"statement"`
-	Scope     scopeInput      `json:"scope"`
-	ActorID   string          `json:"actor_id"`
-	Evidence  []evidenceInput `json:"evidence,omitempty"`
+	Statement    string          `json:"statement"`
+	Scope        scopeInput      `json:"scope"`
+	ActorID      string          `json:"actor_id"`
+	AccessToken  string          `json:"access_token,omitempty"`
+	Evidence     []evidenceInput `json:"evidence,omitempty"`
 }
 
 type getInput struct {
-	ID string `json:"id"`
+	ID          string `json:"id"`
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 type verifyInput struct {
-	ID      string `json:"id"`
-	ActorID string `json:"actor_id"`
+	ID          string `json:"id"`
+	ActorID     string `json:"actor_id"`
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 type invalidateInput struct {
-	ID      string `json:"id"`
-	ActorID string `json:"actor_id"`
+	ID          string `json:"id"`
+	ActorID     string `json:"actor_id"`
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 type supersedeInput struct {
-	ID        string          `json:"id"`
-	Statement string          `json:"statement"`
-	ActorID   string          `json:"actor_id"`
-	Evidence  []evidenceInput `json:"evidence,omitempty"`
+	ID          string          `json:"id"`
+	Statement   string          `json:"statement"`
+	ActorID     string          `json:"actor_id"`
+	AccessToken string          `json:"access_token,omitempty"`
+	Evidence    []evidenceInput `json:"evidence,omitempty"`
 }
 
 type explainInput struct {
-	ID string `json:"id"`
+	ID          string `json:"id"`
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 type searchInput struct {
 	Scope        scopeInput `json:"scope"`
 	IncludeStale bool       `json:"include_stale,omitempty"`
+	AccessToken  string     `json:"access_token,omitempty"`
 }
 
 type knowledgeSearchInput struct {
@@ -93,6 +103,7 @@ type knowledgeSearchInput struct {
 	Limit        *int        `json:"limit,omitempty"`
 	IncludeStale bool        `json:"include_stale,omitempty"`
 	ActorID      string      `json:"actor_id"`
+	AccessToken  string      `json:"access_token,omitempty"`
 }
 
 type getForTaskInput struct {
@@ -101,10 +112,11 @@ type getForTaskInput struct {
 	Scope       scopeInput `json:"scope"`
 	TokenBudget *int       `json:"token_budget,omitempty"`
 	ActorID     string     `json:"actor_id"`
+	AccessToken string     `json:"access_token,omitempty"`
 }
 
 func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input rememberInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := requireActor(input.ActorID)
+	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermWrite)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
@@ -137,6 +149,9 @@ func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input r
 }
 
 func (t *Tools) get(ctx context.Context, _ *sdkmcp.CallToolRequest, input getInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
+	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
 	entry, err := t.GetLore.Handle(ctx, input.ID)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
@@ -145,7 +160,7 @@ func (t *Tools) get(ctx context.Context, _ *sdkmcp.CallToolRequest, input getInp
 }
 
 func (t *Tools) verify(ctx context.Context, _ *sdkmcp.CallToolRequest, input verifyInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := requireActor(input.ActorID)
+	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermVerify)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
@@ -160,7 +175,7 @@ func (t *Tools) verify(ctx context.Context, _ *sdkmcp.CallToolRequest, input ver
 }
 
 func (t *Tools) invalidate(ctx context.Context, _ *sdkmcp.CallToolRequest, input invalidateInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := requireActor(input.ActorID)
+	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermInvalidate)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
@@ -175,7 +190,7 @@ func (t *Tools) invalidate(ctx context.Context, _ *sdkmcp.CallToolRequest, input
 }
 
 func (t *Tools) supersede(ctx context.Context, _ *sdkmcp.CallToolRequest, input supersedeInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := requireActor(input.ActorID)
+	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermWrite)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
@@ -200,6 +215,9 @@ func (t *Tools) supersede(ctx context.Context, _ *sdkmcp.CallToolRequest, input 
 }
 
 func (t *Tools) explain(ctx context.Context, _ *sdkmcp.CallToolRequest, input explainInput) (*sdkmcp.CallToolResult, presenters.ExplainResult, error) {
+	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
+		return nil, presenters.ExplainResult{}, mapDomainError(err)
+	}
 	entry, err := t.GetLore.Handle(ctx, input.ID)
 	if err != nil {
 		return nil, presenters.ExplainResult{}, mapDomainError(err)
@@ -219,6 +237,9 @@ func (t *Tools) explain(ctx context.Context, _ *sdkmcp.CallToolRequest, input ex
 }
 
 func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input searchInput) (*sdkmcp.CallToolResult, presenters.LoreEntryList, error) {
+	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
+		return nil, presenters.LoreEntryList{}, mapDomainError(err)
+	}
 	kind, err := domain.ParseScopeKind(string(input.Scope.Kind))
 	if err != nil {
 		return nil, presenters.LoreEntryList{}, mapDomainError(err)
@@ -242,7 +263,11 @@ func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input sea
 }
 
 func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, input knowledgeSearchInput) (*sdkmcp.CallToolResult, presenters.KnowledgeSearchResult, error) {
-	if _, err := requireActor(input.ActorID); err != nil {
+	if t.authEnabled() {
+		if _, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermRead); err != nil {
+			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+		}
+	} else if _, err := requireActor(input.ActorID); err != nil {
 		return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
 	}
 	var scope *domain.Scope
@@ -290,7 +315,11 @@ func derefTokenBudget(budget *int) int {
 }
 
 func (t *Tools) getForTask(ctx context.Context, _ *sdkmcp.CallToolRequest, input getForTaskInput) (*sdkmcp.CallToolResult, presenters.ContextPacket, error) {
-	if _, err := requireActor(input.ActorID); err != nil {
+	if t.authEnabled() {
+		if _, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermRead); err != nil {
+			return nil, presenters.ContextPacket{}, mapDomainError(err)
+		}
+	} else if _, err := requireActor(input.ActorID); err != nil {
 		return nil, presenters.ContextPacket{}, mapDomainError(err)
 	}
 	kind, err := domain.ParseScopeKind(string(input.Scope.Kind))

@@ -4,8 +4,10 @@ import "errors"
 
 // Sentinel errors for domain validation and lookup failures.
 var (
-	ErrValidation = errors.New("validation error")
-	ErrNotFound   = errors.New("not found")
+	ErrValidation   = errors.New("validation error")
+	ErrNotFound     = errors.New("not found")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrForbidden    = errors.New("forbidden")
 )
 
 // ValidationError indicates input failed domain rules.
@@ -35,6 +37,38 @@ func (e *NotFoundError) Error() string {
 
 func (e *NotFoundError) Is(target error) bool {
 	return target == ErrNotFound
+}
+
+// UnauthorizedError indicates missing or invalid authentication.
+type UnauthorizedError struct {
+	Message string
+}
+
+func (e *UnauthorizedError) Error() string {
+	if e.Message == "" {
+		return "unauthorized"
+	}
+	return e.Message
+}
+
+func (e *UnauthorizedError) Is(target error) bool {
+	return target == ErrUnauthorized
+}
+
+// ForbiddenError indicates authenticated caller lacks permission.
+type ForbiddenError struct {
+	Message string
+}
+
+func (e *ForbiddenError) Error() string {
+	if e.Message == "" {
+		return "forbidden"
+	}
+	return e.Message
+}
+
+func (e *ForbiddenError) Is(target error) bool {
+	return target == ErrForbidden
 }
 
 func validationError(message string) error {
