@@ -5,6 +5,7 @@ import (
 
 	"github.com/memlore/memlore/internal/adapters/presenters"
 	appauth "github.com/memlore/memlore/internal/application/auth"
+	"github.com/memlore/memlore/internal/application/authz"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
@@ -25,6 +26,8 @@ type Tools struct {
 	CompileContext  *queries.CompileContextHandler
 	ExplainLore     *queries.ExplainLoreHandler
 	Auth            *appauth.Service
+	Authz           *authz.Gate
+	Membership      ports.MembershipDirectory
 }
 
 // NewTools constructs MCP tool handlers from a unit-of-work factory and clock.
@@ -118,7 +121,7 @@ type getForTaskInput struct {
 }
 
 func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input rememberInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermWrite)
+	p, err := t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermWrite)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
@@ -128,6 +131,9 @@ func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input r
 	}
 	scope, err := domain.NewScope(kind, input.Scope.Key)
 	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	if err := t.requireScope(ctx, p, scope, false); err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
 	evidence := make([]domain.EvidenceReference, 0, len(input.Evidence))
@@ -141,7 +147,7 @@ func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input r
 	entry, err := t.CreateLore.Handle(ctx, commands.CreateLoreCommand{
 		Statement: input.Statement,
 		Scope:     scope,
-		ActorID:   actor,
+		ActorID:   p.Subject,
 		Evidence:  evidence,
 	})
 	if err != nil {
@@ -151,24 +157,37 @@ func (t *Tools) remember(ctx context.Context, _ *sdkmcp.CallToolRequest, input r
 }
 
 func (t *Tools) get(ctx context.Context, _ *sdkmcp.CallToolRequest, input getInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
-		return nil, presenters.LoreEntry{}, mapDomainError(err)
-	}
 	entry, err := t.GetLore.Handle(ctx, input.ID)
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	if t.authEnabled() {
+		p, err := t.resolvePrincipal(ctx, "", input.AccessToken, domain.PermRead)
+		if err != nil {
+			return nil, presenters.LoreEntry{}, mapDomainError(err)
+		}
+		if err := t.requireScope(ctx, p, entry.Scope, true); err != nil {
+			return nil, presenters.LoreEntry{}, mapDomainError(err)
+		}
 	}
 	return nil, presenters.ToLoreEntry(entry), nil
 }
 
 func (t *Tools) verify(ctx context.Context, _ *sdkmcp.CallToolRequest, input verifyInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermVerify)
+	p, err := t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermVerify)
 	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	existing, err := t.GetLore.Handle(ctx, input.ID)
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	if err := t.requireScope(ctx, p, existing.Scope, true); err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
 	entry, err := t.VerifyLore.Handle(ctx, commands.VerifyLoreCommand{
 		EntryID: input.ID,
-		ActorID: actor,
+		ActorID: p.Subject,
 	})
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
@@ -177,13 +196,20 @@ func (t *Tools) verify(ctx context.Context, _ *sdkmcp.CallToolRequest, input ver
 }
 
 func (t *Tools) invalidate(ctx context.Context, _ *sdkmcp.CallToolRequest, input invalidateInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermInvalidate)
+	p, err := t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermInvalidate)
 	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	existing, err := t.GetLore.Handle(ctx, input.ID)
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	if err := t.requireScope(ctx, p, existing.Scope, true); err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
 	entry, err := t.InvalidateLore.Handle(ctx, commands.InvalidateLoreCommand{
 		EntryID: input.ID,
-		ActorID: actor,
+		ActorID: p.Subject,
 	})
 	if err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
@@ -192,8 +218,15 @@ func (t *Tools) invalidate(ctx context.Context, _ *sdkmcp.CallToolRequest, input
 }
 
 func (t *Tools) supersede(ctx context.Context, _ *sdkmcp.CallToolRequest, input supersedeInput) (*sdkmcp.CallToolResult, presenters.LoreEntry, error) {
-	actor, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermWrite)
+	p, err := t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermWrite)
 	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	existing, err := t.GetLore.Handle(ctx, input.ID)
+	if err != nil {
+		return nil, presenters.LoreEntry{}, mapDomainError(err)
+	}
+	if err := t.requireScope(ctx, p, existing.Scope, true); err != nil {
 		return nil, presenters.LoreEntry{}, mapDomainError(err)
 	}
 	evidence := make([]domain.EvidenceReference, 0, len(input.Evidence))
@@ -207,7 +240,7 @@ func (t *Tools) supersede(ctx context.Context, _ *sdkmcp.CallToolRequest, input 
 	entry, err := t.SupersedeLore.Handle(ctx, commands.SupersedeLoreCommand{
 		EntryID:   input.ID,
 		Statement: input.Statement,
-		ActorID:   actor,
+		ActorID:   p.Subject,
 		Evidence:  evidence,
 	})
 	if err != nil {
@@ -217,20 +250,23 @@ func (t *Tools) supersede(ctx context.Context, _ *sdkmcp.CallToolRequest, input 
 }
 
 func (t *Tools) explain(ctx context.Context, _ *sdkmcp.CallToolRequest, input explainInput) (*sdkmcp.CallToolResult, presenters.ExplainResult, error) {
-	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
-		return nil, presenters.ExplainResult{}, mapDomainError(err)
-	}
 	result, err := t.ExplainLore.Handle(ctx, input.ID)
 	if err != nil {
 		return nil, presenters.ExplainResult{}, mapDomainError(err)
+	}
+	if t.authEnabled() {
+		p, err := t.resolvePrincipal(ctx, "", input.AccessToken, domain.PermRead)
+		if err != nil {
+			return nil, presenters.ExplainResult{}, mapDomainError(err)
+		}
+		if err := t.requireScope(ctx, p, result.Entry.Scope, true); err != nil {
+			return nil, presenters.ExplainResult{}, mapDomainError(err)
+		}
 	}
 	return nil, presenters.ToExplainResult(result.Entry, result.Audits, result.Evaluation), nil
 }
 
 func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input searchInput) (*sdkmcp.CallToolResult, presenters.LoreEntryList, error) {
-	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
-		return nil, presenters.LoreEntryList{}, mapDomainError(err)
-	}
 	kind, err := domain.ParseScopeKind(string(input.Scope.Kind))
 	if err != nil {
 		return nil, presenters.LoreEntryList{}, mapDomainError(err)
@@ -238,6 +274,15 @@ func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input sea
 	scope, err := domain.NewScope(kind, input.Scope.Key)
 	if err != nil {
 		return nil, presenters.LoreEntryList{}, mapDomainError(err)
+	}
+	if t.authEnabled() {
+		p, err := t.resolvePrincipal(ctx, "", input.AccessToken, domain.PermRead)
+		if err != nil {
+			return nil, presenters.LoreEntryList{}, mapDomainError(err)
+		}
+		if err := t.requireScope(ctx, p, scope, false); err != nil {
+			return nil, presenters.LoreEntryList{}, mapDomainError(err)
+		}
 	}
 	items, err := t.ListLoreByScope.Handle(ctx, queries.ListLoreByScopeQuery{
 		Scope:        scope,
@@ -254,8 +299,11 @@ func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input sea
 }
 
 func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, input knowledgeSearchInput) (*sdkmcp.CallToolResult, presenters.KnowledgeSearchResult, error) {
+	var p domain.Principal
 	if t.authEnabled() {
-		if _, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermRead); err != nil {
+		var err error
+		p, err = t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermRead)
+		if err != nil {
 			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
 		}
 	} else if _, err := requireActor(input.ActorID); err != nil {
@@ -272,6 +320,11 @@ func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, 
 			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
 		}
 		scope = &parsed
+		if t.authEnabled() {
+			if err := t.requireScope(ctx, p, parsed, false); err != nil {
+				return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+			}
+		}
 	}
 	result, err := t.SearchKnowledge.Handle(ctx, queries.SearchKnowledgeQuery{
 		Query:        input.Query,
@@ -281,6 +334,13 @@ func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, 
 	})
 	if err != nil {
 		return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
+	}
+	if t.authEnabled() {
+		filtered, ferr := t.gate().FilterAccessible(ctx, p, result.Governance)
+		if ferr != nil {
+			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(ferr)
+		}
+		result.Governance = filtered
 	}
 	return nil, presenters.ToKnowledgeSearchResult(
 		result.Query,
@@ -306,8 +366,11 @@ func derefTokenBudget(budget *int) int {
 }
 
 func (t *Tools) getForTask(ctx context.Context, _ *sdkmcp.CallToolRequest, input getForTaskInput) (*sdkmcp.CallToolResult, presenters.ContextPacket, error) {
+	var p domain.Principal
 	if t.authEnabled() {
-		if _, err := t.resolveActor(ctx, input.ActorID, input.AccessToken, domain.PermRead); err != nil {
+		var err error
+		p, err = t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermRead)
+		if err != nil {
 			return nil, presenters.ContextPacket{}, mapDomainError(err)
 		}
 	} else if _, err := requireActor(input.ActorID); err != nil {
@@ -320,6 +383,11 @@ func (t *Tools) getForTask(ctx context.Context, _ *sdkmcp.CallToolRequest, input
 	scope, err := domain.NewScope(kind, input.Scope.Key)
 	if err != nil {
 		return nil, presenters.ContextPacket{}, mapDomainError(err)
+	}
+	if t.authEnabled() {
+		if err := t.requireScope(ctx, p, scope, false); err != nil {
+			return nil, presenters.ContextPacket{}, mapDomainError(err)
+		}
 	}
 	result, err := t.CompileContext.Handle(ctx, queries.CompileContextQuery{
 		Task:        input.Task,

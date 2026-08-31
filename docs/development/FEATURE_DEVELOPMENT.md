@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-31  
-**Current Milestone**: M16 — legacy Python core retired  
+**Current Milestone**: M17 — membership-scoped authorization  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -35,7 +35,8 @@
 | F007 | Context compiler + `get_for_task` | DONE | ✓ | ✓ | ✓ | — | F109 + F112 (temporal filter + conflicts) |
 | F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 |
 | F009 | Conflict detection | DONE | ✓ | ✓ | ✓ | — | Implemented as F112 |
-| F010 | Auth (OIDC) + team/project scopes | PARTIAL | ✓ | ✓ | ✓ | — | F111 authn+RBAC; membership deferred |
+| F010 | Auth (OIDC) + team/project scopes | DONE | ✓ | ✓ | ✓ | — | F111 authn+RBAC; F114 membership ACL |
+| F114 | Membership-scoped authorization | DONE | ✓ | ✓ | ✓ | — | `018-membership-authz`; goose 00004 |
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
 | F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |

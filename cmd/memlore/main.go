@@ -17,6 +17,7 @@ import (
 	httpadapter "github.com/memlore/memlore/internal/adapters/http"
 	mcpadapter "github.com/memlore/memlore/internal/adapters/mcp"
 	appauth "github.com/memlore/memlore/internal/application/auth"
+	"github.com/memlore/memlore/internal/application/authz"
 	"github.com/memlore/memlore/internal/bootstrap"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
@@ -104,6 +105,8 @@ func runServe(addr string, logger *slog.Logger) error {
 		return err
 	}
 	handlers.Auth = authSvc
+	handlers.Membership = postgres.NewMembershipDirectory(pool)
+	handlers.Authz = &authz.Gate{Auth: authSvc, Membership: handlers.Membership}
 	handler := handlers.Router()
 	server := &http.Server{
 		Addr:              addr,
@@ -207,6 +210,8 @@ func runMCP(logger *slog.Logger) error {
 		return err
 	}
 	tools.Auth = authSvc
+	tools.Membership = postgres.NewMembershipDirectory(pool)
+	tools.Authz = &authz.Gate{Auth: authSvc, Membership: tools.Membership}
 	server := mcpadapter.NewServerFromTools(tools, Version, logger)
 	logger.Info("memlore mcp listening on stdio", "oidc", authSvc.Config.Enabled())
 	return server.Run(context.Background(), &sdkmcp.StdioTransport{})

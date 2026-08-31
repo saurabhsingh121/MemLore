@@ -8,6 +8,35 @@ import (
 	"testing"
 )
 
+func TestMembershipMigrationDefinesExpectedTables(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	sqlPath := filepath.Join(filepath.Dir(file), "00004_membership.sql")
+	body, err := os.ReadFile(sqlPath)
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	content := string(body)
+	required := []string{
+		"CREATE TABLE users",
+		"CREATE TABLE teams",
+		"CREATE TABLE projects",
+		"CREATE TABLE memberships",
+		"CREATE TABLE scope_bindings",
+		"target_kind VARCHAR(32)",
+		"scope_kind VARCHAR(64)",
+		"DROP TABLE IF EXISTS scope_bindings",
+		"DROP TABLE IF EXISTS users",
+	}
+	for _, fragment := range required {
+		if !strings.Contains(content, fragment) {
+			t.Errorf("migration missing %q", fragment)
+		}
+	}
+}
+
 func TestSupersedeInvalidateMigrationAddsLifecycleColumns(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
