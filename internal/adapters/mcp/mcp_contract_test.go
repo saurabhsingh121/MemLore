@@ -385,6 +385,57 @@ func TestGetForTaskMCPContract(t *testing.T) {
 	}
 }
 
+func TestGetForTaskMCPPacketSections(t *testing.T) {
+	session, _ := testSession(t)
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Hexagonal architecture with ports.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+	})
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use Kafka instead of RabbitMQ.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+		"evidence":  []map[string]string{{"type": "adr", "value": "ADR-017"}},
+	})
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Payment outbox must persist events atomically.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+	})
+
+	result := callTool(t, session, "memlore.get_for_task", map[string]any{
+		"task":          "Implement payment outbox",
+		"scope":         map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"changed_files": []string{"src/payments/outbox.go"},
+		"ticket":        "PAY-1842",
+		"agent_id":      "cursor-agent",
+		"actor_id":      "alice",
+	})
+	if result.IsError {
+		t.Fatalf("get_for_task failed: %s", toolText(result))
+	}
+	payload := structuredContent(t, result)
+	if payload["agent_id"] != "cursor-agent" {
+		t.Fatalf("agent_id = %v", payload["agent_id"])
+	}
+	sections, ok := payload["sections"].([]any)
+	if !ok || len(sections) < 2 {
+		t.Fatalf("sections = %v", payload["sections"])
+	}
+	ids := map[string]bool{}
+	for _, raw := range sections {
+		sec := raw.(map[string]any)
+		ids[sec["id"].(string)] = true
+	}
+	if !ids["architecture"] || !ids["decisions"] {
+		t.Fatalf("section ids = %v", ids)
+	}
+	if _, ok := payload["items"].([]any); !ok {
+		t.Fatal("items must remain present")
+	}
+}
+
 func TestRepoProfileContract(t *testing.T) {
 	session, _ := testSession(t)
 	callTool(t, session, "memlore.remember", map[string]any{

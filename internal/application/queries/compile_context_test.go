@@ -2,6 +2,7 @@ package queries_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func (s *stubSearcher) Handle(_ context.Context, q queries.SearchKnowledgeQuery)
 }
 
 func TestCompileContextRequiresTaskAndScope(t *testing.T) {
-	handler := queries.NewCompileContextHandler(&stubSearcher{})
+	handler := queries.NewCompileContextHandler(&stubSearcher{}, nil)
 	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
 
 	_, err := handler.Handle(context.Background(), queries.CompileContextQuery{})
@@ -76,7 +77,7 @@ func TestCompileContextOmitsStaleAndSurfacesConflicts(t *testing.T) {
 			Warnings: []string{"graph_service_unavailable"},
 		},
 	}
-	handler := queries.NewCompileContextHandler(stub)
+	handler := queries.NewCompileContextHandler(stub, nil)
 
 	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
 		Task:  "deploy",
@@ -121,7 +122,7 @@ func TestCompileContextConflictSurvivesBudget(t *testing.T) {
 			Warnings: []string{},
 		},
 	}
-	handler := queries.NewCompileContextHandler(stub)
+	handler := queries.NewCompileContextHandler(stub, nil)
 
 	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
 		Task:        "task",
@@ -163,7 +164,7 @@ func TestCompileContextRanksAndBudgets(t *testing.T) {
 			Warnings: []string{},
 		},
 	}
-	handler := queries.NewCompileContextHandler(stub)
+	handler := queries.NewCompileContextHandler(stub, nil)
 
 	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
 		Task:        "Implement outbox",
@@ -194,7 +195,7 @@ func TestCompileContextRanksAndBudgets(t *testing.T) {
 func TestCompileContextDefaultsQueryToTask(t *testing.T) {
 	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
 	stub := &stubSearcher{result: queries.SearchKnowledgeResult{Warnings: []string{}}}
-	handler := queries.NewCompileContextHandler(stub)
+	handler := queries.NewCompileContextHandler(stub, nil)
 
 	_, err := handler.Handle(context.Background(), queries.CompileContextQuery{
 		Task:  "my task text",
@@ -204,6 +205,211 @@ func TestCompileContextDefaultsQueryToTask(t *testing.T) {
 		t.Fatalf("Handle: %v", err)
 	}
 	if len(stub.calls) != 1 || stub.calls[0].Query != "my task text" {
+		t.Fatalf("calls = %+v", stub.calls)
+	}
+}
+
+func TestCompileContextPacketSectionsAndOmitsEmpty(t *testing.T) {
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
+				{
+					ID: "arch", Statement: "Hexagonal architecture with ports.", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationVerified,
+					CreatedAt: now, UpdatedAt: now,
+				},
+				{
+					ID: "dec", Statement: "Use Kafka instead of RabbitMQ.", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationVerified,
+					Evidence:  []domain.EvidenceReference{{Type: domain.EvidenceTypeADR, Value: "ADR-017"}},
+					CreatedAt: now, UpdatedAt: now,
+				},
+				{
+					ID: "task", Statement: "Payment outbox must persist events atomically.", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationUnverified,
+					CreatedAt: now, UpdatedAt: now,
+				},
+				{
+					ID: "noise", Statement: "The sky is blue.", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationUnverified,
+					CreatedAt: now, UpdatedAt: now,
+				},
+			}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "Implement payment outbox",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 4 {
+		t.Fatalf("items = %d, want 4", len(result.Items))
+	}
+	got := map[appcontext.ProfileSectionID]int{}
+	for _, sec := range result.Sections {
+		if len(sec.Items) == 0 {
+			t.Fatalf("empty section %s", sec.ID)
+		}
+		got[sec.ID] = len(sec.Items)
+	}
+	if got[appcontext.SectionArchitecture] != 1 || got[appcontext.SectionDecisions] != 1 {
+		t.Fatalf("sections = %v", got)
+	}
+	if got[appcontext.SectionTaskContext] != 1 {
+		t.Fatalf("task_context missing: %v", got)
+	}
+	if _, ok := got[appcontext.SectionConventions]; ok {
+		t.Fatal("empty conventions must be omitted")
+	}
+	if result.Meta.UnclassifiedCount != 1 {
+		t.Fatalf("unclassified = %d", result.Meta.UnclassifiedCount)
+	}
+	if len(result.Sources) != 1 || result.Sources[0].Value != "ADR-017" {
+		t.Fatalf("sources = %+v", result.Sources)
+	}
+}
+
+func TestCompileContextMergesRepositoryBriefing(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	list := &stubLister{entries: []domain.LoreEntry{
+		{
+			ID: "arch", Statement: "Hexagonal architecture with ports.", Scope: scope,
+			Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationVerified,
+			CreatedAt: now, UpdatedAt: now,
+		},
+		{
+			ID: "noise", Statement: "The sky is blue.", Scope: scope,
+			Origin: domain.KnowledgeOriginHumanAuthored, CreatedAt: now, UpdatedAt: now,
+		},
+	}}
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{{
+				ID: "task", Statement: "Payment outbox must persist events atomically.", Scope: scope,
+				Origin: domain.KnowledgeOriginHumanAuthored, CreatedAt: now, UpdatedAt: now,
+			}}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, list)
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "Implement payment outbox",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := map[string]bool{}
+	for _, item := range result.Items {
+		ids[item.ID] = true
+	}
+	if !ids["arch"] || !ids["task"] {
+		t.Fatalf("items = %v", ids)
+	}
+	if ids["noise"] {
+		t.Fatal("unclassified list lore must not be merged")
+	}
+}
+
+func TestCompileContextFilesInfluenceTaskContext(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
+				{ID: "file", Statement: "Publisher writes to src/payments/outbox.go after commit.", Scope: scope, CreatedAt: now, UpdatedAt: now},
+				{ID: "other", Statement: "Unrelated refund SLA is two days.", Scope: scope, CreatedAt: now, UpdatedAt: now},
+			}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:         "wire publisher",
+		Scope:        scope,
+		ChangedFiles: []string{"src/payments/outbox.go"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stub.calls) != 1 || !strings.Contains(stub.calls[0].Query, "src/payments/outbox.go") {
+		t.Fatalf("search query = %+v", stub.calls)
+	}
+	if len(result.Sections) != 1 || result.Sections[0].ID != appcontext.SectionTaskContext {
+		t.Fatalf("sections = %+v", result.Sections)
+	}
+	if result.Sections[0].Items[0].ID != "file" {
+		t.Fatalf("task_context = %+v", result.Sections[0].Items)
+	}
+}
+
+func TestCompileContextAgentIDDoesNotChangeRanking(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
+				{ID: "a", Statement: "Hexagonal architecture.", Scope: scope, Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationVerified, CreatedAt: now, UpdatedAt: now},
+				{ID: "b", Statement: "Maybe use hexagonal architecture.", Scope: scope, Origin: domain.KnowledgeOriginAgentInference, VerificationStatus: domain.VerificationUnverified, CreatedAt: now, UpdatedAt: now},
+			}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	base := queries.CompileContextQuery{Task: "review architecture", Scope: scope}
+	withAgent := base
+	withAgent.AgentID = "cursor-agent"
+	a, err := handler.Handle(context.Background(), base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := handler.Handle(context.Background(), withAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.AgentID != "cursor-agent" {
+		t.Fatalf("agent_id = %q", b.AgentID)
+	}
+	if len(a.Items) != len(b.Items) {
+		t.Fatalf("item count %d vs %d", len(a.Items), len(b.Items))
+	}
+	for i := range a.Items {
+		if a.Items[i].ID != b.Items[i].ID {
+			t.Fatalf("ranking changed: %+v vs %+v", a.Items[i], b.Items[i])
+		}
+		if diff := a.Items[i].AuthorityScore - b.Items[i].AuthorityScore; diff > 1e-9 || diff < -1e-9 {
+			t.Fatalf("score changed: %v vs %v", a.Items[i].AuthorityScore, b.Items[i].AuthorityScore)
+		}
+		if b.Items[i].AuthorityFactors.Origin == "cursor-agent" {
+			t.Fatal("agent_id must not appear in authority factors")
+		}
+	}
+	if a.Items[0].ID != "a" {
+		t.Fatalf("verified architecture should rank first: %+v", a.Items)
+	}
+}
+
+func TestCompileContextSearchIncludesTicket(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	stub := &stubSearcher{result: queries.SearchKnowledgeResult{Warnings: []string{}}}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	_, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:   "do thing",
+		Query:  "outbox",
+		Ticket: "PAY-1842",
+		Scope:  scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stub.calls) != 1 || stub.calls[0].Query != "outbox PAY-1842" {
 		t.Fatalf("calls = %+v", stub.calls)
 	}
 }
@@ -222,7 +428,7 @@ func TestCompileContextTokenBudgetLimitsItems(t *testing.T) {
 			Warnings: []string{},
 		},
 	}
-	handler := queries.NewCompileContextHandler(stub)
+	handler := queries.NewCompileContextHandler(stub, nil)
 
 	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
 		Task:        "task",

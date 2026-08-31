@@ -16,9 +16,9 @@ alwaysApply: true
 
 ## Active feature plan
 
-Next to specify: F021 — Agent Context Bootstrap / `get_for_task`
-  (`docs/development/FEATURE_DEVELOPMENT.md`, Epic D).
-F020 repository intelligence profile is DONE (`specs/020-repo-intelligence-profile/`).
+F021 agent context bootstrap is DONE (`specs/021-agent-context-bootstrap/`).
+Next to specify: F030 — Git Commit Ingestion (flywheel) or F022 — Context
+Packet Profiles (Epic D). F007 compile v1 and F020 repository profile remain DONE.
 Foundation complete (v0.8.0): F001–F010, F003, F101–F114, F113.
 Product roadmap is epic-based (A–J). Frozen IDs F101–F114 are never reused;
 remapped product IDs: F115–F119, F122.

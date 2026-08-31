@@ -158,7 +158,7 @@ Agents interact with MemLore, not Graphiti directly.
 
 | Tool | Purpose |
 |------|---------|
-| `memlore.get_for_task` | Compiled context for a task (preferred) |
+| `memlore.get_for_task` | Compiled named context packet for a task (preferred) |
 | `memlore.repo_profile` | Compact repository intelligence profile |
 | `memlore.search` | Search with governance filters |
 | `memlore.remember` | Store lore |

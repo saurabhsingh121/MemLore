@@ -90,10 +90,15 @@ type knowledgeSearchRequest struct {
 }
 
 type compileContextRequest struct {
-	Task        string    `json:"task"`
-	Query       string    `json:"query"`
-	Scope       *scopeDTO `json:"scope"`
-	TokenBudget int       `json:"token_budget"`
+	Task         string    `json:"task"`
+	Query        string    `json:"query"`
+	Scope        *scopeDTO `json:"scope"`
+	TokenBudget  int       `json:"token_budget"`
+	Branch       string    `json:"branch"`
+	Ticket       string    `json:"ticket"`
+	ChangedFiles []string  `json:"changed_files"`
+	WorkingFiles []string  `json:"working_files"`
+	AgentID      string    `json:"agent_id"`
 }
 
 type repositoryProfileRequest struct {

@@ -76,6 +76,7 @@ See [docs/api/mcp.md](docs/api/mcp.md).
 ./bin/memlore serve     # REST on :8080
 ./bin/memlore mcp       # stdio MCP
 ./bin/memlore profile --repository <key>  # repository intelligence briefing
+./bin/memlore context --task <text> --repository <key>  # task context packet
 ./bin/memlore migrate   # goose (embedded)
 ./bin/memlore worker    # outbox → graph-service
 ```
@@ -97,9 +98,9 @@ Or `go run ./cmd/memlore <command>` from this repo.
 
 MemLore Core is **Go** (REST, MCP, migrations, worker, authority, lifecycle,
 OIDC/RBAC). Knowledge plane is a thin Python **graph-service** (Graphiti/Neo4j).
-Foundation (v0.8.0) is complete. F020 repository intelligence profile is
-available (`POST /v1/repository-profile`, `memlore.repo_profile`,
-`memlore profile`). Next: **F021** agent context bootstrap — see the
+Foundation (v0.8.0) is complete. F020 repository intelligence profile and F021
+agent context bootstrap (`get_for_task` named packet, `memlore context`) are
+available. Next: **F030** git ingest or **F022** packet profiles — see the
 [feature roadmap](docs/development/FEATURE_DEVELOPMENT.md).
 
 ## License

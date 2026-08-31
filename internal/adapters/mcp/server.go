@@ -56,7 +56,7 @@ func NewServerFromTools(tools *Tools, version string, logger *slog.Logger) *sdkm
 	}, tools.knowledgeSearch)
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "memlore.get_for_task",
-		Description: "Compile token-budgeted context for a coding task.",
+		Description: "Compile a named context packet for a coding task (sections, sources, optional files/ticket/agent_id).",
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
 	}, tools.getForTask)
 	sdkmcp.AddTool(server, &sdkmcp.Tool{

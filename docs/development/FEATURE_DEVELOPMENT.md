@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M19 — product flywheel (next: F021)  
+**Current Milestone**: M19 — product flywheel (next: F030; F022 is next Epic D compiler follow-up)  
 **Current Release Target**: v0.9.0 engineering-intelligence flywheel  
 **Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
 
@@ -229,7 +229,7 @@ validity, evidence, and implementation awareness.
 | ID | Feature | Priority | Status | Notes |
 |----|---------|----------|--------|-------|
 | F020 | Repository intelligence profile | P0 | DONE | `specs/020-repo-intelligence-profile/` |
-| F021 | Agent context bootstrap / `get_for_task` | P0 | PLANNED | **Next to specify**; extends F007 |
+| F021 | Agent context bootstrap / `get_for_task` | P0 | DONE | `specs/021-agent-context-bootstrap/`; extends F007 |
 | F022 | Context packet profiles | P0 | PLANNED | coding / review / debug / architecture / incident / onboarding |
 | F023 | Token-budgeted agent briefing | P0 | PLANNED | Extends F007 budgeting; priority ladder |
 | F060 | Context usage feedback | P0 | PLANNED | Retrieval signal only; not authority |
@@ -565,12 +565,13 @@ lore/graph, not a second knowledge store.
 - [x] Profile generation respects F114 membership and F007-style token limits
 - [x] Output is usable by humans (CLI) and agents (MCP/REST)
 
-**Next step**: Specify **F021** agent context bootstrap.
+**Next step**: F021 agent context bootstrap is DONE.
 
 ### F021 — Agent Context Bootstrap / `get_for_task`
 
-**Status**: PLANNED  
+**Status**: DONE  
 **Priority**: P0  
+**Spec**: `specs/021-agent-context-bootstrap/`  
 **Depends on**: F007 (v1 compiler DONE), F020 (profile as an input/section)
 **Extends**: F007
 
@@ -580,7 +581,7 @@ inputs and a compiled packet of *useful* sections, not a bag of similar text.
 Inputs may include: repository, branch, task/ticket, changed files, working
 files, query, token budget, agent identity.
 
-Output packet sections:
+Output packet sections (omitted when empty):
 
 ```text
 Relevant Architecture
@@ -588,24 +589,30 @@ Applicable Decisions
 Coding Conventions
 Task Context
 Known Gotchas
-Observed Implementation Drift
 Conflicts
-Potentially Stale Knowledge
 Evidence / Sources
 ```
 
+Observed implementation drift and potentially stale knowledge are omitted in
+this slice (F050 / `include_stale` not added). Conflicts stay on the existing
+`conflicts` array. F007 `items[]` remains.
+
 **Product value**: Immediate reduction in context-discovery cost and tokens.
 
-**Acceptance criteria** (draft):
+**Surfaces**: REST `POST /v1/context/compile` (additive fields), MCP
+`memlore.get_for_task` (same; tool count stays 10), CLI `memlore context`.
 
-- [ ] `get_for_task` / compile accept the richer input set (unspecified fields optional)
-- [ ] Packet exposes the section types above when data exists
-- [ ] Empty sections are omitted rather than padded
-- [ ] F007 ranking, temporal filter, conflicts, and authority evaluation still apply
-- [ ] REST and MCP stay in parity
-- [ ] Agent identity is recorded for later F060 feedback, not used as authority
+**Acceptance criteria**:
 
-**Next step**: Specify after F020 (or overlapping if F020 is a compile profile).
+- [x] `get_for_task` / compile accept the richer input set (unspecified fields optional)
+- [x] Packet exposes the section types above when data exists
+- [x] Empty sections are omitted rather than padded
+- [x] F007 ranking, temporal filter, conflicts, and authority evaluation still apply
+- [x] REST and MCP stay in parity
+- [x] Agent identity is recorded for later F060 feedback, not used as authority
+
+**Next step**: Specify **F022** (packet profiles) or **F030** (git commit
+ingestion) per flywheel sequence.
 
 ### F022 — Context Packet Profiles
 
@@ -630,7 +637,8 @@ memlore context --profile debugging
 - [ ] Profiles change ranking/token allocation in a testable way
 - [ ] Default profile is `coding` unless specify says otherwise
 
-**Next step**: Specify with F021 if it is a compile parameter; else immediately after.
+**Next step**: Specify after F021 (deferred from the F021 slice; F021 ships a
+single compile packet without a `profile` field).
 
 ### F023 — Token-Budgeted Agent Briefing
 
@@ -1233,6 +1241,13 @@ requirement.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F021 agent context bootstrap
+
+- Extends F007 compile with named packet sections and optional files/ticket/agent_id
+- REST `POST /v1/context/compile` additive JSON; MCP `memlore.get_for_task` (tool count 10)
+- CLI `memlore context --task … --repository …`
+- Spec: `specs/021-agent-context-bootstrap/`; F021 marked DONE
+
 ### 2026-09-01 — F020 repository intelligence profile
 
 - Compile-on-read profile from current lore + graph; cue-based sections
@@ -1256,9 +1271,9 @@ requirement.
 
 ### Immediate recommended tasks
 
-1. Specify **F021** (agent context bootstrap / richer `get_for_task`)
-2. Then F022/F023 compiler profiles/budget
-3. Then F030–F032 ingest + F035 review queue
+1. Specify **F030** (git commit ingestion) — next flywheel capture step after F021
+2. Or specify **F022/F023** compiler profiles/budget if staying on agent briefing
+3. Then F031–F032 ingest + F035 review queue
 4. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
 5. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 

@@ -53,10 +53,11 @@ type RankedItem struct {
 
 // Meta summarizes compilation output.
 type Meta struct {
-	TokenBudget      int
-	EstimatedTokens  int
-	ItemsIncluded    int
-	ItemsTotalRanked int
+	TokenBudget       int
+	EstimatedTokens   int
+	ItemsIncluded     int
+	ItemsTotalRanked  int
+	UnclassifiedCount int
 }
 
 // NormalizeStatement lowercases and trims for dedup comparison.
