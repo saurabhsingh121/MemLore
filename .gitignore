@@ -46,7 +46,7 @@ Thumbs.db
 data/
 tmp/
 
-# Alembic local overrides
+# Alembic local overrides (removed with Python core; keep ignore harmless)
 alembic.ini.local
 
 # Go

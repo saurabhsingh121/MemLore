@@ -84,6 +84,15 @@ support for sqlc/pgx, goose, chi, OpenTelemetry, and the Go MCP SDK.
 - Spec Kit feature **F101** (`specs/003-go-core-skeleton/`) defines the first
   Go slice: module skeleton, tooling, schema port — **no traffic switch**.
 
+## Update (2026-08-31) — strangler complete
+
+Go slices F104–F112, F111, F003, F106a, and F107 are the production path.
+The legacy Python governance tree (`src/memlore/`, root pytest, Alembic) was
+removed. Python remains **only** as `graph-service/`. CI no longer runs a
+root FastAPI pytest job.
+
+See `specs/017-retire-python-core/`.
+
 ## References
 
 - `docs/development/MIGRATION_DISCOVERY.md`

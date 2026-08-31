@@ -1,8 +1,13 @@
 # MemLore Migration Inventory
 
-**Last Updated**: 2026-08-28  
+**Last Updated**: 2026-08-31  
 **Purpose**: Track each capability from current implementation → target architecture.  
 **Statuses**: `Not Started` · `Characterizing` · `Specified` · `In Development` · `Migrated` · `Verified` · `Deprecated` · `Removed` · `Blocked`
+
+> **Strangler complete (F113).** The Python governance app is gone. Rows below
+> that still name FastAPI/Python handlers are a historical map of *what was
+> migrated*, not how to run the product. Canonical runtime is Go. See
+> [FEATURE_DEVELOPMENT.md](FEATURE_DEVELOPMENT.md).
 
 | Capability | Current Implementation | Target | Status | Tests | Migration Notes |
 |------------|------------------------|--------|--------|-------|-----------------|
@@ -23,8 +28,8 @@
 | MCP `memlore.verify` | Python MCP adapter | Go MCP SDK | Migrated | Yes | |
 | MCP `memlore.explain` | Python MCP adapter | Go MCP SDK | Migrated | Yes | Entry + audits, no NL narrative |
 | MCP `memlore.search` | Python MCP adapter (scope list) | Go MCP SDK | Migrated | Yes | Not semantic search |
-| MCP stdio CLI | `memlore mcp` Python | `memlore mcp` Go binary | Migrated | Yes | Go stdio; Python unchanged |
-| CLI `memlore serve` | Uvicorn Python | Go HTTP server | Migrated | Partial | Go default `:8080`; Python `:8000` |
+| MCP stdio CLI | `memlore mcp` Python | `memlore mcp` Go binary | Removed | Yes | Python MCP deleted (F113) |
+| CLI `memlore serve` | Uvicorn Python | Go HTTP server | Removed | Yes | Go `:8080` only (F113) |
 | **Persistence** |
 | Postgres schema `lore_entries` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | SQL ported; integration test build tag |
 | Postgres schema `audit_records` | Alembic `0001` + goose `00001` | goose migration | Migrated | Partial | |
@@ -58,7 +63,7 @@
 | Structured logging | Python `get_logger` | Go `slog` | Not Started | No | |
 | OpenTelemetry | None | Go + Python OTel | Not Started | No | |
 | Docker Compose app services | DBs only | Add memlore + graph-service | Not Started | No | |
-| CI pipeline | Python ruff/mypy/pytest | Add Go jobs | Migrated | N/A | `go-test` job in CI |
+| CI pipeline | Root Python ruff/mypy/pytest | Go jobs + graph-service | Removed | N/A | Root `quality` job deleted (F113) |
 | **Documentation / process** |
 | Spec Kit workflow | Active | Continue | Migrated | N/A | |
 | Go module skeleton | — | `go.mod`, layout, `cmd/memlore` | Verified | Yes | F101; `go test ./...` |
@@ -70,15 +75,14 @@
 
 ---
 
-## Status Summary (2026-08-25)
+## Status Summary (2026-08-31)
 
-| Status | Count |
-|--------|------:|
-| Verified (Go F101 skeleton) | Go module, goose DDL port, CI |
-| Migrated (partial) | Postgres schema parity in goose |
-| In production (Python) | F001+F002 governance REST/MCP |
-| Not Started (Go features) | Lore handlers, MCP, graph-service |
-| Blocked | 0 |
+| Status | Notes |
+|--------|-------|
+| Removed | Python governance core (`src/memlore/`, Alembic, root pytest) |
+| Canonical | Go MemLore Core (REST, MCP, migrate, worker) |
+| Retained Python | `graph-service/` only |
+| Remaining product | F010 team/project membership (not a language migration) |
 
 ---
 

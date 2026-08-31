@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-31  
-**Current Milestone**: M15 — F003 authority evaluation complete  
+**Current Milestone**: M16 — legacy Python core retired  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -25,9 +25,10 @@
 
 | ID | Feature | Status | Spec | Tests | Docs | ADR | Notes |
 |----|---------|--------|------|-------|------|-----|-------|
-| F001 | Scoped human-authored lore entry (REST) | DONE | ✓ | ✓ | ✓ | 0001 | PostgreSQL governance slice |
+| F001 | Scoped human-authored lore entry (REST) | DONE | ✓ | ✓ | ✓ | 0001 | Go REST (Python core removed) |
 | F002 | MCP lore tools (remember/get/verify/explain/search) | DONE | ✓ | ✓ | ✓ | 0003 | Merged to main |
 | F003 | Authority factor model + evaluation | DONE | ✓ | ✓ | ✓ | — | Ephemeral factors + trust bands on compile/explain |
+| F113 | Retire legacy Python core | DONE | ✓ | ✓ | ✓ | 0005 | Removed `src/memlore/`; graph-service kept |
 | F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
@@ -40,7 +41,7 @@
 | F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |
 | F104 | Migrate lore CRUD/verify REST to Go | DONE | ✓ | ✓ | — | — | `memlore serve` :8080 |
 | F105 | Migrate MCP lore tools to Go | DONE | ✓ | ✓ | — | 0003 | `memlore mcp` stdio |
-| F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI integration |
+| F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI; Python core later removed |
 | F106 | Extract graph-service + contracts | DONE | ✓ | ✓ | ✓ | — | `graph-service/`, Go KnowledgeGraph port |
 | F107 | Transactional outbox + graph sync worker | DONE | ✓ | ✓ | ✓ | — | `memlore worker`, outbox migration |
 | F110 | Invalidate + supersede lifecycle | DONE | ✓ | ✓ | ✓ | 0003 | REST + MCP |
@@ -81,11 +82,15 @@ plane (PostgreSQL) without knowledge-graph coupling.
 
 ### Implementation
 
+Historical Python tree (removed in F113):
+
 - `src/memlore/domain/models/`
 - `src/memlore/application/commands/`, `queries/`
 - `src/memlore/infrastructure/postgres/`
 - `src/memlore/adapters/rest/`
 - `alembic/versions/0001_lore_audit.py`
+
+Canonical implementation is Go REST (F104).
 
 ### Documentation
 
@@ -98,7 +103,7 @@ plane (PostgreSQL) without knowledge-graph coupling.
 
 ### Next Step
 
-Maintain until Go port (F104) is verified in production; then deprecate Python REST handlers.
+Superseded by Go REST (F104). Python REST handlers removed (`017-retire-python-core`).
 
 ---
 
@@ -156,7 +161,7 @@ domain tool names (no Graphiti leakage).
 
 ### Next Step
 
-None — complete. Go MCP available via `go run ./cmd/memlore mcp`; Python MCP unchanged until cutover.
+None — complete. Python MCP removed (`017-retire-python-core`); Go `memlore mcp` is canonical.
 
 ---
 
@@ -297,7 +302,31 @@ F010 remainder — team/project membership-scoped authorization.
 
 ---
 
-## F104 — Migrate Lore CRUD/Verify REST to Go
+## F113 — Retire legacy Python governance core
+
+**Status**: DONE  
+**Branch**: `017-retire-python-core`  
+**Spec**: `specs/017-retire-python-core/`
+
+### Goal
+
+Remove the stale Python FastAPI REST/MCP app (`src/memlore/`) now that Go is
+the production path. Keep `graph-service/` as the Python Graphiti boundary.
+
+### Acceptance Criteria
+
+- [x] `src/memlore/`, root `tests/`, Alembic, root `pyproject.toml` removed
+- [x] CI root Python `quality` job removed; graph-service job kept
+- [x] README / setup / constitution point at Go core
+- [x] `go test ./...` green
+
+### Next Step
+
+F010 remainder — team/project membership.
+
+---
+
+## F104 — Migrate lore CRUD/verify REST to Go
 
 **Status**: DONE  
 **Branch**: `006-go-rest-lore-crud`  
@@ -313,7 +342,7 @@ Go REST `/v1/lore-entries` with application handlers and chi adapter.
 - [x] Error envelope parity (`validation_error`, `not_found`)
 - [x] Go contract tests mirror Python contract suite
 - [x] `go run ./cmd/memlore serve` (default `:8080`)
-- [x] Python `uv run memlore serve` unchanged on `:8000`
+- [x] Python serve later removed (F113)
 
 ### Implementation
 
@@ -324,7 +353,7 @@ Go REST `/v1/lore-entries` with application handlers and chi adapter.
 
 ### Next Step
 
-Plan Python adapter deprecation and governance hardening.
+F106a then F113 — Python adapters deprecated and removed.
 
 ---
 
@@ -344,7 +373,7 @@ Go MCP stdio server with five `memlore.*` lore tools.
 - [x] Tool errors: `validation_error: …`, `not_found: …`
 - [x] Go contract tests mirror Python MCP contract suite
 - [x] `go run ./cmd/memlore mcp` (stdio; logs on stderr)
-- [x] Python `uv run memlore mcp` unchanged
+- [x] Python MCP later removed (F113)
 
 ### Implementation
 
@@ -379,7 +408,7 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-Complete (see F111 / F112). Next product work: F010 membership (F003 done).
+F113 retired the Python core. Next product work: F010 membership.
 
 ---
 

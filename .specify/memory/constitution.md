@@ -1,21 +1,21 @@
 <!--
 Sync Impact Report
-- Version change: (none) → 1.0.0 (initial ratification)
-- Modified principles: n/a (initial)
-- Added sections:
-  - Core Principles I–VIII (TDD, Spec-Driven, Architecture Integrity,
-    Documentation, Authority & Provenance, Temporal Correctness,
-    Secure by Default, Observability)
-  - Architecture & Technology Baseline
-  - Development Workflow
-  - Governance
+- Version change: 1.0.0 → 1.1.0 (MINOR)
+- Modified principles: none (I–VIII unchanged)
+- Modified sections:
+  - Architecture & Technology Baseline: Go 1.25+ core; Python only for
+    graph-service; layout cmd/internal/graph-service
+  - Development Workflow item 4: goose (not Alembic) for PostgreSQL schema
+- Added sections: n/a
 - Removed sections: n/a
 - Templates requiring updates:
-  - .specify/templates/plan-template.md - ✅ Constitution Check gates filled
-  - .specify/templates/tasks-template.md - ✅ TDD mandatory for behavioral work
-  - .specify/templates/spec-template.md - ✅ no structural change required
-  - .specify/templates/checklist-template.md - ✅ no structural change required
+  - .specify/templates/plan-template.md - ✅ preferred layout Go core
+  - .specify/templates/tasks-template.md - ✅ path conventions Go core
+  - .specify/templates/spec-template.md - ✅ no structural change
+  - .specify/templates/checklist-template.md - ✅ no structural change
 - Follow-up TODOs: none
+- Rationale: ADR-0005 already superseded Python for core; this amendment
+  records completed strangler (src/memlore removed).
 -->
 
 # MemLore Constitution
@@ -115,12 +115,15 @@ operation where applicable.
 
 Unless an accepted ADR changes it, MemLore uses:
 
-- Python 3.12, FastAPI, Pydantic, SQLAlchemy/Alembic
+- **MemLore Core**: Go 1.25+, chi, pgx, sqlc, goose, slog, Go MCP SDK
+  ([ADR-0005](../../docs/adr/0005-go-memlore-core.md))
+- **Graph knowledge service**: Python 3.12, FastAPI, Graphiti (`graph-service/`)
 - PostgreSQL (governance/control plane)
 - Graphiti + Neo4j (temporal knowledge plane)
 - MCP as primary agent-facing integration; REST for UI/automation
 - Redis where justified (e.g., background workers)
-- OpenTelemetry; Docker Compose for local development; pytest for tests
+- OpenTelemetry; Docker Compose for local development
+- Tests: `go test` for core; pytest for graph-service
 - Spec Kit for specification-driven development
 
 Canonical public brand for this repository is **MemLore**. Package, CLI, and
@@ -130,8 +133,11 @@ deferred unless an ADR accepts them.
 Preferred package layout:
 
 ```text
-src/memlore/{domain,application,infrastructure,adapters,bootstrap}
-tests/{unit,integration,contract,e2e}
+cmd/memlore/
+internal/{domain,application,adapters,infrastructure,bootstrap}
+migrations/                 # goose
+db/queries/                 # sqlc
+graph-service/              # Python Graphiti boundary
 ```
 
 ## Development Workflow
@@ -141,7 +147,7 @@ tests/{unit,integration,contract,e2e}
 3. Use the test pyramid: many unit tests, fewer integration tests, only
    necessary e2e tests. Integration tests where infrastructure behavior
    matters; contract tests for MCP/REST.
-4. All PostgreSQL schema changes MUST use Alembic migrations.
+4. All PostgreSQL schema changes MUST use goose migrations (`migrations/`).
 5. Do not add third-party dependencies without clear purpose, license, and
    security consideration.
 6. Before marking work complete, update docs if architecture, public API, MCP,
@@ -165,4 +171,4 @@ It supersedes informal practice and agent convenience.
   principles. Unjustified complexity is a defect.
 - Runtime development guidance lives in `README.md` and `docs/`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-25 | **Last Amended**: 2026-08-25
+**Version**: 1.1.0 | **Ratified**: 2026-08-25 | **Last Amended**: 2026-08-31

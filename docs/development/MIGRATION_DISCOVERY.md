@@ -1,5 +1,10 @@
 # MemLore Migration Discovery Report
 
+> **Historical** (2026-08-25). Baseline before the Go strangler. The Python
+> governance app (`src/memlore/`) has since been **removed**; MemLore Core is
+> Go. See [ADR-0005](../adr/0005-go-memlore-core.md) and
+> `specs/017-retire-python-core/`.
+
 **Last Updated**: 2026-08-25  
 **Branch inspected**: `002-mcp-lore-tools` (uncommitted MCP implementation present)  
 **Discovery scope**: Full repository characterization before Go migration or production-behavior changes

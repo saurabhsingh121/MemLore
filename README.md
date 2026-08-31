@@ -19,36 +19,42 @@ Generic AI memory stores embeddings and snippets. Engineering work needs more:
 
 ## Quick start
 
-Requirements: Python 3.12+, [uv](https://docs.astral.sh/uv/), Docker.
+Requirements: Go 1.25+, Docker / Docker Compose. Python 3.12 + [uv](https://docs.astral.sh/uv/)
+only if you run `graph-service/`.
 
 ```bash
 cp .env.example .env
-docker compose up -d
-uv sync
-uv run pytest
-uv run memlore serve
+docker compose up -d postgres
+./scripts/install-memlore.sh
+./bin/memlore migrate
+./bin/memlore serve
 ```
 
-Health check: `GET http://127.0.0.1:8000/health`
+Health check: `GET http://127.0.0.1:8080/health`
 
 ## Connect a coding agent
 
 Start the stdio MCP server (Postgres must be up and migrated):
 
 ```bash
-uv run memlore mcp
+./bin/memlore mcp
 ```
 
-Implemented tools: `memlore.remember`, `memlore.get`, `memlore.verify`,
-`memlore.explain`, `memlore.search`. Mutating tools require `actor_id`.
+Tools: `memlore.remember`, `get`, `verify`, `explain`, `search`,
+`knowledge_search`, `get_for_task`, `supersede`, `invalidate`.
+Mutating tools require `actor_id` in local mode (OIDC optional).
 See [docs/api/mcp.md](docs/api/mcp.md).
 
 ## CLI
 
 ```bash
-uv run memlore serve --host 127.0.0.1 --port 8000
-uv run memlore mcp
+./bin/memlore serve     # REST on :8080
+./bin/memlore mcp       # stdio MCP
+./bin/memlore migrate   # goose (embedded)
+./bin/memlore worker    # outbox → graph-service
 ```
+
+Or `go run ./cmd/memlore <command>` from this repo.
 
 ## Documentation
 
@@ -62,11 +68,8 @@ uv run memlore mcp
 
 ## Status
 
-First product slice implemented: scoped human-authored lore entries
-(store / retrieve / verify / list / audit) on PostgreSQL via REST `/v1/lore-entries`.
-MCP, Graphiti sync, OIDC/RBAC, conflicts, and supersession remain future work
-except the first MCP lore tools (`remember` / `get` / `verify` / `explain` /
-`search` over stdio).
+MemLore Core is **Go** (REST, MCP, migrations, worker, authority, lifecycle,
+OIDC/RBAC). Knowledge plane is a thin Python **graph-service** (Graphiti/Neo4j).
 
 ## License
 

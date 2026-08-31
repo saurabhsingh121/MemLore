@@ -14,10 +14,11 @@ Use **Python 3.12**, **FastAPI**, **Pydantic**, **SQLAlchemy/Alembic**,
 **pytest**, and the official MCP Python SDK as the primary application stack.
 Package layout follows hexagonal boundaries under `src/memlore/`.
 
-> **Update (2026-08-25)**: Superseded for the **MemLore Core control plane** by
+> **Update (2026-08-31)**: Superseded for the **MemLore Core control plane** by
 > [ADR 0005](0005-go-memlore-core.md). Python remains the stack for the **graph
-> knowledge service** (`graph-service/`) and is legacy for governance features
-> until Go strangler slices verify parity.
+> knowledge service** (`graph-service/`). The legacy governance app
+> (`src/memlore/`) was removed after Go slices verified (F106a remainder /
+> `017-retire-python-core`).
 
 ## Alternatives Considered
 
@@ -35,4 +36,4 @@ Package layout follows hexagonal boundaries under `src/memlore/`.
 ## References
 
 - Constitution: Architecture & Technology Baseline
-- `pyproject.toml`
+- `graph-service/pyproject.toml`
