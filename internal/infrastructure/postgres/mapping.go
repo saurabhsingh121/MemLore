@@ -315,3 +315,106 @@ func processedSHAFromRow(row sqlc.GitIngestSha) domain.ProcessedSHA {
 		ProcessedAt: timeFromTimestamptz(row.ProcessedAt),
 	}
 }
+
+func int4FromInt(value int) pgtype.Int4 {
+	if value == 0 {
+		return pgtype.Int4{Valid: false}
+	}
+	return pgtype.Int4{Int32: int32(value), Valid: true}
+}
+
+func intFromInt4(value pgtype.Int4) int {
+	if !value.Valid {
+		return 0
+	}
+	return int(value.Int32)
+}
+
+func prIngestRunToInsertParams(run domain.PRIngestRun) sqlc.InsertPRIngestRunParams {
+	return sqlc.InsertPRIngestRunParams{
+		ID:               run.ID,
+		ScopeKind:        string(run.Scope.Kind),
+		ScopeKey:         run.Scope.Key,
+		ActorID:          run.ActorID,
+		PrNumber:         int32(run.PRNumber),
+		Status:           string(run.Status),
+		PrsSeen:          int32(run.PRsSeen),
+		PrsSkipped:       int32(run.PRsSkipped),
+		CandidatesStored: int32(run.CandidatesStored),
+		CursorPr:         int4FromInt(run.CursorPR),
+		CursorAt:         timestamptzFromPtr(run.CursorAt),
+		ErrorSummary:     textFromString(run.ErrorSummary),
+		StartedAt:        timestamptzFromTime(run.StartedAt),
+		FinishedAt:       timestamptzFromPtr(run.FinishedAt),
+	}
+}
+
+func prIngestRunToUpdateParams(run domain.PRIngestRun) sqlc.UpdatePRIngestRunParams {
+	return sqlc.UpdatePRIngestRunParams{
+		ID:               run.ID,
+		Status:           string(run.Status),
+		PrsSeen:          int32(run.PRsSeen),
+		PrsSkipped:       int32(run.PRsSkipped),
+		CandidatesStored: int32(run.CandidatesStored),
+		CursorPr:         int4FromInt(run.CursorPR),
+		CursorAt:         timestamptzFromPtr(run.CursorAt),
+		ErrorSummary:     textFromString(run.ErrorSummary),
+		FinishedAt:       timestamptzFromPtr(run.FinishedAt),
+	}
+}
+
+func prIngestRunFromRow(row sqlc.PrIngestRun) (domain.PRIngestRun, error) {
+	kind, err := domain.ParseScopeKind(row.ScopeKind)
+	if err != nil {
+		return domain.PRIngestRun{}, err
+	}
+	return domain.PRIngestRun{
+		ID:               row.ID,
+		Scope:            domain.Scope{Kind: kind, Key: row.ScopeKey},
+		ActorID:          row.ActorID,
+		PRNumber:         int(row.PrNumber),
+		Status:           domain.IngestRunStatus(row.Status),
+		PRsSeen:          int(row.PrsSeen),
+		PRsSkipped:       int(row.PrsSkipped),
+		CandidatesStored: int(row.CandidatesStored),
+		CursorPR:         intFromInt4(row.CursorPr),
+		CursorAt:         ptrFromTimestamptz(row.CursorAt),
+		ErrorSummary:     stringFromText(row.ErrorSummary),
+		StartedAt:        timeFromTimestamptz(row.StartedAt),
+		FinishedAt:       ptrFromTimestamptz(row.FinishedAt),
+	}, nil
+}
+
+func prIngestCursorFromRow(row sqlc.PrIngestCursor) domain.PRIngestCursor {
+	return domain.PRIngestCursor{
+		Scope:        domain.Scope{Kind: domain.ScopeKind(row.ScopeKind), Key: row.ScopeKey},
+		LastPR:       int(row.LastPr),
+		LastMergedAt: timeFromTimestamptz(row.LastMergedAt),
+		UpdatedAt:    timeFromTimestamptz(row.UpdatedAt),
+	}
+}
+
+func processedPRToInsertParams(row domain.ProcessedPR) sqlc.InsertPRIngestPRParams {
+	return sqlc.InsertPRIngestPRParams{
+		ScopeKind:   string(row.Scope.Kind),
+		ScopeKey:    row.Scope.Key,
+		PrNumber:    int32(row.PRNumber),
+		NodeID:      textFromString(row.NodeID),
+		LoreEntryID: textFromString(row.LoreEntryID),
+		Skipped:     row.Skipped,
+		SkipReason:  textFromString(row.SkipReason),
+		ProcessedAt: timestamptzFromTime(row.ProcessedAt),
+	}
+}
+
+func processedPRFromRow(row sqlc.PrIngestPr) domain.ProcessedPR {
+	return domain.ProcessedPR{
+		Scope:       domain.Scope{Kind: domain.ScopeKind(row.ScopeKind), Key: row.ScopeKey},
+		PRNumber:    int(row.PrNumber),
+		NodeID:      stringFromText(row.NodeID),
+		LoreEntryID: stringFromText(row.LoreEntryID),
+		Skipped:     row.Skipped,
+		SkipReason:  stringFromText(row.SkipReason),
+		ProcessedAt: timeFromTimestamptz(row.ProcessedAt),
+	}
+}

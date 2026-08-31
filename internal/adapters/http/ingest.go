@@ -166,7 +166,16 @@ func (h *Handlers) listIngestCandidates(w http.ResponseWriter, r *http.Request) 
 		handleDomainError(w, err)
 		return
 	}
-	items, err := h.ListIngestCands.Handle(r.Context(), queries.ListIngestCandidatesQuery{Scope: scope})
+	var evidenceType domain.EvidenceType
+	if raw := strings.TrimSpace(r.URL.Query().Get("evidence_type")); raw != "" {
+		et, err := domain.ParseEvidenceType(raw)
+		if err != nil {
+			handleDomainError(w, err)
+			return
+		}
+		evidenceType = et
+	}
+	items, err := h.ListIngestCands.Handle(r.Context(), queries.ListIngestCandidatesQuery{Scope: scope, EvidenceType: evidenceType})
 	if err != nil {
 		handleDomainError(w, err)
 		return

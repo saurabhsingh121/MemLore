@@ -60,3 +60,50 @@ func TestIngestRunMarkSucceededAndFailed(t *testing.T) {
 		t.Fatalf("failed = %+v", fail)
 	}
 }
+
+func TestGitHubRepoFromScopeKey(t *testing.T) {
+	owner, repo, err := domain.GitHubRepoFromScopeKey("github.com/acme/payments")
+	if err != nil || owner != "acme" || repo != "payments" {
+		t.Fatalf("got %s/%s err=%v", owner, repo, err)
+	}
+	_, _, err = domain.GitHubRepoFromScopeKey("gitlab.com/acme/payments")
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	_, _, err = domain.GitHubRepoFromScopeKey("github.com/acme")
+	if err == nil {
+		t.Fatal("expected validation error for missing repo")
+	}
+}
+
+func TestPREvidenceValue(t *testing.T) {
+	if got := domain.PREvidenceValue("acme", "payments", 1842); got != "acme/payments#1842" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestNewPRIngestRunStartsRunning(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	run, err := domain.NewPRIngestRun(domain.NewPRIngestRunInput{
+		Scope: scope, ActorID: "alice", Now: now,
+	})
+	if err != nil {
+		t.Fatalf("NewPRIngestRun: %v", err)
+	}
+	if run.Status != domain.IngestRunRunning || run.ActorID != "alice" {
+		t.Fatalf("run = %+v", run)
+	}
+	ok := run.MarkSucceeded(now.Add(time.Minute))
+	if ok.Status != domain.IngestRunSucceeded {
+		t.Fatalf("succeeded = %+v", ok)
+	}
+}
+
+func TestNewPRIngestRunRejectsUnmappableKey(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "acme/payments")
+	_, err := domain.NewPRIngestRun(domain.NewPRIngestRunInput{Scope: scope, ActorID: "alice"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}

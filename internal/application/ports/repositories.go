@@ -34,6 +34,7 @@ type UnitOfWork interface {
 	Audits() AuditRepository
 	Outbox() OutboxRepository
 	Ingest() IngestRepository
+	PRIngest() PRIngestRepository
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }

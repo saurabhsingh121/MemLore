@@ -26,6 +26,7 @@ import (
 	"github.com/memlore/memlore/internal/domain"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
 	"github.com/memlore/memlore/internal/infrastructure/gitcli"
+	"github.com/memlore/memlore/internal/infrastructure/githubhttp"
 	"github.com/memlore/memlore/internal/infrastructure/graphclient"
 	"github.com/memlore/memlore/internal/infrastructure/postgres"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -112,6 +113,20 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 				return 1
 			}
 			return 0
+		case "pr":
+			opts, err := cli.ParseIngestPRArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ingest pr failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runIngestPR(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "ingest pr failed: %v\n", err)
+				return 1
+			}
+			return 0
 		case "status":
 			opts, err := cli.ParseIngestStatusArgs(args[3:])
 			if err != nil {
@@ -149,7 +164,8 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore profile --repository <key>")
 	fmt.Fprintln(stdout, "  memlore context --task <text> --repository <key>")
 	fmt.Fprintln(stdout, "  memlore ingest git --repository <key> --path <dir> [--actor <id>]")
-	fmt.Fprintln(stdout, "  memlore ingest status --repository <key>")
+	fmt.Fprintln(stdout, "  memlore ingest pr --repository <key> [--pr <n>] [--actor <id>]")
+	fmt.Fprintln(stdout, "  memlore ingest status --repository <key> [--kind git|pr]")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -393,6 +409,50 @@ func runIngestGit(opts cli.IngestGitArgs, stdout io.Writer, logger *slog.Logger)
 	return err
 }
 
+func runIngestPR(opts cli.IngestPRArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	token := githubhttp.TokenFromEnv()
+	handler := commands.NewIngestPullRequestsHandler(begin, clock.SystemClock{}, githubhttp.NewReader("", token, nil))
+	logger.Info("memlore ingest pr started", "repository_id", opts.Repository)
+	run, err := handler.Handle(context.Background(), commands.IngestPullRequestsCommand{
+		Scope:   scope,
+		ActorID: opts.Actor,
+		PR:      opts.PR,
+		MaxPRs:  opts.MaxPRs,
+	})
+	if err != nil {
+		logger.Error("memlore ingest pr failed", "repository_id", opts.Repository, "error", err)
+		return err
+	}
+	if run.Status == domain.IngestRunFailed {
+		logger.Error("memlore ingest pr failed", "repository_id", opts.Repository, "run_id", run.ID, "error", run.ErrorSummary)
+	} else {
+		logger.Info("memlore ingest pr completed",
+			"repository_id", opts.Repository,
+			"run_id", run.ID,
+			"prs_seen", run.PRsSeen,
+			"candidates_stored", run.CandidatesStored,
+		)
+	}
+	_, err = io.WriteString(stdout, cli.FormatPRIngestStatus(opts.Repository, &run))
+	return err
+}
+
 func runIngestStatus(opts cli.IngestStatusArgs, stdout io.Writer, _ *slog.Logger) error {
 	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
 	dsn = bootstrap.NormalizePostgresDSN(dsn)
@@ -409,6 +469,18 @@ func runIngestStatus(opts cli.IngestStatusArgs, stdout io.Writer, _ *slog.Logger
 	}
 	runs, err := queries.NewListIngestRunsHandler(begin).Handle(context.Background(), queries.ListIngestRunsQuery{Scope: scope})
 	if err != nil {
+		return err
+	}
+	if opts.Kind == "pr" {
+		prRuns, err := queries.NewListPRIngestRunsHandler(begin).Handle(context.Background(), queries.ListPRIngestRunsQuery{Scope: scope})
+		if err != nil {
+			return err
+		}
+		var latest *domain.PRIngestRun
+		if len(prRuns) > 0 {
+			latest = &prRuns[0]
+		}
+		_, err = io.WriteString(stdout, cli.FormatPRIngestStatus(opts.Repository, latest))
 		return err
 	}
 	var latest *domain.IngestRun

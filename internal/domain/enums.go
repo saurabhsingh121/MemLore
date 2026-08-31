@@ -36,11 +36,12 @@ const (
 	EvidenceTypePath   EvidenceType = "path"
 	EvidenceTypeADR    EvidenceType = "adr"
 	EvidenceTypeCommit EvidenceType = "commit"
+	EvidenceTypePR     EvidenceType = "pr"
 )
 
 func ParseEvidenceType(value string) (EvidenceType, error) {
 	switch EvidenceType(value) {
-	case EvidenceTypeURL, EvidenceTypePath, EvidenceTypeADR, EvidenceTypeCommit:
+	case EvidenceTypeURL, EvidenceTypePath, EvidenceTypeADR, EvidenceTypeCommit, EvidenceTypePR:
 		return EvidenceType(value), nil
 	default:
 		return "", validationError("invalid evidence type")

@@ -1,1 +1,3 @@
-{"feature_directory": "specs/030-git-commit-ingest"}
+{
+  "feature_directory": "specs/031-pull-request-ingest"
+}

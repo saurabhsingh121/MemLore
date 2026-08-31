@@ -23,12 +23,14 @@ func TestEvidenceTypeMatchesPythonSet(t *testing.T) {
 		domain.EvidenceTypePath:   true,
 		domain.EvidenceTypeADR:    true,
 		domain.EvidenceTypeCommit: true,
+		domain.EvidenceTypePR:     true,
 	}
 	types := []domain.EvidenceType{
 		domain.EvidenceTypeURL,
 		domain.EvidenceTypePath,
 		domain.EvidenceTypeADR,
 		domain.EvidenceTypeCommit,
+		domain.EvidenceTypePR,
 	}
 	if len(types) != len(want) {
 		t.Fatalf("unexpected evidence type count: %d", len(types))

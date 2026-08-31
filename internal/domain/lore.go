@@ -93,7 +93,7 @@ func NewLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
 }
 
 // NewObservationalLoreEntry creates unverified repository_observation lore.
-// Git ingest MUST use this path; NewLoreEntry remains human-authored only.
+// Git and PR ingest MUST use this path; NewLoreEntry remains human-authored only.
 func NewObservationalLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
 	statement := strings.TrimSpace(in.Statement)
 	createdBy := strings.TrimSpace(in.CreatedBy)
@@ -121,15 +121,15 @@ func NewObservationalLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
 	if evidence == nil {
 		evidence = []EvidenceReference{}
 	}
-	hasCommit := false
+	hasObservationalEvidence := false
 	for _, ref := range evidence {
-		if ref.Type == EvidenceTypeCommit && strings.TrimSpace(ref.Value) != "" {
-			hasCommit = true
+		if (ref.Type == EvidenceTypeCommit || ref.Type == EvidenceTypePR) && strings.TrimSpace(ref.Value) != "" {
+			hasObservationalEvidence = true
 			break
 		}
 	}
-	if !hasCommit {
-		return LoreEntry{}, validationError("observational lore requires commit evidence")
+	if !hasObservationalEvidence {
+		return LoreEntry{}, validationError("observational lore requires commit or pr evidence")
 	}
 
 	id := strings.TrimSpace(in.ID)

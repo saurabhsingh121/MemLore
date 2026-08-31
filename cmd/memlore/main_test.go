@@ -65,6 +65,16 @@ func TestUsageMentionsIngest(t *testing.T) {
 	if !bytes.Contains(buf.Bytes(), []byte("ingest git --repository")) {
 		t.Fatalf("usage missing ingest: %s", buf.String())
 	}
+	if !bytes.Contains(buf.Bytes(), []byte("ingest pr --repository")) {
+		t.Fatalf("usage missing ingest pr: %s", buf.String())
+	}
+}
+
+func TestIngestPRWithoutRepositoryExitsNonZero(t *testing.T) {
+	code := run([]string{"memlore", "ingest", "pr"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(ingest pr) = 0, want non-zero")
+	}
 }
 
 func TestIngestGitWithoutRepositoryExitsNonZero(t *testing.T) {
