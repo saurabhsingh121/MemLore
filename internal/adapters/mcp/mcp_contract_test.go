@@ -388,24 +388,24 @@ func TestTemporalFilterAndConflictsMCPContract(t *testing.T) {
 	session, _ := testSession(t)
 	scope := map[string]string{"kind": "repository", "key": "r1"}
 	a := callTool(t, session, "memlore.remember", map[string]any{
-		"statement": "Use blue-green",
+		"statement": "Use blue-green deploys",
 		"scope":     scope,
 		"actor_id":  "alice",
 	})
 	b := callTool(t, session, "memlore.remember", map[string]any{
-		"statement": "Use rolling",
+		"statement": "Use rolling deploys",
 		"scope":     scope,
 		"actor_id":  "alice",
 	})
 	old := callTool(t, session, "memlore.remember", map[string]any{
-		"statement": "Legacy rule",
+		"statement": "Legacy deploy rule",
 		"scope":     scope,
 		"actor_id":  "alice",
 	})
 	oldID := structuredContent(t, old)["id"].(string)
 	_ = callTool(t, session, "memlore.supersede", map[string]any{
 		"id":        oldID,
-		"statement": "Successor rule",
+		"statement": "Successor deploy rule",
 		"actor_id":  "alice",
 	})
 

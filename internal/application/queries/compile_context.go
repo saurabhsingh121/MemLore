@@ -79,7 +79,7 @@ func (h *CompileContextHandler) Handle(ctx context.Context, query CompileContext
 	}
 
 	// retrieve → temporal filter → conflict detect → evaluate+rank → budget.
-	current := appcontext.FilterCurrent(searchResult.Governance)
+	current := appcontext.FilterCurrent(searchResult.LoreEntries())
 	conflicts := appcontext.DetectConflicts(current)
 
 	now := h.now()

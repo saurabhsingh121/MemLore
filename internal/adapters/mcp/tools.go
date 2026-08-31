@@ -336,19 +336,23 @@ func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, 
 		return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)
 	}
 	if t.authEnabled() {
-		filtered, ferr := t.gate().FilterAccessible(ctx, p, result.Governance)
+		filtered, ferr := t.gate().FilterAccessible(ctx, p, result.LoreEntries())
 		if ferr != nil {
 			return nil, presenters.KnowledgeSearchResult{}, mapDomainError(ferr)
 		}
-		result.Governance = filtered
+		allowed := make(map[string]struct{}, len(filtered))
+		for _, e := range filtered {
+			allowed[e.ID] = struct{}{}
+		}
+		kept := make([]queries.GovernanceHit, 0, len(result.Governance))
+		for _, hit := range result.Governance {
+			if _, ok := allowed[hit.Entry.ID]; ok {
+				kept = append(kept, hit)
+			}
+		}
+		result.Governance = kept
 	}
-	return nil, presenters.ToKnowledgeSearchResult(
-		result.Query,
-		result.Scope,
-		result.Governance,
-		result.Graph,
-		result.Warnings,
-	), nil
+	return nil, presenters.ToKnowledgeSearchResult(result), nil
 }
 
 func derefLimit(limit *int) int {

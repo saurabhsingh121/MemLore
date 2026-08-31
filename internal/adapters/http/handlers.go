@@ -344,20 +344,24 @@ func (h *Handlers) knowledgeSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p, ok := h.currentPrincipal(r); ok {
-		filtered, ferr := h.gate().FilterAccessible(r.Context(), p, result.Governance)
+		filtered, ferr := h.gate().FilterAccessible(r.Context(), p, result.LoreEntries())
 		if ferr != nil {
 			handleDomainError(w, ferr)
 			return
 		}
-		result.Governance = filtered
+		allowed := make(map[string]struct{}, len(filtered))
+		for _, e := range filtered {
+			allowed[e.ID] = struct{}{}
+		}
+		kept := make([]queries.GovernanceHit, 0, len(result.Governance))
+		for _, hit := range result.Governance {
+			if _, ok := allowed[hit.Entry.ID]; ok {
+				kept = append(kept, hit)
+			}
+		}
+		result.Governance = kept
 	}
-	writeJSON(w, http.StatusOK, presenters.ToKnowledgeSearchResult(
-		result.Query,
-		result.Scope,
-		result.Governance,
-		result.Graph,
-		result.Warnings,
-	))
+	writeJSON(w, http.StatusOK, presenters.ToKnowledgeSearchResult(result))
 }
 
 func (h *Handlers) compileContext(w http.ResponseWriter, r *http.Request) {

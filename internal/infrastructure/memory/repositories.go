@@ -68,6 +68,28 @@ func (r *LoreRepository) ListByScope(_ context.Context, scope domain.Scope) ([]d
 	return out, nil
 }
 
+func (r *LoreRepository) SearchRelevant(_ context.Context, opts ports.SearchRelevantOpts) ([]domain.LoreEntry, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]domain.LoreEntry, 0)
+	for _, entry := range r.items {
+		if opts.Scope != nil {
+			if entry.Scope.Kind != opts.Scope.Kind || entry.Scope.Key != opts.Scope.Key {
+				continue
+			}
+		}
+		if !domain.StatementMatchesQuery(entry.Statement, opts.Query) {
+			continue
+		}
+		out = append(out, entry)
+	}
+	domain.SortLoreByRelevance(out, opts.Query)
+	if opts.Limit > 0 && len(out) > opts.Limit {
+		out = out[:opts.Limit]
+	}
+	return out, nil
+}
+
 // AuditRepository is an in-memory audit store for tests.
 type AuditRepository struct {
 	mu    sync.RWMutex

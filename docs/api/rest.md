@@ -38,7 +38,10 @@ and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018
 
 Contract details:
 [`specs/001-scoped-lore-entry/contracts/rest-lore-entries.md`](../../specs/001-scoped-lore-entry/contracts/rest-lore-entries.md).
-Knowledge search: [`specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md`](../../specs/011-graph-retrieval-orchestration/contracts/knowledge-search.md).
+Knowledge search: [`specs/019-semantic-graph-retrieval/contracts/knowledge-search-v2.md`](../../specs/019-semantic-graph-retrieval/contracts/knowledge-search-v2.md)
+(extends F108). Governance hits are query-relevant; optional `graph_receipt`
+when a graph fact collapses onto lore; scope omitted searches membership-allowed
+lore (local: all).
 Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md).
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).

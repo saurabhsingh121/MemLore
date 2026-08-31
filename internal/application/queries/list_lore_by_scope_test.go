@@ -100,12 +100,12 @@ func TestSearchKnowledgeOmitsStaleByDefault(t *testing.T) {
 	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
 
 	_, _ = create.Handle(context.Background(), commands.CreateLoreCommand{
-		Statement: "Keep me",
+		Statement: "Keep me — deployment rules",
 		Scope:     scope,
 		ActorID:   "alice",
 	})
 	bad, _ := create.Handle(context.Background(), commands.CreateLoreCommand{
-		Statement: "Drop me",
+		Statement: "Drop me — old rules",
 		Scope:     scope,
 		ActorID:   "alice",
 	})
@@ -125,7 +125,7 @@ func TestSearchKnowledgeOmitsStaleByDefault(t *testing.T) {
 	if len(result.Governance) != 1 {
 		t.Fatalf("governance = %+v", result.Governance)
 	}
-	if result.Governance[0].ID == bad.ID {
+	if result.Governance[0].Entry.ID == bad.ID {
 		t.Fatal("invalidated should be omitted")
 	}
 

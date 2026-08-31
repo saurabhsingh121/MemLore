@@ -51,7 +51,7 @@ func TestCompileContextOmitsStaleAndSurfacesConflicts(t *testing.T) {
 	succ := "succ-id"
 	stub := &stubSearcher{
 		result: queries.SearchKnowledgeResult{
-			Governance: []domain.LoreEntry{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
 				{
 					ID: "a", Statement: "Use blue-green", Scope: scope,
 					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationUnverified,
@@ -72,7 +72,7 @@ func TestCompileContextOmitsStaleAndSurfacesConflicts(t *testing.T) {
 					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationInvalidated,
 					CreatedAt: now, UpdatedAt: now,
 				},
-			},
+			}),
 			Warnings: []string{"graph_service_unavailable"},
 		},
 	}
@@ -114,10 +114,10 @@ func TestCompileContextConflictSurvivesBudget(t *testing.T) {
 	longB := stringsRepeat('b', 400)
 	stub := &stubSearcher{
 		result: queries.SearchKnowledgeResult{
-			Governance: []domain.LoreEntry{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
 				{ID: "a", Statement: longA, Scope: scope, CreatedAt: now, UpdatedAt: now},
 				{ID: "b", Statement: longB, Scope: scope, CreatedAt: now, UpdatedAt: now},
-			},
+			}),
 			Warnings: []string{},
 		},
 	}
@@ -146,7 +146,7 @@ func TestCompileContextRanksAndBudgets(t *testing.T) {
 		result: queries.SearchKnowledgeResult{
 			Query: "payment outbox",
 			Scope: &scope,
-			Governance: []domain.LoreEntry{{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{{
 				ID:                 "gov-1",
 				Statement:          "Verified outbox rule",
 				Scope:              scope,
@@ -154,7 +154,7 @@ func TestCompileContextRanksAndBudgets(t *testing.T) {
 				VerificationStatus: domain.VerificationVerified,
 				CreatedAt:          now,
 				UpdatedAt:          now,
-			}},
+			}}),
 			Graph: []ports.GraphFact{{
 				ID:        "fact-1",
 				Statement: "Graph outbox hint",
@@ -215,10 +215,10 @@ func TestCompileContextTokenBudgetLimitsItems(t *testing.T) {
 
 	stub := &stubSearcher{
 		result: queries.SearchKnowledgeResult{
-			Governance: []domain.LoreEntry{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
 				{ID: "1", Statement: longStatement, Scope: scope, CreatedAt: now, UpdatedAt: now},
 				{ID: "2", Statement: longStatement + " extra", Scope: scope, CreatedAt: now, UpdatedAt: now},
-			},
+			}),
 			Warnings: []string{},
 		},
 	}
