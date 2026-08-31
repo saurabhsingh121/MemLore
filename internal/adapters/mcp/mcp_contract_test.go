@@ -77,7 +77,7 @@ func structuredContent(t *testing.T, result *sdkmcp.CallToolResult) map[string]a
 	return payload
 }
 
-func TestListToolsIsExactlyNineLoreTools(t *testing.T) {
+func TestListToolsIsExactlyTenLoreTools(t *testing.T) {
 	session, _ := testSession(t)
 	listed, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -95,11 +95,12 @@ func TestListToolsIsExactlyNineLoreTools(t *testing.T) {
 		"memlore.search":           {},
 		"memlore.knowledge_search": {},
 		"memlore.get_for_task":     {},
+		"memlore.repo_profile":     {},
 		"memlore.invalidate":       {},
 		"memlore.supersede":        {},
 	}
-	if len(names) != 9 {
-		t.Fatalf("tool count = %d, want 9: %v", len(names), names)
+	if len(names) != 10 {
+		t.Fatalf("tool count = %d, want 10: %v", len(names), names)
 	}
 	for _, name := range names {
 		if _, ok := want[name]; !ok {
@@ -381,6 +382,37 @@ func TestGetForTaskMCPContract(t *testing.T) {
 	first := items[0].(map[string]any)
 	if first["trust_band"] == nil || first["trust_band"] == "" {
 		t.Fatal("get_for_task missing trust_band")
+	}
+}
+
+func TestRepoProfileContract(t *testing.T) {
+	session, _ := testSession(t)
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Hexagonal architecture.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+	})
+	callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use Kafka instead of RabbitMQ.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id":  "alice",
+		"evidence":  []map[string]string{{"type": "adr", "value": "ADR-017"}},
+	})
+	result := callTool(t, session, "memlore.repo_profile", map[string]any{
+		"scope":    map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"actor_id": "alice",
+	})
+	if result.IsError {
+		t.Fatalf("repo_profile failed: %s", toolText(result))
+	}
+	payload := structuredContent(t, result)
+	repo := payload["repository"].(map[string]any)
+	if repo["key"] != "github.com/acme/payments" {
+		t.Fatalf("repository = %v", repo)
+	}
+	sections := payload["sections"].([]any)
+	if len(sections) < 2 {
+		t.Fatalf("sections = %v", sections)
 	}
 }
 

@@ -14,12 +14,16 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	authadapter "github.com/memlore/memlore/internal/adapters/auth"
+	"github.com/memlore/memlore/internal/adapters/cli"
 	httpadapter "github.com/memlore/memlore/internal/adapters/http"
 	mcpadapter "github.com/memlore/memlore/internal/adapters/mcp"
+	"github.com/memlore/memlore/internal/adapters/presenters"
 	appauth "github.com/memlore/memlore/internal/application/auth"
 	"github.com/memlore/memlore/internal/application/authz"
-	"github.com/memlore/memlore/internal/bootstrap"
 	"github.com/memlore/memlore/internal/application/commands"
+	"github.com/memlore/memlore/internal/application/queries"
+	"github.com/memlore/memlore/internal/bootstrap"
+	"github.com/memlore/memlore/internal/domain"
 	"github.com/memlore/memlore/internal/infrastructure/clock"
 	"github.com/memlore/memlore/internal/infrastructure/graphclient"
 	"github.com/memlore/memlore/internal/infrastructure/postgres"
@@ -59,6 +63,17 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "profile":
+		opts, err := cli.ParseProfileArgs(args[2:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "profile failed: %v\n", err)
+			return 1
+		}
+		if err := runProfile(opts, stdout, logger); err != nil {
+			fmt.Fprintf(os.Stderr, "profile failed: %v\n", err)
+			return 1
+		}
+		return 0
 	case "migrate":
 		if err := runMigrate(logger); err != nil {
 			fmt.Fprintf(os.Stderr, "migrate failed: %v\n", err)
@@ -84,6 +99,7 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore migrate")
 	fmt.Fprintln(stdout, "  memlore serve")
 	fmt.Fprintln(stdout, "  memlore mcp")
+	fmt.Fprintln(stdout, "  memlore profile --repository <key>")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -215,6 +231,36 @@ func runMCP(logger *slog.Logger) error {
 	server := mcpadapter.NewServerFromTools(tools, Version, logger)
 	logger.Info("memlore mcp listening on stdio", "oidc", authSvc.Config.Enabled())
 	return server.Run(context.Background(), &sdkmcp.StdioTransport{})
+}
+
+func runProfile(opts cli.ProfileArgs, stdout io.Writer, logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	graphURL := envOr("MEMLORE_GRAPH_SERVICE_URL", "http://127.0.0.1:8090")
+	graph := graphclient.NewClient(graphURL, nil)
+	list := queries.NewListLoreByScopeHandler(begin)
+	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
+	handler := queries.NewRepositoryProfileHandler(list, search)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	result, err := handler.Handle(context.Background(), queries.RepositoryProfileQuery{
+		Scope:       scope,
+		TokenBudget: opts.TokenBudget,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(stdout, cli.FormatProfile(presenters.ToRepositoryProfile(result)))
+	return err
 }
 
 func newAuthService() (*appauth.Service, error) {

@@ -1,8 +1,52 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M18 — fuller semantic search + graph retrieval (F006)  
-**Current Release Target**: v0.8.0 knowledge plane; governance production-ready
+**Current Milestone**: M19 — product flywheel (next: F021)  
+**Current Release Target**: v0.9.0 engineering-intelligence flywheel  
+**Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
+
+---
+
+## Product Thesis
+
+MemLore is not merely a database where agents store memories.
+
+It is **the engineering intelligence layer that makes every coding agent
+understand how your team actually builds software.**
+
+```text
+Generic memory
+      ↓
+"I remember something."
+
+MemLore
+      ↓
+"I know what your team decided,
+why they decided it,
+whether it's still true,
+what code implements it,
+what contradicts it,
+and what this agent needs to know right now."
+```
+
+The differentiator is not more memory primitives. It is engineering rationale,
+provenance, authority, temporal validity, evidence, and implementation
+awareness — compiled for the task at hand.
+
+Foundation already shipped: scoped lore, authority, provenance, temporal
+validity, conflict handling, Graphiti retrieval, context compilation,
+verification, MCP, membership-scoped authz, and auditability. New work extends
+that foundation around real engineering problems.
+
+---
+
+## Clarifications
+
+### Session 2026-09-01
+
+- Q: New product IDs F101–F103 and F110–F112 collide with completed platform IDs. → A: Keep F101–F114 frozen. Remap collisions to F115–F119 and F122.
+- Q: How much completed TDD detail stays in this tracker? → A: Compact DONE Epic A/B tables with spec links. Full writeups only for new planned features.
+- Q: P0 review-queue surface? → A: CLI + REST for P0 queues. Web UI waits for F120. GitHub checks/comments (F054/F074) are separate integration surfaces. MCP only where agents participate.
 
 ---
 
@@ -21,698 +65,1210 @@
 
 ---
 
+## How to read this tracker
+
+Work is organized by **product epic**, not a flat ID list.
+
+| Epic | Name | Role |
+|------|------|------|
+| A | Memory Foundation | Completed control + knowledge planes |
+| B | Trust & Governance | Completed authority, authn/z, audit |
+| C | Knowledge Acquisition | Ingest git, PRs, ADRs, docs, agent sessions |
+| D | Agent Intelligence | Profiles, `get_for_task`, feedback, cross-agent learning |
+| E | Decision Intelligence | First-class decisions and `memlore why` |
+| F | Engineering Drift | Intent vs implementation; PR checks |
+| G | Developer Experience | PR intelligence, archaeology, knowledge graph UI |
+| H | Integrations | GitHub-first forge adapters (features live in C/F/G) |
+| I | Knowledge Health | Freshness, gaps, verification queues |
+| J | Analytics | Health dashboard and outcome metrics |
+
+**ID stability:** Completed platform tickets **F101–F114** are never reused.
+Colliding product ideas from the 2026-09-01 roadmap were remapped:
+
+| Roadmap name | Tracker ID | Frozen ID it would have collided with |
+|--------------|------------|----------------------------------------|
+| Cross-Agent Learning | **F115** | F101 Go skeleton |
+| Session Outcome Capture | **F116** | F102 Go domain |
+| Repository Learning Profile | **F117** | F103 Go persistence |
+| Knowledge Coverage Analysis | **F118** | F110 invalidate/supersede |
+| Missing Knowledge Detection | **F119** | F111 OIDC/RBAC |
+| Knowledge Gap Review Queue | **F122** | F112 temporal/conflict filter |
+
+Implementation history for DONE work lives in `specs/` and git. This file
+tracks what to build next.
+
+---
+
+## Product flywheel
+
+The first coherent loop — not every feature at once:
+
+```text
+             Git / PR / ADR
+                  |
+                  v
+          Automatic Capture
+                  |
+                  v
+            MemLore Graph
+                  |
+          authority + evidence
+                  |
+                  v
+         get_for_task / why
+                  |
+                  v
+             Coding Agent
+                  |
+                  v
+                 PR
+                  |
+                  v
+             Drift Check
+                  |
+                  v
+          Human Correction
+                  |
+                  v
+          MemLore Learns
+                  |
+                  +----------> next agent
+```
+
+```text
+capture → trust → retrieve → use → detect drift → human correction → learn
+```
+
+### Recommended build sequence
+
+1. **F020** — Repository Intelligence Profile
+2. **F021** — Agent Context Bootstrap / `get_for_task` (extends F007)
+3. **F030** — Git Commit Ingestion
+4. **F031** — Pull Request Ingestion
+5. **F032** — ADR Auto-Ingestion
+6. **F035** — Suggested Lore Review Queue
+7. **F040** — First-Class Decision Model
+8. **F044** — `memlore why`
+9. **F050** — Architecture Drift Detection
+10. **F054** — GitHub PR Check Integration
+11. **F100** — Agent Correction Capture (once drift/review is stable)
+
+### Signature demo
+
+One command should eventually explain the product:
+
+```bash
+$ memlore why src/payments/refund.go
+```
+
+```text
+Why does this code use the transactional outbox?
+
+ADR-023 · AUTHORITATIVE
+
+Introduced after duplicate PaymentRefunded events
+caused INC-481.
+
+Decision:
+All payment-domain events must be persisted atomically
+with business state and published asynchronously.
+
+Evidence:
+  ADR-023
+  PR #1842
+  INC-481
+
+Current implementation:
+  ✓ Compliant
+
+Last verified:
+  12 days ago
+```
+
+That is the differentiator: rationale, provenance, authority, temporal
+validity, evidence, and implementation awareness.
+
+---
+
 ## Feature Summary
 
-| ID | Feature | Status | Spec | Tests | Docs | ADR | Notes |
-|----|---------|--------|------|-------|------|-----|-------|
-| F001 | Scoped human-authored lore entry (REST) | DONE | ✓ | ✓ | ✓ | 0001 | Go REST (Python core removed) |
-| F002 | MCP lore tools (remember/get/verify/explain/search) | DONE | ✓ | ✓ | ✓ | 0003 | Merged to main |
-| F003 | Authority factor model + evaluation | DONE | ✓ | ✓ | ✓ | — | Ephemeral factors + trust bands on compile/explain |
-| F113 | Retire legacy Python core | DONE | ✓ | ✓ | ✓ | 0005 | Removed `src/memlore/`; graph-service kept |
-| F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
-| F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
-| F006 | Semantic search + graph retrieval | DONE | ✓ | ✓ | ✓ | — | F108 + `019-semantic-graph-retrieval` |
-| F007 | Context compiler + `get_for_task` | DONE | ✓ | ✓ | ✓ | — | F109 + F112 (temporal filter + conflicts) |
-| F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 |
-| F009 | Conflict detection | DONE | ✓ | ✓ | ✓ | — | Implemented as F112 |
-| F010 | Auth (OIDC) + team/project scopes | DONE | ✓ | ✓ | ✓ | — | F111 authn+RBAC; F114 membership ACL |
-| F114 | Membership-scoped authorization | DONE | ✓ | ✓ | ✓ | — | `018-membership-authz`; goose 00004 |
-| F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
-| F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
-| F103 | Go PostgreSQL persistence (sqlc/goose) | DONE | ✓ | ✓ | — | — | Repositories + UoW |
-| F104 | Migrate lore CRUD/verify REST to Go | DONE | ✓ | ✓ | — | — | `memlore serve` :8080 |
-| F105 | Migrate MCP lore tools to Go | DONE | ✓ | ✓ | — | 0003 | `memlore mcp` stdio |
-| F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI; Python core later removed |
-| F106 | Extract graph-service + contracts | DONE | ✓ | ✓ | ✓ | — | `graph-service/`, Go KnowledgeGraph port |
-| F107 | Transactional outbox + graph sync worker | DONE | ✓ | ✓ | ✓ | — | `memlore worker`, outbox migration |
-| F110 | Invalidate + supersede lifecycle | DONE | ✓ | ✓ | ✓ | 0003 | REST + MCP |
-| F112 | Temporal filter + conflict detection | DONE | ✓ | ✓ | ✓ | — | Filter stale from retrieval; surface conflicts |
-| F111 | OIDC + RBAC | DONE | ✓ | ✓ | ✓ | — | Optional OIDC; reader/writer/admin; membership deferred |
+### Epic A — Memory Foundation (DONE)
+
+| ID | Feature | Status | Spec | Notes |
+|----|---------|--------|------|-------|
+| F001 | Scoped human-authored lore (REST) | DONE | `001-scoped-lore-entry` | Go REST (Python core removed) |
+| F002 | MCP lore tools | DONE | `002-mcp-lore-tools` | remember/get/verify/explain/search |
+| F004 | Transactional outbox + graph sync | DONE | `010-transactional-outbox` | Delivered as F107 |
+| F005 | Graph knowledge service | DONE | `009-graph-service` | `graph-service/` Graphiti boundary |
+| F006 | Semantic search + graph retrieval | DONE | `011-…` + `019-…` | F108 + fuller retrieval |
+| F007 | Context compiler + `get_for_task` v1 | DONE | `012-context-compiler` | F109 + F112 stages; F021 extends |
+| F008 | Supersession + invalidation | DONE | `013-supersede-invalidate` | Delivered as F110 |
+| F009 | Conflict detection | DONE | `014-conflict-filtering` | Delivered as F112 |
+
+### Epic B — Trust & Governance (DONE)
+
+| ID | Feature | Status | Spec | Notes |
+|----|---------|--------|------|-------|
+| F003 | Authority factor model + evaluation | DONE | `016-authority-factors` | Ephemeral factors + trust bands |
+| F010 | Auth (OIDC) + team/project scopes | DONE | `015-…` + `018-…` | F111 authn+RBAC; F114 membership |
+| F114 | Membership-scoped authorization | DONE | `018-membership-authz` | Goose 00004 |
+
+### Epic C — Knowledge Acquisition
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F030 | Git commit ingestion | P0 | PLANNED | Observational evidence, not canonical truth |
+| F031 | Pull request ingestion | P0 | PLANNED | GitHub-first; evidence links to the PR |
+| F032 | ADR auto-ingestion | P0 | PLANNED | Accepted ADRs → high source authority |
+| F033 | Documentation ingestion | P1 | PLANNED | Architecture/runbooks/standards only |
+| F034 | Agent session knowledge extraction | P1 | PLANNED | Labeled `agent_observation` / `agent_inference` |
+| F035 | Suggested Lore review queue | P0 | PLANNED | CLI + REST; nothing auto-becomes canonical |
+
+### Epic D — Agent Intelligence
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F020 | Repository intelligence profile | P0 | DONE | `specs/020-repo-intelligence-profile/` |
+| F021 | Agent context bootstrap / `get_for_task` | P0 | PLANNED | **Next to specify**; extends F007 |
+| F022 | Context packet profiles | P0 | PLANNED | coding / review / debug / architecture / incident / onboarding |
+| F023 | Token-budgeted agent briefing | P0 | PLANNED | Extends F007 budgeting; priority ladder |
+| F060 | Context usage feedback | P0 | PLANNED | Retrieval signal only; not authority |
+| F061 | Retrieval quality metrics | P1 | PLANNED | Hit rate, unused, latency, conflicts |
+| F062 | Context usefulness score | P1 | PLANNED | Must not override authority |
+| F063 | Ranking feedback loop | P1 | PLANNED | Tune ranking by workflow profile |
+| F064 | Retrieval experiment framework | P2 | PLANNED | Offline / A-B evaluation |
+| F100 | Agent correction capture | P0 | PLANNED | After F050/F054/F035 are stable |
+| F115 | Cross-agent learning | P1 | PLANNED | Formerly roadmap F101 |
+| F116 | Session outcome capture | P1 | PLANNED | Formerly roadmap F102 |
+| F117 | Repository learning profile | P1 | PLANNED | Formerly roadmap F103 |
+
+### Epic E — Decision Intelligence
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F040 | First-class decision model | P0 | PLANNED | Dedicated domain, not generic lore only |
+| F041 | Decision timeline | P1 | PLANNED | Previous truth remains discoverable |
+| F042 | Alternative tracking | P1 | PLANNED | Why X, why not Y |
+| F043 | Decision impact graph | P1 | PLANNED | Affected services, events, components |
+| F044 | `memlore why` | P0 | PLANNED | Signature developer workflow |
+
+### Epic F — Engineering Drift
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F050 | Architecture drift detection | P0 | PLANNED | Intent vs observed implementation |
+| F051 | Convention violation detection | P1 | PLANNED | Machine-readable conventions |
+| F052 | Drift severity scoring | P1 | PLANNED | CRITICAL…INFORMATIONAL |
+| F053 | Drift review workflow | P1 | PLANNED | CLI + REST; resolution becomes lore |
+| F054 | GitHub PR check integration | P0 | PLANNED | First forge adapter (Epic H) |
+
+### Epic G — Developer Experience
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F070 | PR context retrieval | P1 | PLANNED | Context for changed files |
+| F071 | Changed-file lore matching | P1 | PLANNED | Decisions, owners, risks |
+| F072 | PR decision summary | P1 | PLANNED | Candidate lore from the PR |
+| F073 | Historical risk context | P1 | PLANNED | Incidents, regressions, failed approaches |
+| F074 | GitHub review bot | P1 | PLANNED | One concise summary; not noisy |
+| F090 | File explanation | P1 | PLANNED | `memlore explain <path>` |
+| F091 | `why-line` | P1 | PLANNED | Blame = who; MemLore = why |
+| F092 | Historical change narrative | P2 | PLANNED | Component timeline |
+| F120 | Engineering knowledge graph UI | P2 | PLANNED | First product web UI |
+| F121 | Component relationship explorer | P2 | PLANNED | Graph navigation |
+
+### Epic H — Integrations
+
+GitHub is the first forge. Feature writeups live with their product epic.
+
+| ID | Feature | Home epic | Priority | Status |
+|----|---------|-----------|----------|--------|
+| F031 | Pull request ingestion | C | P0 | PLANNED |
+| F054 | GitHub PR check | F | P0 | PLANNED |
+| F074 | GitHub review bot | G | P1 | PLANNED |
+
+Other forges (GitLab, Bitbucket, etc.) are out of scope until the GitHub
+flywheel works.
+
+### Epic I — Knowledge Health
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F080 | Freshness scoring | P1 | PLANNED | Age, evidence, supersession, contradiction |
+| F081 | Stale lore detection | P1 | PLANNED | Surface for human review |
+| F082 | Evidence revalidation | P1 | PLANNED | File/ADR/PR still supports the claim |
+| F083 | Knowledge expiry policies | P2 | PLANNED | Task context, workarounds, mitigations |
+| F084 | Periodic verification queue | P1 | PLANNED | CLI + REST; authority × usage × staleness × impact |
+| F118 | Knowledge coverage analysis | P2 | PLANNED | Formerly roadmap F110 |
+| F119 | Missing knowledge detection | P2 | PLANNED | Formerly roadmap F111 |
+| F122 | Knowledge gap review queue | P2 | PLANNED | Formerly roadmap F112 |
+
+### Epic J — Analytics
+
+| ID | Feature | Priority | Status | Notes |
+|----|---------|----------|--------|-------|
+| F130 | MemLore health dashboard | P2 | PLANNED | After F120 or as CLI/REST metrics first |
+| F131 | Agent context effectiveness | P2 | PLANNED | Outcome metrics, not vanity retrieval counts |
+
+### Completed platform delivery (frozen IDs)
+
+| ID | Feature | Status | Spec |
+|----|---------|--------|------|
+| F101 | Go project skeleton + tooling | DONE | `003-go-core-skeleton` |
+| F102 | Go domain primitives | DONE | `004-go-domain-primitives` |
+| F103 | Go PostgreSQL persistence | DONE | `005-go-postgres-persistence` |
+| F104 | Migrate lore CRUD/verify REST to Go | DONE | `006-go-rest-lore-crud` |
+| F105 | Migrate MCP lore tools to Go | DONE | `007-go-mcp-lore-tools` |
+| F106a | Go governance hardening + Python cutover | DONE | `008-go-governance-hardening` |
+| F106 | Extract graph-service + contracts | DONE | `009-graph-service` |
+| F107 | Transactional outbox + graph sync worker | DONE | `010-transactional-outbox` |
+| F108 | Graph retrieval orchestration | DONE | `011-graph-retrieval-orchestration` |
+| F109 | Context compiler + get_for_task v1 | DONE | `012-context-compiler` |
+| F110 | Invalidate + supersede lifecycle | DONE | `013-supersede-invalidate` |
+| F111 | OIDC + RBAC | DONE | `015-oidc-rbac` |
+| F112 | Temporal filter + conflict detection | DONE | `014-conflict-filtering` |
+| F113 | Retire legacy Python core | DONE | `017-retire-python-core` |
 
 ---
 
-## F001 — Scoped Human-Authored Lore Entry (REST)
+## EPIC A — Memory Foundation
 
-**Status**: DONE  
-**Branch**: `001-scoped-lore-entry` (merged)  
-**Commit**: `e342c65`
+**Status**: DONE (v0.8.0)
 
-### Goal
+Governance-plane lore, dual-plane search, context compilation, lifecycle, and
+the Go strangler. Specs remain the source of acceptance history.
 
-Store, retrieve, verify, and audit scoped human-authored lore on the governance
-plane (PostgreSQL) without knowledge-graph coupling.
+| Concern | How it shipped |
+|---------|----------------|
+| Scoped lore CRUD, verify, audit | F001 / F104 |
+| MCP `memlore.*` | F002 / F105 |
+| Graph isolation | F005 / F106 |
+| Outbox sync | F004 / F107 |
+| Semantic + graph retrieval | F006 / F108 / `019-semantic-graph-retrieval` |
+| Token-budgeted compile + `get_for_task` | F007 / F109 |
+| Supersede / invalidate | F008 / F110 |
+| Temporal filter + conflicts | F009 / F112 |
+| Python core removed | F113 |
 
-### Specification
-
-`specs/001-scoped-lore-entry/`
-
-### Acceptance Criteria
-
-- [x] Create with scope (`kind`+`key`), statement, evidence, `human_authored`
-- [x] Get by id; not found is clean
-- [x] List by exact scope; duplicates allowed
-- [x] Verify idempotent; self-verify allowed
-- [x] Audit records on create/verify; list audits (404 if entry missing)
-- [x] Actor via `X-Memlore-Actor` on mutating REST calls
-
-### TDD Progress
-
-- [x] RED — domain, application, contract tests per `tasks.md`
-- [x] GREEN — handlers, repos, REST routes
-- [x] REFACTOR — UoW, container wiring
-
-### Implementation
-
-Historical Python tree (removed in F113):
-
-- `src/memlore/domain/models/`
-- `src/memlore/application/commands/`, `queries/`
-- `src/memlore/infrastructure/postgres/`
-- `src/memlore/adapters/rest/`
-- `alembic/versions/0001_lore_audit.py`
-
-Canonical implementation is Go REST (F104).
-
-### Documentation
-
-- `docs/api/rest.md`
-- `docs/concepts/lore.md`, `provenance.md`
-
-### Open Questions
-
-- When to extend `VerificationStatus` beyond unverified/verified?
-
-### Next Step
-
-Superseded by Go REST (F104). Python REST handlers removed (`017-retire-python-core`).
+**F007 remains DONE.** F021–F023 are product-grade enhancements of that
+compiler, not a reopening of F007.
 
 ---
 
-## F002 — MCP Lore Tools
-
-**Status**: DONE  
-**Branch**: merged to `main`  
-**Commits**: `144974e`, `d3636cb` (with migration docs)
-
-### Goal
-
-Expose governance-plane lore operations to coding agents via stdio MCP with
-domain tool names (no Graphiti leakage).
-
-### Specification
-
-`specs/002-mcp-lore-tools/`
-
-### Acceptance Criteria
-
-- [x] Five tools: remember, get, verify, explain, search
-- [x] `actor_id` required on remember/verify
-- [x] Payload parity with REST schemas
-- [x] `memlore mcp` stdio CLI
-- [x] No Graphiti/Neo4j tools on `tools/list`
-- [x] Error codes: `validation_error`, `not_found`
-
-### TDD Progress
-
-- [x] RED — unit + contract + e2e tasks T003–T027
-- [x] GREEN — `adapters/mcp/`, CLI `mcp` subcommand
-- [x] REFACTOR — stderr logging, payload reuse
-
-### Tests Added
-
-- `tests/unit/adapters/test_mcp_*.py`
-- `tests/contract/test_mcp_*.py`
-- `tests/e2e/test_mcp_stdio.py`
-- `tests/support/mcp_client.py`
-
-### Tests Executed
-
-`uv run pytest` → 51 passed (2026-08-25)
-
-### Documentation Updated
-
-- `docs/api/mcp.md`, `README.md`, `docs/architecture/overview.md`, setup guide
-
-### Known Limitations
-
-- Human-authored only on remember (agent origins deferred)
-- Search is scope list, not semantic
-- No Streamable HTTP MCP
-- e2e/integration skip without Postgres
-
-### Next Step
-
-None — complete. Python MCP removed (`017-retire-python-core`); Go `memlore mcp` is canonical.
-
----
-
-## F101 — Go Project Skeleton + Tooling
-
-**Status**: DONE  
-**Branch**: `003-go-core-skeleton`  
-**ADR**: [ADR-0005](../adr/0005-go-memlore-core.md)
-
-### Goal
-
-Additive Go module: `go.mod`, goose/sqlc scaffold, CI gates, layout contract.
-No lore handlers; Python REST/MCP unchanged.
-
-### Specification
-
-`specs/003-go-core-skeleton/`
-
-### Acceptance Criteria
-
-- [x] `go test ./...` and `go vet ./...` pass
-- [x] CI Go job added
-- [x] goose `00001` ports Alembic schema
-- [x] Python pytest still green (51 tests)
-
-### TDD Progress
-
-- [x] RED — version, migration parse, layout contract tests
-- [x] GREEN — cmd/memlore, migrations, sqlc package, CI job
-- [x] REFACTOR — committed sqlc output; integration test behind `integration` tag
-
-### Implementation
-
-- `go.mod`, `cmd/memlore/`, `internal/`, `migrations/`, `db/queries/`
-- `internal/infrastructure/postgres/sqlc/` (committed generated code)
-- `.github/workflows/ci.yml` — `go-test` job
-
-### Next Step
-
-F103 — Go PostgreSQL persistence (sqlc lore/audit queries)
-
----
-
-## F102 — Go Domain Primitives
-
-**Status**: DONE  
-**Branch**: `004-go-domain-primitives`  
-**Spec**: `specs/004-go-domain-primitives/`
-
-### Goal
-
-Port Python governance domain types to Go with characterization test parity.
-
-### Acceptance Criteria
-
-- [x] Enums, scope, evidence, lore, audit, verification in `internal/domain/`
-- [x] Validation messages match Python for characterized cases
-- [x] Package has no infra imports
-- [x] `go test ./internal/domain/...` passes
-
-### Implementation
-
-- `internal/domain/{errors,enums,scope,evidence,lore,audit,verification}.go`
-- Characterization tests referencing Python sources
-
-### Next Step
-
-F104 — Migrate lore CRUD/verify REST to Go
-
----
-
-## F103 — Go PostgreSQL Persistence
-
-**Status**: DONE  
-**Branch**: `005-go-postgres-persistence`  
-**Spec**: `specs/005-go-postgres-persistence/`
-
-### Goal
-
-sqlc + pgx repositories for lore entries and audit records with transaction UoW.
-
-### Acceptance Criteria
-
-- [x] Application ports in `internal/application/ports/`
-- [x] sqlc queries: insert/get/update/list lore; insert/list audit
-- [x] Domain ↔ row mapping including JSONB evidence
-- [x] `BeginUnitOfWork` with pgx transaction
-- [x] Integration tests pass with `-tags=integration` when Postgres is up
-
-### Implementation
-
-- `db/queries/lore.sql`, `audit.sql`
-- `internal/infrastructure/postgres/{mapping,lore_repository,audit_repository,unit_of_work}.go`
-- sqlc regenerated via `docker run ... sqlc/sqlc:1.28.0 generate`
-
-### Next Step
-
-F104 — application handlers + REST adapter using Go repositories (DONE; see F104/F105)
-
----
-
-## F003 — Authority Factor Model + Evaluation
+## EPIC B — Trust & Governance
 
 **Status**: DONE
-**Branch**: `016-authority-factors`
-**Spec**: `specs/016-authority-factors/`
 
-### Goal
+| Concern | How it shipped |
+|---------|----------------|
+| Explainable authority factors + trust bands | F003 / `016-authority-factors` |
+| Optional OIDC + reader/writer/admin | F010 / F111 / `015-oidc-rbac` |
+| Team/project membership ACL | F010 / F114 / `018-membership-authz` |
 
-Evaluate explainable authority factors at compile/explain time, derive a
-score **and** trust band, and rank compiled context from those factors —
-without opaque-only scores or a persistence table.
-
-### Specification
-
-`specs/016-authority-factors/` (specify → clarify → plan → tasks).
-
-### Acceptance Criteria
-
-- [x] Verified ADR with evidence → `canonical` (or `high` if evidence rule not met)
-- [x] Unverified agent inference → `low`; verified agent inference → `high` never `canonical`
-- [x] Factors + `trust_band` on compile/`get_for_task` items
-- [x] `memlore.explain` and `GET /v1/lore-entries/{id}/explain` include evaluation + `factor_breakdown` (no NL summary)
-- [x] Ranking uses evaluator (not only verified/unverified bases); invalidated cannot outrank unverified
-- [x] No authority table; ephemeral evaluation
-- [x] F112 filter/conflicts and F111 local-mode auth unchanged
-- [x] `go test ./...` green
-
-### Implementation
-
-- `internal/domain/authority.go` — pure `EvaluateAuthority`
-- `internal/application/authority/` — LoreEntry / GraphFact adapters
-- Ranking, compile, explain presenters, REST GET explain
-
-### Next Step
-
-F010 remainder — team/project membership-scoped authorization.
+New acquisition and agent-origin features MUST keep agent observations
+distinguishable from human-verified knowledge (constitution V). F035 exists so
+extraction cannot silently become canonical.
 
 ---
 
-## F113 — Retire legacy Python governance core
+## EPIC C — Knowledge Acquisition
+
+Automatically captured knowledge is **candidate lore**. It does not become
+authoritative until a human accepts it (F035) or an existing high-authority
+source type applies (accepted ADRs in F032).
+
+### F030 — Git Commit Ingestion
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F004/F107 (outbox), F005/F106 (graph ingest)
+
+**Goal**: Ingest Git commit history and extract candidate engineering knowledge
+(rationale, migration context, bug explanations, component relationships,
+technical constraints).
+
+**Product value**: Recovers *why* from history that never became an ADR.
+
+**Surfaces**: Background worker; REST status/list; no silent canonical writes.
+
+**Acceptance criteria** (draft; refined at specify):
+
+- [ ] Commits from a configured repository can be ingested with author, SHA, timestamp, message, and changed-path metadata
+- [ ] Extracted candidates are stored as observational evidence, not `canonical` / human-verified
+- [ ] Each candidate preserves an evidence link to the commit SHA
+- [ ] Re-ingest of the same SHA is idempotent
+- [ ] Failed ingest retries without duplicating accepted lore
+
+**Next step**: Specify after F020/F021 shape the consumption side — or in
+parallel once F020 is specified, if capture is the chosen first vertical.
+
+### F031 — Pull Request Ingestion
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F030 (shared ingest pipeline likely), Epic H GitHub adapter
+**Home also**: Epic H
+
+**Goal**: Ingest PR title, description, linked issues, changed files, review
+discussion, merged state, author, and timestamps. PRs are high-quality sources
+for why code changed.
+
+**Product value**: Review discussion is often the real decision record.
+
+**Acceptance criteria** (draft):
+
+- [ ] Merged PRs from a configured GitHub repository can be ingested
+- [ ] Candidates preserve evidence links to the original PR (and review comments used)
+- [ ] Git-derived and PR-derived candidates remain observational until F035 accept
+- [ ] Linked issues/tickets are stored as evidence refs when present
+- [ ] Unmerged PRs are either skipped or clearly labeled as not-landed (specify)
+
+**Next step**: Specify with F030 as a shared acquisition slice if practical.
+
+### F032 — ADR Auto-Ingestion
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F001 (lore model), F003 (authority), F008 (supersession)
+
+**Goal**: Discover and ingest ADRs from configured paths (`docs/adr/`, `adr/`,
+`architecture/decisions/`, and repo-configured extras). Extract decision,
+status, context, alternatives, consequences, supersession, and affected
+components.
+
+**Product value**: Turns the team’s existing decision corpus into governed lore
+without copy-paste.
+
+**Acceptance criteria** (draft):
+
+- [ ] Configured paths are scanned; new/changed ADRs produce candidates
+- [ ] Accepted ADRs receive high source authority (not unverified agent inference)
+- [ ] Supersession relationships in ADR metadata map to lore supersession where possible
+- [ ] Original ADR path remains the evidence source
+- [ ] Human review (F035) still applies if extraction is uncertain; accepted-file ingest may be auto-trusted only when specify says so
+
+**Next step**: Specify after or with F030/F031; needed before F040/F044 shine.
+
+### F033 — Documentation Ingestion
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F030–F032 ingest pipeline
+
+**Goal**: Ingest selected engineering documentation (architecture docs,
+runbooks, coding standards, service docs, migration notes) without becoming a
+general document search engine.
+
+**Product value**: Trusted engineering docs become evidence-backed context.
+
+**Acceptance criteria** (draft):
+
+- [ ] Only configured doc classes/paths are eligible
+- [ ] Original document remains the evidence source
+- [ ] Candidates are not canonical until review or an explicit trusted-source policy
+- [ ] Arbitrary wiki/dump ingestion is out of scope
+
+**Next step**: Specify after P0 acquisition works.
+
+### F034 — Agent Session Knowledge Extraction
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F035, F100; F002 remember already exists
+
+**Goal**: Allow agent sessions to produce candidate lore (conventions,
+unexpected behavior, debugging discoveries, workarounds, architectural
+mismatches).
+
+**Product value**: Coding sessions stop being a knowledge dead-end.
+
+**Acceptance criteria** (draft):
+
+- [ ] Extracted items are labeled `agent_observation` or `agent_inference` until verified
+- [ ] They cannot receive `canonical` trust from extraction alone (F003 invariant)
+- [ ] F035 review is the promotion path
+- [ ] Prompt-injection / untrusted-agent content is treated as untrusted input
+
+**Next step**: Specify after F035.
+
+### F035 — Suggested Lore Review Queue
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F030–F032 (producers); F003 (authority); F010 (who may accept)
+
+**Goal**: Automatically extracted knowledge must not silently become
+authoritative. Humans Accept / Edit / Reject candidates with evidence and
+confidence visible.
+
+**Product value**: Safe path from extraction to trusted engineering knowledge.
+
+**Surfaces**: **CLI + REST** (P0). No product web UI. MCP may list/read
+candidates for agents; mutating accept/reject is a human (or authorized
+human-equivalent) action.
+
+Example (CLI/REST payload, not a GUI):
+
+```text
+Suggested Lore
+Decision: Payment events use transactional outbox.
+Reason: Prevent duplicate Kafka publishing.
+Evidence: PR #1842, PAY-381
+Confidence: 0.84
+[Accept] [Edit] [Reject]
+```
+
+**Acceptance criteria** (draft):
+
+- [ ] Candidates appear in a review queue with statement, reason, evidence, confidence, source type
+- [ ] Accept creates/updates governed lore with human verification provenance
+- [ ] Edit then accept records the human-authored statement, not the raw extract as-if-human
+- [ ] Reject records a negative decision so the same extract is not re-prompted forever
+- [ ] Queue is scoped by membership (F114)
+- [ ] Nothing in the queue is treated as canonical until accept
+
+**Next step**: Specify as soon as the first ingest producer (F030/F031/F032)
+can create candidates — same flywheel slice if possible.
+
+---
+
+## EPIC D — Agent Intelligence
+
+### F020 — Repository Intelligence Profile
 
 **Status**: DONE  
-**Branch**: `017-retire-python-core`  
-**Spec**: `specs/017-retire-python-core/`
+**Priority**: P0  
+**Spec**: `specs/020-repo-intelligence-profile/`  
+**Depends on**: F006, F007 (retrieval + compile). Ingest (F030–F032) enriches later.
 
-### Goal
+**Goal**: Create a compact intelligence profile for a repository: the
+engineering context a human or coding agent needs before exploring dozens of
+files.
 
-Remove the stale Python FastAPI REST/MCP app (`src/memlore/`) now that Go is
-the production path. Keep `graph-service/` as the Python Graphiti boundary.
+Where available, the profile includes: architecture summary, important
+architectural decisions, major technologies, coding conventions, repository
+ownership, known gotchas, active migrations, architectural hotspots,
+operational risks, recent important changes, related services and
+dependencies.
 
-### Acceptance Criteria
+**Product value**: Useful repository overview without archaeology.
 
-- [x] `src/memlore/`, root `tests/`, Alembic, root `pyproject.toml` removed
-- [x] CI root Python `quality` job removed; graph-service job kept
-- [x] README / setup / constitution point at Go core
-- [x] `go test ./...` green
+**Surfaces**: REST `POST /v1/repository-profile`, MCP `memlore.repo_profile`,
+CLI `memlore profile --repository`. Token-bounded; compiled from existing
+lore/graph, not a second knowledge store.
 
-### Next Step
+**Acceptance criteria**:
 
-F010 remainder — team/project membership.
+- [x] Given a repository scope the caller is authorized to read, MemLore returns a structured profile
+- [x] Missing sections are omitted — not hallucinated
+- [x] Decisions cite evidence when present
+- [x] Profile generation respects F114 membership and F007-style token limits
+- [x] Output is usable by humans (CLI) and agents (MCP/REST)
+
+**Next step**: Specify **F021** agent context bootstrap.
+
+### F021 — Agent Context Bootstrap / `get_for_task`
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F007 (v1 compiler DONE), F020 (profile as an input/section)
+**Extends**: F007
+
+**Goal**: Make `memlore.get_for_task` the primary agent entry point with richer
+inputs and a compiled packet of *useful* sections, not a bag of similar text.
+
+Inputs may include: repository, branch, task/ticket, changed files, working
+files, query, token budget, agent identity.
+
+Output packet sections:
+
+```text
+Relevant Architecture
+Applicable Decisions
+Coding Conventions
+Task Context
+Known Gotchas
+Observed Implementation Drift
+Conflicts
+Potentially Stale Knowledge
+Evidence / Sources
+```
+
+**Product value**: Immediate reduction in context-discovery cost and tokens.
+
+**Acceptance criteria** (draft):
+
+- [ ] `get_for_task` / compile accept the richer input set (unspecified fields optional)
+- [ ] Packet exposes the section types above when data exists
+- [ ] Empty sections are omitted rather than padded
+- [ ] F007 ranking, temporal filter, conflicts, and authority evaluation still apply
+- [ ] REST and MCP stay in parity
+- [ ] Agent identity is recorded for later F060 feedback, not used as authority
+
+**Next step**: Specify after F020 (or overlapping if F020 is a compile profile).
+
+### F022 — Context Packet Profiles
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F021
+
+**Goal**: Different packet styles by workflow: `coding`, `code_review`,
+`debugging`, `architecture`, `incident`, `onboarding`. Profiles influence
+ranking and token allocation.
+
+```bash
+memlore context --profile debugging
+```
+
+**Product value**: The same repo should not brief a debugger like an architect.
+
+**Acceptance criteria** (draft):
+
+- [ ] A documented set of profiles is selectable on compile / CLI / MCP
+- [ ] Unknown profile is a validation error
+- [ ] Profiles change ranking/token allocation in a testable way
+- [ ] Default profile is `coding` unless specify says otherwise
+
+**Next step**: Specify with F021 if it is a compile parameter; else immediately after.
+
+### F023 — Token-Budgeted Agent Briefing
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F007 (budgeting exists), F021–F022
+**Extends**: F007 token budgeting
+
+**Goal**: Generate packets under an explicit token budget. Maximize useful
+context per token, not retrieval volume.
+
+Priority ladder:
+
+1. High-authority architecture/policy
+2. Task-specific context
+3. Relevant repository conventions
+4. Current implementation observations
+5. Conflicts and warnings
+6. Supporting evidence
+
+**Acceptance criteria** (draft):
+
+- [ ] Caller-supplied token budget is honored (existing F007 behavior retained)
+- [ ] Drop order follows the ladder when over budget (testable fixtures)
+- [ ] Conflicts/warnings are not silently dropped ahead of low-value evidence
+- [ ] Budget and dropped-section counts are visible on the packet (specify exact fields)
+
+**Next step**: Specify with F021/F022 as compiler hardening.
+
+### F060 — Context Usage Feedback
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F021
+
+**Goal**: Coding agents report whether retrieved context was USED, NOT_USED, or
+IRRELEVANT. Retrieval feedback only — never authority truth.
+
+**Acceptance criteria** (draft):
+
+- [ ] REST/MCP accepts per-item feedback against a compile/get_for_task result
+- [ ] Feedback cannot raise trust band or mark lore verified
+- [ ] Feedback is auditable (who/agent, packet id, item id, signal)
+- [ ] Missing feedback is allowed; quality metrics degrade gracefully
+
+**Next step**: Specify after F021 is in use (dogfood), before F063.
+
+### F061 — Retrieval Quality Metrics
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F060
+
+**Goal**: Measure context hit rate, unused context, irrelevant context, packet
+size, retrieval latency, conflicts surfaced, source coverage.
+
+**Next step**: Specify after F060; expose via observability (constitution VIII)
+and later F130.
+
+### F062 — Context Usefulness Score
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F060, F003
+
+**Goal**: A usefulness signal from downstream usage. Popularity MUST NOT
+override authority.
+
+**Next step**: Specify with F063; document the non-override invariant as an AC.
+
+### F063 — Ranking Feedback Loop
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F062, F022
+
+**Goal**: Improve ranking with feedback: boost repeatedly useful task-specific
+sources, demote repeatedly irrelevant memories, detect too-generic context,
+tune by workflow profile.
+
+**Next step**: Specify after F062; keep ranking explainable (F003).
+
+### F064 — Retrieval Experiment Framework
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F061–F063
+
+**Goal**: Offline or A/B evaluation of ranking formulas, token budgets, query
+expansion, graph depth, and authority weighting.
+
+**Next step**: Defer until the flywheel produces enough labeled feedback.
+
+### F100 — Agent Correction Capture
+
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F035, F050 or F054 (a correction channel exists)
+
+**Goal**: Capture explicit human corrections of agent behavior as candidate
+lore (e.g. reviewer: “No. Use transactional outbox.”) with evidence (PR review)
+and `human_verified` only after review/accept.
+
+**Product value**: One agent’s mistake becomes the next agent’s constraint.
+
+**Acceptance criteria** (draft):
+
+- [ ] A correction can be recorded with the rejected action, the rule, and evidence
+- [ ] Corrections enter F035 (or a dedicated correction queue with the same accept/edit/reject semantics)
+- [ ] Promoted rules are available to other authorized agents in the same scopes (F115)
+- [ ] Agent-originated restatements remain labeled until human accept
+
+**Next step**: Specify immediately after the first drift/review workflow is
+stable (after F050/F054).
+
+### F115 — Cross-Agent Learning
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F100, F114  
+**Roadmap ID**: F101 (remapped)
+
+**Goal**: Knowledge learned in one coding-agent workflow is available to other
+authorized agents in the same membership scopes.
+
+**Acceptance criteria** (draft):
+
+- [ ] Lore accepted from a Claude (etc.) correction is retrievable by Codex (etc.) under the same authz
+- [ ] No cross-tenant leak (F114)
+- [ ] Agent identity is provenance, not a visibility wall inside the team
+
+**Next step**: Specify with or right after F100.
+
+### F116 — Session Outcome Capture
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F034, F035  
+**Roadmap ID**: F102 (remapped)
+
+**Goal**: Optionally capture discovered facts, decisions, failed approaches,
+successful resolution, and remaining uncertainty at session end. Only useful
+information is promoted.
+
+**Next step**: Specify after F034/F035.
+
+### F117 — Repository Learning Profile
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F020, F100, F115  
+**Roadmap ID**: F103 (remapped)
+
+**Goal**: Repository-specific lessons: common mistakes, recurring review
+feedback, dangerous areas, preferred implementation patterns.
+
+**Next step**: Specify after F020 and F100 have data to summarize.
 
 ---
 
-## F104 — Migrate lore CRUD/verify REST to Go
+## EPIC E — Decision Intelligence
 
-**Status**: DONE  
-**Branch**: `006-go-rest-lore-crud`  
-**Spec**: `specs/006-go-rest-lore-crud/`
+### F040 — First-Class Decision Model
 
-### Goal
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F001 (lore), F008 (supersession), F032 (ADR ingest strongly preferred)
 
-Go REST `/v1/lore-entries` with application handlers and chi adapter.
+**Goal**: Treat engineering decisions as a dedicated domain concept, not only
+generic memories.
 
-### Acceptance Criteria
+A decision supports: question/problem, decision, rationale, alternatives,
+consequences, owner, date, affected components, evidence, superseded decision,
+current validity.
 
-- [x] Create, get, verify, list by scope, list audits
-- [x] Error envelope parity (`validation_error`, `not_found`)
-- [x] Go contract tests mirror Python contract suite
-- [x] `go run ./cmd/memlore serve` (default `:8080`)
-- [x] Python serve later removed (F113)
+**Product value**: Agents can answer “why Kafka?” as a decision, not a snippet.
 
-### Implementation
+**Acceptance criteria** (draft):
 
-- `internal/application/commands/`, `queries/`
-- `internal/adapters/http/`
-- `internal/infrastructure/memory/` (contract tests)
-- `cmd/memlore serve`
+- [ ] Decisions can be created, retrieved, and superseded without deleting history
+- [ ] Required fields from the model above are represented (optional fields allowed)
+- [ ] Decisions participate in compile / `get_for_task` as first-class sections
+- [ ] Evidence and owner are preserved
+- [ ] REST + CLI + MCP parity for read; write via REST/CLI (and MCP remember-shaped API if specify agrees)
 
-### Next Step
+**Next step**: Specify after F032 or in parallel if manual decision entry is the
+MVP and ADR ingest lands immediately after.
 
-F106a then F113 — Python adapters deprecated and removed.
+### F041 — Decision Timeline
 
----
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F040
 
-## F105 — Migrate MCP Lore Tools to Go
+**Goal**: Show how a decision evolved (adopted → proposed migration → selected
+→ compatibility removed). Previous truth stays historically discoverable.
 
-**Status**: DONE  
-**Branch**: `007-go-mcp-lore-tools`  
-**Spec**: `specs/007-go-mcp-lore-tools/`
+**Next step**: Specify after F040; reuse F008 history + explain.
 
-### Goal
+### F042 — Alternative Tracking
 
-Go MCP stdio server with five `memlore.*` lore tools.
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F040
 
-### Acceptance Criteria
+**Goal**: Capture alternatives considered so agents can answer why not SQS /
+whether DynamoDB was considered / which tradeoff won.
 
-- [x] `memlore.remember`, `get`, `verify`, `explain`, `search`
-- [x] Tool errors: `validation_error: …`, `not_found: …`
-- [x] Go contract tests mirror Python MCP contract suite
-- [x] `go run ./cmd/memlore mcp` (stdio; logs on stderr)
-- [x] Python MCP later removed (F113)
+**Next step**: Specify as F040 fields if that keeps the model smaller; split
+only if query/UX needs it.
 
-### Implementation
+### F043 — Decision Impact Graph
 
-- `internal/adapters/mcp/` (official Go MCP SDK)
-- `internal/adapters/presenters/` (shared JSON with REST)
-- `cmd/memlore mcp`
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F040, F005
 
-### Next Step
+**Goal**: Show what a decision affects (services, events, publishers,
+components) for impact analysis before changing architecture.
 
-F106a governance hardening (DONE).
+**Next step**: Specify after F040; graph-service relationships, not a new DB.
 
----
+### F044 — `memlore why`
 
-## F106a — Go Governance Hardening
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F040, F007/F021
 
-**Status**: DONE  
-**Branch**: `008-go-governance-hardening`  
-**Spec**: `specs/008-go-governance-hardening/`
+**Goal**: Signature developer command: `memlore why "Kafka"` or
+`memlore why src/payments/refund.go`. Explain the decision, alternatives,
+introduction date, current validity, and evidence.
 
-### Goal
+**Product value**: This is the demo that should sell the product.
 
-Production-ready Go governance: embedded migrations, CI integration, installable
-binary for cross-project MCP, Python deprecation notices.
+**Surfaces**: CLI first; REST + MCP equivalents required for agents.
 
-### Acceptance Criteria
+**Acceptance criteria** (draft):
 
-- [x] `memlore migrate` (embedded goose, cwd-independent)
-- [x] Alembic integration test on empty DB
-- [x] CI `go-integration` job with Postgres
-- [x] Python `serve`/`mcp` deprecation stderr notices
-- [x] `scripts/install-memlore.sh` + setup docs
+- [ ] Natural-language topic and path/file inputs are supported
+- [ ] Output includes decision, reason, alternatives, introduced-at, still-valid, evidence
+- [ ] Stale/superseded decisions are labeled, not presented as current
+- [ ] Unauthorized scopes return not-found/forbidden without leaking existence beyond existing authz policy
+- [ ] Implementation-awareness (compliant vs drift) may be “unknown” until F050
 
-### Next Step
-
-F113 retired the Python core. Next product work: F010 membership.
-
----
-
-## F111 — OIDC authentication + RBAC
-
-**Status**: DONE  
-**Branch**: `015-oidc-rbac`  
-**Spec**: `specs/015-oidc-rbac/`  
-**Implements**: Product F010 (partial — no team/project membership yet)
-
-### Goal
-
-Optional OIDC Bearer JWT auth with reader/writer/admin RBAC. Local mode
-preserves `X-Memlore-Actor` / `actor_id` when OIDC is unset.
-
-### Acceptance Criteria
-
-- [x] OIDC optional until configured
-- [x] Actor from token `sub` when OIDC on; header spoofing ignored
-- [x] Role matrix enforced (reader/writer/admin)
-- [x] REST + MCP parity; `/health` open
-- [x] `go test ./...` green
-
-### Next Step
-
-F010 remainder — team/project membership-scoped authorization.
+**Next step**: Specify after F040; can stub “still valid / compliant” until F050.
 
 ---
 
-## F112 — Temporal filtering + conflict detection
+## EPIC F — Engineering Drift
 
-**Status**: DONE  
-**Branch**: `014-conflict-filtering`  
-**Spec**: `specs/014-conflict-filtering/`  
-**Implements**: Product F009; completes F007 temporal/conflict stages
+### F050 — Architecture Drift Detection
 
-### Goal
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F040 (intent), F006 (retrieval); benefits from F030/F031 (code observations)
 
-Omit superseded/invalidated lore from default retrieval; surface structural
-conflict groups on compiled context. History remains via get/explain.
+**Goal**: Detect differences between authoritative engineering intent and
+observed implementation.
 
-### Acceptance Criteria
+Categories: architecture violation, coding convention violation, dependency
+violation, deprecated technology use, missing security control, operational
+policy mismatch.
 
-- [x] Default list/search/knowledge_search/get_for_task omit stale
-- [x] `include_stale` opt-in on list/search/knowledge_search
-- [x] get/explain still return stale
-- [x] Compile `conflicts` array; neither side silently dropped
-- [x] REST + MCP parity; still 9 MCP tools
-- [x] `go test ./...` green
+**Product value**: MemLore notices when the code stopped matching the decision.
 
-### Implementation
+**Acceptance criteria** (draft):
 
-- `internal/domain/lore.go` (`IsCurrent`)
-- `internal/application/context/{current,conflicts}.go`
-- `internal/application/queries/{list_lore_by_scope,search_knowledge,compile_context}.go`
-- Presenters + HTTP/MCP adapters
+- [ ] Given an authoritative rule and an observation, the system can emit `IMPLEMENTATION_DRIFT` (or equivalent) with both sides preserved
+- [ ] Neither side is silently dropped (F009 invariant)
+- [ ] Drift is scoped and authorized (F114)
+- [ ] Confidence of the observation is visible
+- [ ] CLI + REST can list open drift for a repository/PR
 
-### Next Step
+**Next step**: Specify after F040; observations may start conservative (file/PR
+signals before deep static analysis).
 
-F111 OIDC/RBAC (DONE).
+### F051 — Convention Violation Detection
 
----
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F050, trusted convention lore
 
-## F110 — Invalidate + supersede (governance lifecycle)
+**Goal**: Treat coding conventions as machine-readable expectations and detect
+likely violations in changed code.
 
-**Status**: DONE  
-**Branch**: `013-supersede-invalidate`  
-**Spec**: `specs/013-supersede-invalidate/`  
-**Implements**: Product F008 (lifecycle; retrieval filtering is F112)
+**Next step**: Specify after F050; start with conventions that are already
+structured, not free-text only.
 
-### Goal
+### F052 — Drift Severity Scoring
 
-Mark lore invalidated without deleting history, and supersede lore with a
-successor that preserves the predecessor. REST and MCP (`memlore.invalidate`,
-`memlore.supersede`) share the same entry shape.
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F050, F003
 
-### Acceptance Criteria
+**Goal**: Score CRITICAL / HIGH / MEDIUM / LOW / INFORMATIONAL from authority
+of the rule, code scope, production/security risk, and observation confidence.
 
-- [x] `verification_status=invalidated`; idempotent re-invalidate
-- [x] `superseded_by_id` on predecessor; successor in same scope
-- [x] Dual audits (`supersede` + `create`); explain chronological
-- [x] REST `POST .../invalidate` and `POST .../supersede`
-- [x] MCP nine tools including invalidate + supersede
-- [x] Goose `00003` + sqlc mapping
+**Next step**: Specify after F050; keep the score explainable.
 
-### Implementation
+### F053 — Drift Review Workflow
 
-- `internal/domain/lifecycle.go`
-- `internal/application/commands/invalidate_lore.go`
-- `internal/application/commands/supersede_lore.go`
-- `migrations/00003_supersede_invalidate.sql`
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F050, F035-style queue
 
-### Next Step
+**Goal**: Not every apparent violation is wrong. Confirm drift, accept
+exception, update architecture, mark false positive, or create follow-up.
+Preserve the resolution as lore.
 
-F111 OIDC/RBAC (DONE).
+**Surfaces**: CLI + REST (same P0 queue policy).
 
----
+**Next step**: Specify after F050; reuse F035 mechanics where possible.
 
-## F109 — Context Compiler + get_for_task
+### F054 — GitHub PR Check Integration
 
-**Status**: DONE  
-**Branch**: `012-context-compiler`  
-**Spec**: `specs/012-context-compiler/`  
-**Implements**: Product F007 (completed via F112 temporal/conflict stages)
+**Status**: PLANNED  
+**Priority**: P0  
+**Depends on**: F050 (meaningful check body); F031 useful for PR metadata
+**Home also**: Epic H
 
-### Goal
+**Goal**: Expose MemLore as a GitHub PR check so drift and decision violations
+show up next to tests and lint.
 
-Compile token-budgeted ContextPacket for agents: retrieve via F108, authority
-ranking, dedup, token budgeting. REST `POST /v1/context/compile` and MCP
-`memlore.get_for_task`.
+**Product value**: Everyday developer workflow, not a separate console.
 
-### Acceptance Criteria
+**Acceptance criteria** (draft):
 
-- [x] `CompileContextHandler` with authority ranking and token budget
-- [x] Verified governance outranks graph hits (unit test)
-- [x] Cross-plane statement dedup (v1)
-- [x] `POST /v1/context/compile` + contract tests
-- [x] `memlore.get_for_task` MCP tool + contract tests
+- [ ] A GitHub check run is created for configured repositories
+- [ ] Findings cite the violated lore/ADR and a code location when known
+- [ ] Absence of findings is a passing check, not silence
+- [ ] Check is not noisy: actionable findings only (threshold via F052 later)
+- [ ] Authz: only configured installation + MemLore membership
 
-### Implementation
-
-- `internal/application/context/ranking.go`
-- `internal/application/queries/compile_context.go`
-- `internal/adapters/presenters/context_packet.go`
-
-### Next Step
-
-F111 — OIDC/RBAC.
+**Next step**: Specify after F050 can produce at least one deterministic finding type.
 
 ---
 
-## F108 — Graph Retrieval Orchestration
+## EPIC G — Developer Experience
 
-**Status**: DONE  
-**Branch**: `011-graph-retrieval-orchestration`  
-**Spec**: `specs/011-graph-retrieval-orchestration/`  
-**Implements**: Product F006 (partial)
+### F070 — PR Context Retrieval
 
-### Goal
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F021, F031
 
-Go application orchestrator parallel-fetches governance scope list (when scope
-provided) and knowledge graph search via `ports.KnowledgeGraph`. REST
-`POST /v1/knowledge-search` and MCP `memlore.knowledge_search` return merged
-MemLore-shaped response. `memlore.search` unchanged.
+**Goal**: For a pull request, retrieve context relevant to the changed files
+(decisions, prior PRs, incidents, conventions).
 
-### Acceptance Criteria
+**Next step**: Specify after F021 and F031.
 
-- [x] `SearchKnowledgeHandler` with parallel governance + graph fetch
-- [x] Graceful graph degradation with `graph_service_unavailable` warning
-- [x] `POST /v1/knowledge-search` REST endpoint + contract tests
-- [x] `memlore.knowledge_search` MCP tool + contract tests
-- [x] Bootstrap wiring in `memlore serve` and `memlore mcp`
-- [x] Unit + integration tests; `memlore.search` contract unchanged
+### F071 — Changed-File Lore Matching
 
-### Implementation
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F070
 
-- `internal/application/queries/search_knowledge.go`
-- `internal/adapters/presenters/knowledge_search.go`
-- `internal/adapters/http/handlers.go` — `POST /v1/knowledge-search`
-- `internal/adapters/mcp/tools.go` — `memlore.knowledge_search`
+**Goal**: Given changed files, identify related decisions, conventions,
+incidents, owners, known risks, and dependencies.
 
-### Next Step
+**Next step**: Specify with F070.
 
-Supersede / invalidate (F008) or conflict detection (F009).
+### F072 — PR Decision Summary
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F031, F040, F035
+
+**Goal**: Concise summary of decisions introduced or modified by a PR; later
+candidate lore.
+
+**Next step**: Specify after F040 and F031.
+
+### F073 — Historical Risk Context
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F070
+
+**Goal**: Surface incidents, regressions, and previous failed approaches
+relevant to changed code.
+
+**Next step**: Specify with F070/F071.
+
+### F074 — GitHub Review Bot
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F054, F070
+**Home also**: Epic H
+
+**Goal**: One concise PR comment or check summary: relevant decisions, drift,
+stale context, related incidents, missing evidence. Avoid noisy comments.
+
+**Next step**: Specify after F054; default to check-run only if comments are
+too noisy.
+
+### F090 — File Explanation
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F044, F031
+
+**Goal**: `memlore explain src/refund/retry.go` — why the file exists, introducing
+PR, related incident, relevant ADR.
+
+**Next step**: Specify after F044; CLI + REST + MCP.
+
+### F091 — `why-line`
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F090, F030
+
+**Goal**: `memlore why-line src/refund/retry.go:143` — Git blame explains who
+changed it; MemLore explains why.
+
+**Next step**: Specify after F090.
+
+### F092 — Historical Change Narrative
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F041, F090
+
+**Goal**: Timeline around a component: original design → incident → workaround
+→ ADR → refactor.
+
+**Next step**: Defer until decision + archaeology data exist.
+
+### F120 — Engineering Knowledge Graph UI
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F005, F040, F043
+
+**Goal**: First product web UI over the Graphiti knowledge model: click an
+entity to see decisions, owners, incidents, PRs, dependencies, conventions,
+risks, history.
+
+**Note**: P0 review queues explicitly do **not** wait on this UI.
+
+**Next step**: Separate specify when the API flywheel is proven.
+
+### F121 — Component Relationship Explorer
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F120 or a CLI/REST graph browse MVP
+
+**Goal**: Navigate relationships (USES, DEPENDS_ON, PUBLISHES, SUPERSEDES,
+CONTRADICTS, EVIDENCED_BY, …).
+
+**Next step**: Specify with F120.
 
 ---
 
-## F106 — Graph Knowledge Service
+## EPIC H — Integrations
 
-**Status**: DONE  
-**Branch**: `009-graph-service`  
-**Spec**: `specs/009-graph-service/`
+**Strategy**: GitHub first. Do not start GitLab/Bitbucket until F031 + F054
+work on GitHub.
 
-### Goal
+Integration features are specified in their home epics (C, F, G). This epic
+exists so forge work is not scattered without an owner.
 
-Thin Python `graph-service/` isolating Graphiti/Neo4j behind MemLore HTTP contracts.
-Go `KnowledgeGraph` port + HTTP client without Graphiti imports.
-
-### Acceptance Criteria
-
-- [x] `docker compose up` brings graph-service + Neo4j; `GET /health` returns ok
-- [x] `POST /episodes` via Graphiti; integration test (skip without Neo4j/OpenAI)
-- [x] `POST /search` MemLore-shaped results
-- [x] Go `KnowledgeGraph` port + HTTP client + contract tests
-- [x] CI graph-service job
-- [x] Lore create wired via F107 outbox (not synchronous dual-write)
-
-### Implementation
-
-- `graph-service/` FastAPI, Graphiti adapter
-- `internal/application/ports/knowledge_graph.go`
-- `internal/infrastructure/graphclient/`
-- `docs/api/graph-service.md`
+**Out of scope until the GitHub flywheel is done**: other forges, generic
+“all git hosts” abstractions, and a marketplace listing.
 
 ---
 
-## F107 — Transactional Outbox + Graph Sync
+## EPIC I — Knowledge Health
 
-**Status**: DONE  
-**Branch**: `010-transactional-outbox`  
-**Spec**: `specs/010-transactional-outbox/`  
-**Implements**: Product F004
+### F080 — Freshness Scoring
 
-### Goal
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F003, F008, F009
 
-Lore create writes a pending outbox event in the same Postgres transaction.
-`memlore worker` polls outbox and publishes episodes to graph-service.
+**Goal**: Estimate whether knowledge remains current using age, recent code
+changes, evidence freshness, validity dates, contradicting observations, and
+supersession.
 
-### Acceptance Criteria
+**Next step**: Specify after F050 observations exist; can start with
+age + supersession + explicit validity only.
 
-- [x] `outbox_events` migration (`00002`)
-- [x] `CreateLore` adds `episode.ingest` outbox row atomically with lore + audit
-- [x] `memlore worker` calls `KnowledgeGraph.IngestEpisode` with lore id as episode id
-- [x] Failed events retry with attempts + last_error
-- [x] Unit + Postgres integration tests
+### F081 — Stale Lore Detection
 
-### Implementation
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F080
 
-- `migrations/00002_outbox_events.sql`
-- `internal/application/commands/process_outbox.go`
-- `cmd/memlore` `worker` subcommand
+**Goal**: Surface likely-stale knowledge for human review (e.g. “services use
+Java 17” vs repo reality).
+
+**Next step**: Specify with F080; queue via F084.
+
+### F082 — Evidence Revalidation
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F080, F030–F032
+
+**Goal**: Periodically check whether evidence still exists and still supports
+the claim (file removed, ADR superseded, PR reverted, docs rewritten).
+
+**Next step**: Specify after ingest can resolve evidence URIs/SHAs.
+
+### F083 — Knowledge Expiry Policies
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F008, F080
+
+**Goal**: Explicit or policy-based expiration for task context, migration
+notes, temporary workarounds, incident mitigations.
+
+**Next step**: Defer; invalidation/supersession may be enough at first.
+
+### F084 — Periodic Verification Queue
+
+**Status**: PLANNED  
+**Priority**: P1  
+**Depends on**: F081, F035 mechanics
+
+**Goal**: High-impact stale knowledge for human verification, prioritized by
+authority × usage × staleness × impact.
+
+**Surfaces**: CLI + REST.
+
+**Next step**: Specify after F081; reuse F035 queue UX.
+
+### F118 — Knowledge Coverage Analysis
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F020, F040  
+**Roadmap ID**: F110 (remapped)
+
+**Goal**: Measure whether important components have supporting knowledge
+(architecture, decision, operational, ownership coverage).
+
+**Next step**: Defer until F020/F040 exist to define “covered.”
+
+### F119 — Missing Knowledge Detection
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F118  
+**Roadmap ID**: F111 (remapped)
+
+**Goal**: Detect important gaps (no retry policy, no runbook, no owner, no ADR
+for a critical component).
+
+**Next step**: Specify with F118.
+
+### F122 — Knowledge Gap Review Queue
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F119, F035  
+**Roadmap ID**: F112 (remapped)
+
+**Goal**: Teams prioritize missing documentation/context by criticality and
+agent usage.
+
+**Surfaces**: CLI + REST (web UI only if F120 exists).
+
+**Next step**: Specify after F119.
 
 ---
 
-## Migration Feature Map
+## EPIC J — Analytics
 
-| Migration ID | Replaces | Depends on |
-|--------------|----------|------------|
-| F101 | — | Discovery complete |
-| F102 | Python domain types | F101 |
-| F103 | SQLAlchemy repos | F101, F102 |
-| F104 | F001 REST (Python) | F103 |
-| F105 | F002 MCP (Python) | F104 |
-| F106a | Ops hardening | F105 |
-| F106 | (greenfield) | F004 planning |
-| F107 | F004 outbox | F106 |
-| F108 | F006 read path | F107 |
-| F109 | F007 compiler v1 | F108 |
+### F130 — MemLore Health Dashboard
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F061, F080, F118, F050
+
+**Goal**: Coverage, verified %, stale %, unresolved conflicts, drift, agent
+context hit rate, and monthly promotion/supersession counts.
+
+**Surfaces**: REST metrics first; visual dashboard may wait for F120.
+
+**Next step**: Specify after flywheel metrics exist; do not block P0 on a UI.
+
+### F131 — Agent Context Effectiveness
+
+**Status**: PLANNED  
+**Priority**: P2  
+**Depends on**: F060, F054, F100
+
+**Goal**: Measure whether MemLore context improves engineering outcomes (PR
+rework, reviewer corrections, repeated agent mistakes, tokens before
+implementation, task success). Long-term business case, not a v0.9 launch
+requirement.
+
+**Next step**: Defer; requires production usage and careful causal claims.
 
 ---
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F020 repository intelligence profile
+
+- Compile-on-read profile from current lore + graph; cue-based sections
+- REST `POST /v1/repository-profile`, MCP `memlore.repo_profile`, CLI `memlore profile`
+- Spec: `specs/020-repo-intelligence-profile/`; F020 marked DONE
+
+### 2026-09-01 — Product epic roadmap
+
+- Foundation (F001–F010, F101–F114, F003, F113) treated as DONE v0.8.0
+- Tracker reorganized around epics A–J and the capture → trust → retrieve →
+  use → drift → learn flywheel
+- Next specify: **F020** Repository Intelligence Profile
+- ID remaps: F115–F119, F122 (see Clarifications)
+- P0 human queues: CLI + REST; web UI is F120 (P2)
+
 ### 2026-09-01 — F006 fuller semantic search + graph retrieval
 
-- Query-relevant governance (token/substring match); scope-less membership-aware search
-- Prefer governance + `graph_receipt` collapse for provenance-linked graph facts
+- Query-relevant governance; scope-less membership-aware search
+- Prefer governance + `graph_receipt` collapse
 - Contract: `specs/019-semantic-graph-retrieval/`; F006 marked DONE
-
-### 2026-08-27 — F109 context compiler + get_for_task
-
-- `CompileContextHandler` with authority ranking, dedup, token budgeting
-- `POST /v1/context/compile` and `memlore.get_for_task`
-- Implements product F007 (partial)
-
-### 2026-08-27 — F108 graph retrieval orchestration
-
-- `SearchKnowledgeHandler` parallel governance + graph search
-- `POST /v1/knowledge-search` and `memlore.knowledge_search`
-- Implements product F006 (partial read path)
-
-### 2026-08-26 — F107 transactional outbox + graph sync
-
-- Outbox migration, CreateLore atomic outbox write, `memlore worker`
-- Implements product F004
-
-### 2026-08-25 — F106 graph-service extraction
-
-- `graph-service/` FastAPI + Graphiti adapter (`POST /episodes`, `POST /search`)
-- Go `KnowledgeGraph` port + HTTP client + contract tests
-- Docker Compose graph-service container; CI graph-service job
-
-### 2026-08-25 — F106a Go governance hardening
-
-- `memlore migrate`, CI Postgres integration tests, Python deprecation notices
-- `scripts/install-memlore.sh` for cross-project MCP binary
-
-### 2026-08-25 — F105 Go MCP lore tools
-
-- Branch `007-go-mcp-lore-tools`: five tools via official Go MCP SDK
-- `go run ./cmd/memlore mcp` on stdio (Python MCP unchanged)
-
-### 2026-08-25 — F104 Go REST lore CRUD
-
-- Branch `006-go-rest-lore-crud`: chi handlers, application layer, contract tests
-- `go run ./cmd/memlore serve` on `:8080` (Python REST unchanged on `:8000`)
-
-### 2026-08-25 — F002 merged; F101 specified
-
-- Merged `002-mcp-lore-tools` to `main` (F002 DONE)
-- ADR-0005 accepted; Spec Kit `003-go-core-skeleton` complete (F101 READY)
-- Added `docs/architecture/target-architecture.md`
 
 ### Immediate recommended tasks
 
-1. Dogfood OIDC-on with HMAC or IdP JWKS
-2. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
+1. Specify **F021** (agent context bootstrap / richer `get_for_task`)
+2. Then F022/F023 compiler profiles/budget
+3. Then F030–F032 ingest + F035 review queue
+4. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
+5. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 
 ---
 
 ## Related Documents
 
-- [MIGRATION_DISCOVERY.md](MIGRATION_DISCOVERY.md)
+- [Constitution](../../.specify/memory/constitution.md)
+- [Target architecture](../architecture/target-architecture.md)
+- [Architecture overview](../architecture/overview.md)
+- [ADRs](../adr/README.md)
+- [MIGRATION_DISCOVERY.md](MIGRATION_DISCOVERY.md) (historical Go strangler)
 - [migration-inventory.md](migration-inventory.md)
-- [../adr/README.md](../adr/README.md)
-- [.specify/memory/constitution.md](../../.specify/memory/constitution.md)

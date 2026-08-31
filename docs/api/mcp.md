@@ -23,6 +23,7 @@ when OIDC is on.
 | `memlore.search` | Exact scope list (`kind`+`key`); current only unless `include_stale` | implemented |
 | `memlore.knowledge_search` | Dual-plane knowledge search (query-relevant governance + graph; optional `include_stale`; optional `graph_receipt`) | implemented |
 | `memlore.get_for_task` | Compiled context packet for a task (`conflicts` array; never packs stale) | implemented |
+| `memlore.repo_profile` | Compact repository intelligence profile (named sections; omit empty) | implemented |
 | `memlore.supersede` | Replace while preserving history | implemented |
 | `memlore.invalidate` | Mark invalid without deleting evidence | implemented |
 
@@ -64,6 +65,7 @@ See `specs/002-mcp-lore-tools/contracts/mcp-lore-tools.md` for argument and
 payload schemas. Knowledge search:
 `specs/019-semantic-graph-retrieval/contracts/knowledge-search-v2.md`.
 Context compile: `specs/012-context-compiler/contracts/context-compile.md`.
+Repository profile: `specs/020-repo-intelligence-profile/contracts/repository-profile.md`.
 Invalidate and supersede:
 `specs/013-supersede-invalidate/contracts/lifecycle-lore.md`.
 Temporal filter + conflicts:

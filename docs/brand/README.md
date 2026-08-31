@@ -16,9 +16,9 @@ source of truth for README, GitHub, and docs imagery.
 
 ## Voice & color
 
-- **Short tagline:** Shared engineering memory for humans and AI coding agents.
+- **Short tagline:** The engineering intelligence layer for how your team actually builds software.
 - **Punchy tagline:** Your code tells agents what. MemLore remembers **why** — and brings the **receipts**.
-- **Pillars:** Authority · Provenance · Temporal knowledge · Verification · Context for agents
+- **Pillars:** Authority · Provenance · Temporal knowledge · Verification · Context for agents · Decisions · Drift
 - **Signposts / book spines:** Decisions · Context · History · Evidence
 - **Colors:** Navy (Mem / outlines) · Purple (Lore / accents) · Purple field for avatar
 

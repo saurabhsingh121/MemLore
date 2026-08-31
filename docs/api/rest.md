@@ -27,6 +27,7 @@ and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018
 | `GET` | `/v1/lore-entries/{id}/audits` | List audits (404 if entry missing) |
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) |
 | `POST` | `/v1/context/compile` | Compile token-budgeted context for a task (`conflicts` array; items include `trust_band`) |
+| `POST` | `/v1/repository-profile` | Compile a repository intelligence profile (named sections; omit empty) |
 | `POST` | `/v1/admin/teams` | Create team (admin) |
 | `POST` | `/v1/admin/projects` | Create project (admin; optional `team_key`) |
 | `POST` | `/v1/admin/teams/{key}/members` | Add team member (admin) |
@@ -43,6 +44,7 @@ Knowledge search: [`specs/019-semantic-graph-retrieval/contracts/knowledge-searc
 when a graph fact collapses onto lore; scope omitted searches membership-allowed
 lore (local: all).
 Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md).
+Repository profile: [`specs/020-repo-intelligence-profile/contracts/repository-profile.md`](../../specs/020-repo-intelligence-profile/contracts/repository-profile.md).
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).
 Auth + RBAC: [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).

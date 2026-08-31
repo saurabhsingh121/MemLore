@@ -96,6 +96,11 @@ type compileContextRequest struct {
 	TokenBudget int       `json:"token_budget"`
 }
 
+type repositoryProfileRequest struct {
+	Scope       *scopeDTO `json:"scope"`
+	TokenBudget int       `json:"token_budget"`
+}
+
 func toLoreResponse(entry domain.LoreEntry) loreEntryResponse {
 	return presenters.ToLoreEntry(entry)
 }

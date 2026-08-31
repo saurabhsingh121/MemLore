@@ -11,14 +11,17 @@ alwaysApply: true
 - Governance DB: PostgreSQL; Knowledge: Graphiti + Neo4j; async sync via outbox
 - Adapters: REST + MCP (`memlore.*`) + CLI (`memlore`) — Go
 - Tooling: go test/vet, goose, sqlc, Docker Compose; uv/ruff/mypy in graph-service
-- Constitution: `.specify/memory/constitution.md` (v1.1.0)
+- Constitution: `.specify/memory/constitution.md` (v1.2.0)
 - Brand: MemLore per ADR 0004
 
 ## Active feature plan
 
-Active: F006 remainder — `specs/019-semantic-graph-retrieval/`.
-Completed F114 (`specs/018-membership-authz/`): membership-scoped authz.
-Completed F113 (`specs/017-retire-python-core/`): legacy `src/memlore/` removed.
-Completed: F101–F112, F106a, F111, F003, F113, F010/F114.
+Next to specify: F021 — Agent Context Bootstrap / `get_for_task`
+  (`docs/development/FEATURE_DEVELOPMENT.md`, Epic D).
+F020 repository intelligence profile is DONE (`specs/020-repo-intelligence-profile/`).
+Foundation complete (v0.8.0): F001–F010, F003, F101–F114, F113.
+Product roadmap is epic-based (A–J). Frozen IDs F101–F114 are never reused;
+remapped product IDs: F115–F119, F122.
+P0 review queues: CLI + REST; web UI is F120 (P2).
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

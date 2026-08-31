@@ -19,38 +19,41 @@ import (
 
 // Handlers exposes lore REST endpoints.
 type Handlers struct {
-	CreateLore      *commands.CreateLoreHandler
-	VerifyLore      *commands.VerifyLoreHandler
-	InvalidateLore  *commands.InvalidateLoreHandler
-	SupersedeLore   *commands.SupersedeLoreHandler
-	GetLore         *queries.GetLoreHandler
-	ListLoreByScope *queries.ListLoreByScopeHandler
-	ListAudits      *queries.ListAuditsHandler
-	SearchKnowledge *queries.SearchKnowledgeHandler
-	CompileContext  *queries.CompileContextHandler
-	ExplainLore     *queries.ExplainLoreHandler
-	Auth            *appauth.Service
-	Authz           *authz.Gate
-	Membership      ports.MembershipDirectory
-	Version         string
+	CreateLore        *commands.CreateLoreHandler
+	VerifyLore        *commands.VerifyLoreHandler
+	InvalidateLore    *commands.InvalidateLoreHandler
+	SupersedeLore     *commands.SupersedeLoreHandler
+	GetLore           *queries.GetLoreHandler
+	ListLoreByScope   *queries.ListLoreByScopeHandler
+	ListAudits        *queries.ListAuditsHandler
+	SearchKnowledge   *queries.SearchKnowledgeHandler
+	CompileContext    *queries.CompileContextHandler
+	RepositoryProfile *queries.RepositoryProfileHandler
+	ExplainLore       *queries.ExplainLoreHandler
+	Auth              *appauth.Service
+	Authz             *authz.Gate
+	Membership        ports.MembershipDirectory
+	Version           string
 }
 
 // NewHandlers wires application handlers from a unit-of-work factory and clock.
 func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph, version string) *Handlers {
 	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
+	list := queries.NewListLoreByScopeHandler(begin)
 	return &Handlers{
-		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
-		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
-		InvalidateLore:  commands.NewInvalidateLoreHandler(begin, clock),
-		SupersedeLore:   commands.NewSupersedeLoreHandler(begin, clock),
-		GetLore:         queries.NewGetLoreHandler(begin),
-		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
-		ListAudits:      queries.NewListAuditsHandler(begin),
-		SearchKnowledge: search,
-		CompileContext:  queries.NewCompileContextHandler(search),
-		ExplainLore:     queries.NewExplainLoreHandler(begin),
-		Auth:            appauth.NewService(appauth.Config{}, nil),
-		Version:         version,
+		CreateLore:        commands.NewCreateLoreHandler(begin, clock),
+		VerifyLore:        commands.NewVerifyLoreHandler(begin, clock),
+		InvalidateLore:    commands.NewInvalidateLoreHandler(begin, clock),
+		SupersedeLore:     commands.NewSupersedeLoreHandler(begin, clock),
+		GetLore:           queries.NewGetLoreHandler(begin),
+		ListLoreByScope:   list,
+		ListAudits:        queries.NewListAuditsHandler(begin),
+		SearchKnowledge:   search,
+		CompileContext:    queries.NewCompileContextHandler(search),
+		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
+		ExplainLore:       queries.NewExplainLoreHandler(begin),
+		Auth:              appauth.NewService(appauth.Config{}, nil),
+		Version:           version,
 	}
 }
 
@@ -70,6 +73,7 @@ func (h *Handlers) Router() http.Handler {
 		r.Get("/lore-entries/{id}/audits", h.listLoreAudits)
 		r.Post("/knowledge-search", h.knowledgeSearch)
 		r.Post("/context/compile", h.compileContext)
+		r.Post("/repository-profile", h.repositoryProfile)
 
 		r.Post("/admin/teams", h.adminCreateTeam)
 		r.Post("/admin/projects", h.adminCreateProject)
@@ -399,6 +403,41 @@ func (h *Handlers) compileContext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, presenters.ToContextPacket(result))
+}
+
+func (h *Handlers) repositoryProfile(w http.ResponseWriter, r *http.Request) {
+	var body repositoryProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "invalid JSON body")
+		return
+	}
+	if body.Scope == nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "scope is required")
+		return
+	}
+	kind, err := domain.ParseScopeKind(string(body.Scope.Kind))
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	scope, err := domain.NewScope(kind, body.Scope.Key)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, scope, false); err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	result, err := h.RepositoryProfile.Handle(r.Context(), queries.RepositoryProfileQuery{
+		Scope:       scope,
+		TokenBudget: body.TokenBudget,
+	})
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, presenters.ToRepositoryProfile(result))
 }
 
 // Serve starts the HTTP server until context is cancelled.
