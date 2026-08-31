@@ -16,8 +16,8 @@ alwaysApply: true
 
 ## Active feature plan
 
+Active: F010 remainder / F114 membership authz — `specs/018-membership-authz/`.
 Completed F113 (`specs/017-retire-python-core/`): legacy `src/memlore/` removed.
 Completed: F101–F112, F106a, F111, F003, F113.
-Next: F010 remainder (team/project membership).
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

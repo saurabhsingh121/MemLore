@@ -137,8 +137,8 @@ MCP tools use Bearer when OIDC is on; local mode keeps `actor_id`.
 - **FR-008**: REST and MCP MUST share the same principal resolution and
   permission checks.
 - **FR-009**: Secrets and raw tokens MUST NOT be logged.
-- **FR-010**: Team/project membership persistence and scope ACL are out of
-  F111 (tracked as F010 remainder).
+- **FR-010**: Team/project membership persistence and scope ACL completed by
+  `018-membership-authz` (F114).
 
 ### Key Entities
 

@@ -1,13 +1,18 @@
 # REST API
 
 Authentication:
-- **Local mode** (OIDC unset): mutating routes require `X-Memlore-Actor`
+- **Local mode** (OIDC unset): mutating routes require `X-Memlore-Actor`;
+  membership checks are off (trusted actor is admin).
 - **OIDC mode** (`MEMLORE_OIDC_ISSUER` + JWKS URL or HMAC secret): all `/v1/*`
   routes require `Authorization: Bearer <jwt>`; actor comes from `sub`; role
-  from `memlore_role` (configurable). `/health` stays open.
-- Errors: `unauthorized` (401), `forbidden` (403)
+  from `memlore_role` (configurable). Membership enforcement is **on**:
+  non-admin principals may only access lore in scopes they belong to.
+  JWT `admin` bypasses membership. `/health` stays open.
+- Errors: `unauthorized` (401), `forbidden` (403), `not_found` (404; also used
+  for cross-tenant get-by-id to avoid existence leaks)
 
-See [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).
+See [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md)
+and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018-membership-authz/contracts/membership-authz.md).
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -22,6 +27,14 @@ See [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/con
 | `GET` | `/v1/lore-entries/{id}/audits` | List audits (404 if entry missing) |
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) |
 | `POST` | `/v1/context/compile` | Compile token-budgeted context for a task (`conflicts` array; items include `trust_band`) |
+| `POST` | `/v1/admin/teams` | Create team (admin) |
+| `POST` | `/v1/admin/projects` | Create project (admin; optional `team_key`) |
+| `POST` | `/v1/admin/teams/{key}/members` | Add team member (admin) |
+| `DELETE` | `/v1/admin/teams/{key}/members/{subject}` | Remove team member (admin) |
+| `POST` | `/v1/admin/projects/{key}/members` | Add project member (admin) |
+| `DELETE` | `/v1/admin/projects/{key}/members/{subject}` | Remove project member (admin) |
+| `POST` | `/v1/admin/scope-bindings` | Bind repository/feature/task scope to a project (admin) |
+| `DELETE` | `/v1/admin/scope-bindings` | Unbind child scope (`scope_kind` + `scope_key` query) (admin) |
 
 Contract details:
 [`specs/001-scoped-lore-entry/contracts/rest-lore-entries.md`](../../specs/001-scoped-lore-entry/contracts/rest-lore-entries.md).
@@ -30,6 +43,7 @@ Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).
 Auth + RBAC: [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).
+Membership authz: [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018-membership-authz/contracts/membership-authz.md).
 Authority evaluation: [`specs/016-authority-factors/contracts/authority-evaluation.md`](../../specs/016-authority-factors/contracts/authority-evaluation.md).
 
 Example create (local mode):

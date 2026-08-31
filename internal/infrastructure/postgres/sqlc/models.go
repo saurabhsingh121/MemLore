@@ -34,6 +34,14 @@ type LoreEntry struct {
 	InvalidatedAt      pgtype.Timestamptz
 }
 
+type Membership struct {
+	ID         string
+	UserID     string
+	TargetKind string
+	TargetID   string
+	CreatedAt  pgtype.Timestamptz
+}
+
 type OutboxEvent struct {
 	ID             string
 	AggregateType  string
@@ -46,4 +54,33 @@ type OutboxEvent struct {
 	CreatedAt      pgtype.Timestamptz
 	ProcessedAt    pgtype.Timestamptz
 	LastError      pgtype.Text
+}
+
+type Project struct {
+	ID        string
+	Key       string
+	Name      string
+	TeamID    pgtype.Text
+	CreatedAt pgtype.Timestamptz
+}
+
+type ScopeBinding struct {
+	ID        string
+	ScopeKind string
+	ScopeKey  string
+	ProjectID string
+	CreatedAt pgtype.Timestamptz
+}
+
+type Team struct {
+	ID        string
+	Key       string
+	Name      string
+	CreatedAt pgtype.Timestamptz
+}
+
+type User struct {
+	ID        string
+	Subject   string
+	CreatedAt pgtype.Timestamptz
 }

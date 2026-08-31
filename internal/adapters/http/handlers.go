@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/memlore/memlore/internal/adapters/presenters"
 	appauth "github.com/memlore/memlore/internal/application/auth"
+	"github.com/memlore/memlore/internal/application/authz"
 	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
@@ -29,6 +30,8 @@ type Handlers struct {
 	CompileContext  *queries.CompileContextHandler
 	ExplainLore     *queries.ExplainLoreHandler
 	Auth            *appauth.Service
+	Authz           *authz.Gate
+	Membership      ports.MembershipDirectory
 	Version         string
 }
 
@@ -67,6 +70,15 @@ func (h *Handlers) Router() http.Handler {
 		r.Get("/lore-entries/{id}/audits", h.listLoreAudits)
 		r.Post("/knowledge-search", h.knowledgeSearch)
 		r.Post("/context/compile", h.compileContext)
+
+		r.Post("/admin/teams", h.adminCreateTeam)
+		r.Post("/admin/projects", h.adminCreateProject)
+		r.Post("/admin/teams/{key}/members", h.adminAddTeamMember)
+		r.Delete("/admin/teams/{key}/members/{subject}", h.adminRemoveTeamMember)
+		r.Post("/admin/projects/{key}/members", h.adminAddProjectMember)
+		r.Delete("/admin/projects/{key}/members/{subject}", h.adminRemoveProjectMember)
+		r.Post("/admin/scope-bindings", h.adminBindScope)
+		r.Delete("/admin/scope-bindings", h.adminUnbindScope)
 	})
 	return r
 }
@@ -95,6 +107,10 @@ func (h *Handlers) createLoreEntry(w http.ResponseWriter, r *http.Request) {
 		handleDomainError(w, err)
 		return
 	}
+	if err := h.requireScopeAccess(r, scope, false); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	entry, err := h.CreateLore.Handle(r.Context(), commands.CreateLoreCommand{
 		Statement: statement,
 		Scope:     scope,
@@ -115,6 +131,10 @@ func (h *Handlers) getLoreEntry(w http.ResponseWriter, r *http.Request) {
 		handleDomainError(w, err)
 		return
 	}
+	if err := h.requireScopeAccess(r, entry.Scope, true); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, toLoreResponse(entry))
 }
 
@@ -122,6 +142,10 @@ func (h *Handlers) explainLoreEntry(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	result, err := h.ExplainLore.Handle(r.Context(), id)
 	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, result.Entry.Scope, true); err != nil {
 		handleDomainError(w, err)
 		return
 	}
@@ -135,6 +159,15 @@ func (h *Handlers) verifyLoreEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := chi.URLParam(r, "id")
+	existing, err := h.GetLore.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, existing.Scope, true); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	entry, err := h.VerifyLore.Handle(r.Context(), commands.VerifyLoreCommand{
 		EntryID: id,
 		ActorID: actor,
@@ -153,6 +186,15 @@ func (h *Handlers) invalidateLoreEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := chi.URLParam(r, "id")
+	existing, err := h.GetLore.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, existing.Scope, true); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	entry, err := h.InvalidateLore.Handle(r.Context(), commands.InvalidateLoreCommand{
 		EntryID: id,
 		ActorID: actor,
@@ -185,6 +227,15 @@ func (h *Handlers) supersedeLoreEntry(w http.ResponseWriter, r *http.Request) {
 		evidence = append(evidence, ref)
 	}
 	id := chi.URLParam(r, "id")
+	existing, err := h.GetLore.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, existing.Scope, true); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	entry, err := h.SupersedeLore.Handle(r.Context(), commands.SupersedeLoreCommand{
 		EntryID:   id,
 		Statement: body.Statement,
@@ -215,6 +266,10 @@ func (h *Handlers) listLoreEntries(w http.ResponseWriter, r *http.Request) {
 		handleDomainError(w, err)
 		return
 	}
+	if err := h.requireScopeAccess(r, scope, false); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	includeStale := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("include_stale")), "true")
 	items, err := h.ListLoreByScope.Handle(r.Context(), queries.ListLoreByScopeQuery{
 		Scope:        scope,
@@ -233,6 +288,15 @@ func (h *Handlers) listLoreEntries(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) listLoreAudits(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	entry, err := h.GetLore.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, entry.Scope, true); err != nil {
+		handleDomainError(w, err)
+		return
+	}
 	records, err := h.ListAudits.Handle(r.Context(), id)
 	if err != nil {
 		handleDomainError(w, err)
@@ -264,6 +328,10 @@ func (h *Handlers) knowledgeSearch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		scope = &parsed
+		if err := h.requireScopeAccess(r, parsed, false); err != nil {
+			handleDomainError(w, err)
+			return
+		}
 	}
 	result, err := h.SearchKnowledge.Handle(r.Context(), queries.SearchKnowledgeQuery{
 		Query:        body.Query,
@@ -274,6 +342,14 @@ func (h *Handlers) knowledgeSearch(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleDomainError(w, err)
 		return
+	}
+	if p, ok := h.currentPrincipal(r); ok {
+		filtered, ferr := h.gate().FilterAccessible(r.Context(), p, result.Governance)
+		if ferr != nil {
+			handleDomainError(w, ferr)
+			return
+		}
+		result.Governance = filtered
 	}
 	writeJSON(w, http.StatusOK, presenters.ToKnowledgeSearchResult(
 		result.Query,
@@ -301,6 +377,10 @@ func (h *Handlers) compileContext(w http.ResponseWriter, r *http.Request) {
 	}
 	scope, err := domain.NewScope(kind, body.Scope.Key)
 	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	if err := h.requireScopeAccess(r, scope, false); err != nil {
 		handleDomainError(w, err)
 		return
 	}
