@@ -28,3 +28,18 @@ func TestUnknownSubcommandExitsNonZero(t *testing.T) {
 		t.Fatal("run(unknown) = 0, want non-zero")
 	}
 }
+
+func TestProfileWithoutRepositoryExitsNonZero(t *testing.T) {
+	code := run([]string{"memlore", "profile"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(profile) = 0, want non-zero")
+	}
+}
+
+func TestUsageMentionsProfile(t *testing.T) {
+	var buf bytes.Buffer
+	printUsage(&buf)
+	if !bytes.Contains(buf.Bytes(), []byte("profile --repository")) {
+		t.Fatalf("usage missing profile: %s", buf.String())
+	}
+}

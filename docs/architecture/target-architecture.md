@@ -159,6 +159,7 @@ Agents interact with MemLore, not Graphiti directly.
 | Tool | Purpose |
 |------|---------|
 | `memlore.get_for_task` | Compiled context for a task (preferred) |
+| `memlore.repo_profile` | Compact repository intelligence profile |
 | `memlore.search` | Search with governance filters |
 | `memlore.remember` | Store lore |
 | `memlore.get` | Fetch by id |
@@ -186,13 +187,19 @@ Agents interact with MemLore, not Graphiti directly.
 | Outbox / workers | Go `memlore worker` | Go worker |
 | Context compiler | Go application layer | Same |
 
-Strangler migration is complete (F113). Remaining product work is on the Go core (e.g. F010 membership). See [migration-inventory.md](../development/migration-inventory.md).
+Strangler migration is complete (F113). Membership-scoped authz is complete
+(F114). F020 repository intelligence profile is on the Go core. Remaining
+product work is the engineering-intelligence flywheel (F021+): richer
+`get_for_task`, git/PR/ADR ingest, suggested-lore review (CLI + REST),
+first-class decisions, `memlore why`, architecture drift, and GitHub PR
+checks. See [FEATURE_DEVELOPMENT.md](../development/FEATURE_DEVELOPMENT.md).
 
 ## Related documents
 
 - [Overview](overview.md) — planes and adapters (includes current delivery notes)
 - [Containers](containers.md) — deployable units
 - [Authority model](authority-model.md)
+- [Product feature roadmap](../development/FEATURE_DEVELOPMENT.md)
 - [ADR-0001 Dual-plane](../adr/0001-dual-plane-architecture.md)
 - [ADR-0003 Domain MCP](../adr/0003-mcp-domain-interface.md)
 - [ADR-0005 Go core](../adr/0005-go-memlore-core.md)

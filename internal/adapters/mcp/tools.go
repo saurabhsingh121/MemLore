@@ -15,36 +15,39 @@ import (
 
 // Tools wires lore MCP tool handlers to the application layer.
 type Tools struct {
-	CreateLore      *commands.CreateLoreHandler
-	VerifyLore      *commands.VerifyLoreHandler
-	InvalidateLore  *commands.InvalidateLoreHandler
-	SupersedeLore   *commands.SupersedeLoreHandler
-	GetLore         *queries.GetLoreHandler
-	ListLoreByScope *queries.ListLoreByScopeHandler
-	ListAudits      *queries.ListAuditsHandler
-	SearchKnowledge *queries.SearchKnowledgeHandler
-	CompileContext  *queries.CompileContextHandler
-	ExplainLore     *queries.ExplainLoreHandler
-	Auth            *appauth.Service
-	Authz           *authz.Gate
-	Membership      ports.MembershipDirectory
+	CreateLore        *commands.CreateLoreHandler
+	VerifyLore        *commands.VerifyLoreHandler
+	InvalidateLore    *commands.InvalidateLoreHandler
+	SupersedeLore     *commands.SupersedeLoreHandler
+	GetLore           *queries.GetLoreHandler
+	ListLoreByScope   *queries.ListLoreByScopeHandler
+	ListAudits        *queries.ListAuditsHandler
+	SearchKnowledge   *queries.SearchKnowledgeHandler
+	CompileContext    *queries.CompileContextHandler
+	RepositoryProfile *queries.RepositoryProfileHandler
+	ExplainLore       *queries.ExplainLoreHandler
+	Auth              *appauth.Service
+	Authz             *authz.Gate
+	Membership        ports.MembershipDirectory
 }
 
 // NewTools constructs MCP tool handlers from a unit-of-work factory and clock.
 func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph) *Tools {
 	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
+	list := queries.NewListLoreByScopeHandler(begin)
 	return &Tools{
-		CreateLore:      commands.NewCreateLoreHandler(begin, clock),
-		VerifyLore:      commands.NewVerifyLoreHandler(begin, clock),
-		InvalidateLore:  commands.NewInvalidateLoreHandler(begin, clock),
-		SupersedeLore:   commands.NewSupersedeLoreHandler(begin, clock),
-		GetLore:         queries.NewGetLoreHandler(begin),
-		ListLoreByScope: queries.NewListLoreByScopeHandler(begin),
-		ListAudits:      queries.NewListAuditsHandler(begin),
-		SearchKnowledge: search,
-		CompileContext:  queries.NewCompileContextHandler(search),
-		ExplainLore:     queries.NewExplainLoreHandler(begin),
-		Auth:            appauth.NewService(appauth.Config{}, nil),
+		CreateLore:        commands.NewCreateLoreHandler(begin, clock),
+		VerifyLore:        commands.NewVerifyLoreHandler(begin, clock),
+		InvalidateLore:    commands.NewInvalidateLoreHandler(begin, clock),
+		SupersedeLore:     commands.NewSupersedeLoreHandler(begin, clock),
+		GetLore:           queries.NewGetLoreHandler(begin),
+		ListLoreByScope:   list,
+		ListAudits:        queries.NewListAuditsHandler(begin),
+		SearchKnowledge:   search,
+		CompileContext:    queries.NewCompileContextHandler(search),
+		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
+		ExplainLore:       queries.NewExplainLoreHandler(begin),
+		Auth:              appauth.NewService(appauth.Config{}, nil),
 	}
 }
 
@@ -114,6 +117,13 @@ type knowledgeSearchInput struct {
 type getForTaskInput struct {
 	Task        string     `json:"task"`
 	Query       string     `json:"query,omitempty"`
+	Scope       scopeInput `json:"scope"`
+	TokenBudget *int       `json:"token_budget,omitempty"`
+	ActorID     string     `json:"actor_id"`
+	AccessToken string     `json:"access_token,omitempty"`
+}
+
+type repoProfileInput struct {
 	Scope       scopeInput `json:"scope"`
 	TokenBudget *int       `json:"token_budget,omitempty"`
 	ActorID     string     `json:"actor_id"`
@@ -403,4 +413,38 @@ func (t *Tools) getForTask(ctx context.Context, _ *sdkmcp.CallToolRequest, input
 		return nil, presenters.ContextPacket{}, mapDomainError(err)
 	}
 	return nil, presenters.ToContextPacket(result), nil
+}
+
+func (t *Tools) repoProfile(ctx context.Context, _ *sdkmcp.CallToolRequest, input repoProfileInput) (*sdkmcp.CallToolResult, presenters.RepositoryProfile, error) {
+	var p domain.Principal
+	if t.authEnabled() {
+		var err error
+		p, err = t.resolvePrincipal(ctx, input.ActorID, input.AccessToken, domain.PermRead)
+		if err != nil {
+			return nil, presenters.RepositoryProfile{}, mapDomainError(err)
+		}
+	} else if _, err := requireActor(input.ActorID); err != nil {
+		return nil, presenters.RepositoryProfile{}, mapDomainError(err)
+	}
+	kind, err := domain.ParseScopeKind(string(input.Scope.Kind))
+	if err != nil {
+		return nil, presenters.RepositoryProfile{}, mapDomainError(err)
+	}
+	scope, err := domain.NewScope(kind, input.Scope.Key)
+	if err != nil {
+		return nil, presenters.RepositoryProfile{}, mapDomainError(err)
+	}
+	if t.authEnabled() {
+		if err := t.requireScope(ctx, p, scope, false); err != nil {
+			return nil, presenters.RepositoryProfile{}, mapDomainError(err)
+		}
+	}
+	result, err := t.RepositoryProfile.Handle(ctx, queries.RepositoryProfileQuery{
+		Scope:       scope,
+		TokenBudget: derefTokenBudget(input.TokenBudget),
+	})
+	if err != nil {
+		return nil, presenters.RepositoryProfile{}, mapDomainError(err)
+	}
+	return nil, presenters.ToRepositoryProfile(result), nil
 }

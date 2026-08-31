@@ -14,7 +14,8 @@
   <a href="#license"><img src="https://img.shields.io/badge/License-Apache%202.0-1F2937?style=for-the-badge" alt="License: Apache 2.0" /></a>
 </p>
 
-Shared engineering memory for humans and AI coding agents.
+The engineering intelligence layer that makes every coding agent understand
+how your team actually builds software.
 
 MemLore preserves the *why* behind the code: architectural decisions, engineering
 context, provenance, authority, temporal history, conflicts, superseded
@@ -25,11 +26,21 @@ context with evidence, not just similar text.
 
 Generic AI memory stores embeddings and snippets. Engineering work needs more:
 
+```text
+Generic memory → "I remember something."
+
+MemLore → "I know what your team decided, why they decided it,
+whether it's still true, what code implements it, what contradicts
+it, and what this agent needs to know right now."
+```
+
 - **Provenance** — who said it, human or agent, with evidence
 - **Authority** — verified architecture outranks unverified inference
 - **Temporal truth** — supersede facts without erasing history
 - **Conflicts** — surface drift between policy and implementation
 - **Scopes** — organization → team → project → repository → task
+- **Decisions** — first-class rationale, not generic memories (roadmap F040)
+- **Drift** — intent vs implementation in the PR loop (roadmap F050)
 
 ## Quick start
 
@@ -55,7 +66,7 @@ Start the stdio MCP server (Postgres must be up and migrated):
 ```
 
 Tools: `memlore.remember`, `get`, `verify`, `explain`, `search`,
-`knowledge_search`, `get_for_task`, `supersede`, `invalidate`.
+`knowledge_search`, `get_for_task`, `repo_profile`, `supersede`, `invalidate`.
 Mutating tools require `actor_id` in local mode (OIDC optional).
 See [docs/api/mcp.md](docs/api/mcp.md).
 
@@ -64,6 +75,7 @@ See [docs/api/mcp.md](docs/api/mcp.md).
 ```bash
 ./bin/memlore serve     # REST on :8080
 ./bin/memlore mcp       # stdio MCP
+./bin/memlore profile --repository <key>  # repository intelligence briefing
 ./bin/memlore migrate   # goose (embedded)
 ./bin/memlore worker    # outbox → graph-service
 ```
@@ -75,6 +87,7 @@ Or `go run ./cmd/memlore <command>` from this repo.
 | Area | Link |
 |------|------|
 | Architecture overview | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| Product feature roadmap | [docs/development/FEATURE_DEVELOPMENT.md](docs/development/FEATURE_DEVELOPMENT.md) |
 | ADRs | [docs/adr/](docs/adr/) |
 | Development setup | [docs/development/setup.md](docs/development/setup.md) |
 | TDD | [docs/development/tdd.md](docs/development/tdd.md) |
@@ -84,6 +97,10 @@ Or `go run ./cmd/memlore <command>` from this repo.
 
 MemLore Core is **Go** (REST, MCP, migrations, worker, authority, lifecycle,
 OIDC/RBAC). Knowledge plane is a thin Python **graph-service** (Graphiti/Neo4j).
+Foundation (v0.8.0) is complete. F020 repository intelligence profile is
+available (`POST /v1/repository-profile`, `memlore.repo_profile`,
+`memlore profile`). Next: **F021** agent context bootstrap — see the
+[feature roadmap](docs/development/FEATURE_DEVELOPMENT.md).
 
 ## License
 

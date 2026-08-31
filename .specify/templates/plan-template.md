@@ -40,11 +40,15 @@
   no distributed transactions across Postgres and Neo4j
 - [ ] Documentation: docs/ADR updates included in the same unit of work
 - [ ] Authority & provenance: human vs agent origins, evidence, verification,
-  and explainable authority factors preserved
-- [ ] Temporal correctness: history not overwritten; conflicts surfaced
+  and explainable authority factors preserved; extracted candidates are not
+  silently canonical; usage/popularity does not override authority
+- [ ] Temporal correctness: history not overwritten; conflicts and
+  intent-vs-implementation drift surfaced (neither side silently dropped)
 - [ ] Secure by default: authz, tenant isolation, secret handling, untrusted
   agent context considered
 - [ ] Observability: meaningful logs/metrics/traces/health for critical paths
+- [ ] Engineering intelligence: feature improves trust, evidence, task-relevant
+  context, or implementation awareness — not generic memory/search
 - [ ] Dependency policy: new third-party libraries justified
 - [ ] Simplicity: no speculative abstractions beyond requirements
 

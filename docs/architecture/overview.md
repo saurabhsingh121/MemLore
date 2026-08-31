@@ -1,6 +1,8 @@
 # Architecture overview
 
-MemLore is a shared engineering-context platform for humans and coding agents.
+MemLore is the engineering intelligence layer for humans and coding agents:
+not a generic memory store, but governed knowledge of what the team decided,
+why, whether it is still true, and what an agent needs before changing code.
 
 It separates **governance** (who may know what, verification, audit) from
 **knowledge** (temporal facts, relationships, semantic retrieval).
@@ -48,10 +50,18 @@ transactional outbox (or equivalent reliable async mechanism).
 | Graph service | Thin Python `graph-service/` | Same |
 | Outbox / workers | Go `memlore worker` | Go worker |
 
-**Current delivery**: governance-plane lore (CRUD, verify, invalidate, supersede,
-audit), dual-plane search, context compile, authority evaluation, and optional
-OIDC/RBAC on PostgreSQL via Go REST `/v1/*` and nine `memlore.*` MCP tools.
-Knowledge-plane Graphiti/Neo4j is isolated in `graph-service/`.
+**Current delivery (v0.8.0 foundation)**: governance-plane lore (CRUD, verify,
+invalidate, supersede, audit), dual-plane search, context compile, authority
+evaluation, and optional OIDC/RBAC plus membership ACL on PostgreSQL via Go
+REST `/v1/*` and ten `memlore.*` MCP tools. Knowledge-plane Graphiti/Neo4j is
+isolated in `graph-service/`.
+
+**Product direction**: capture (git/PR/ADR) → trust (review queue) → retrieve
+(`get_for_task` / `why`) → use (coding agent) → detect drift (PR check) →
+human correction → learn. See
+[FEATURE_DEVELOPMENT.md](../development/FEATURE_DEVELOPMENT.md). Next specify:
+F021 agent context bootstrap. P0 human queues are CLI + REST; a
+product web UI is F120 (P2).
 
 ## Adapters
 
@@ -66,4 +76,5 @@ Knowledge-plane Graphiti/Neo4j is isolated in `graph-service/`.
 - [Containers](containers.md)
 - [Authority model](authority-model.md)
 - [Security](security.md)
+- [Product feature roadmap](../development/FEATURE_DEVELOPMENT.md)
 - [ADRs](../adr/)

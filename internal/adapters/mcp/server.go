@@ -60,6 +60,11 @@ func NewServerFromTools(tools *Tools, version string, logger *slog.Logger) *sdkm
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
 	}, tools.getForTask)
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "memlore.repo_profile",
+		Description: "Compile a compact repository intelligence profile from current knowledge.",
+		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
+	}, tools.repoProfile)
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "memlore.invalidate",
 		Description: "Mark a lore entry invalidated without deleting evidence or audits.",
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: true},

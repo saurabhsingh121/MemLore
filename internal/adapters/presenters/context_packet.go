@@ -1,6 +1,7 @@
 package presenters
 
 import (
+	appcontext "github.com/memlore/memlore/internal/application/context"
 	"github.com/memlore/memlore/internal/application/queries"
 )
 
@@ -59,44 +60,62 @@ type ContextPacket struct {
 func ToContextPacket(result queries.CompileContextResult) ContextPacket {
 	items := make([]ContextItem, 0, len(result.Items))
 	for _, item := range result.Items {
-		evidence := make([]Evidence, 0, len(item.Evidence))
-		for _, ref := range item.Evidence {
-			evidence = append(evidence, Evidence{Type: ref.Type, Value: ref.Value})
-		}
-		refs := item.ProvenanceRefs
-		if refs == nil {
-			refs = []string{}
-		}
-		items = append(items, ContextItem{
-			ID:             item.ID,
-			Statement:      item.Statement,
-			Source:         string(item.Source),
-			AuthorityScore: item.AuthorityScore,
-			TrustBand:      string(item.TrustBand),
-			AuthorityFactors: AuthorityFactors{
-				VerificationStatus: item.AuthorityFactors.VerificationStatus,
-				Origin:             item.AuthorityFactors.Origin,
-				SupersessionStatus: item.AuthorityFactors.SupersessionStatus,
-				RecencyBoost:       item.AuthorityFactors.RecencyBoost,
-				EvidenceStrength:   item.AuthorityFactors.EvidenceStrength,
-				SourceType:         item.AuthorityFactors.SourceType,
-				ScopeMatch:         item.AuthorityFactors.ScopeMatch,
-				GraphScore:         item.AuthorityFactors.GraphScore,
-			},
-			Scope: Scope{
-				Kind: item.Scope.Kind,
-				Key:  item.Scope.Key,
-			},
-			Evidence:       evidence,
-			ProvenanceRefs: refs,
-		})
+		items = append(items, toContextItem(item))
 	}
 	warnings := result.Warnings
 	if warnings == nil {
 		warnings = []string{}
 	}
-	conflicts := make([]ConflictGroup, 0, len(result.Conflicts))
-	for _, c := range result.Conflicts {
+	return ContextPacket{
+		Task:      result.Task,
+		Query:     result.Query,
+		Scope:     Scope{Kind: result.Scope.Kind, Key: result.Scope.Key},
+		Items:     items,
+		Meta: ContextMeta{
+			TokenBudget:      result.Meta.TokenBudget,
+			EstimatedTokens:  result.Meta.EstimatedTokens,
+			ItemsIncluded:    result.Meta.ItemsIncluded,
+			ItemsTotalRanked: result.Meta.ItemsTotalRanked,
+		},
+		Warnings:  warnings,
+		Conflicts: toConflictGroups(result.Conflicts),
+	}
+}
+
+func toContextItem(item appcontext.RankedItem) ContextItem {
+	evidence := make([]Evidence, 0, len(item.Evidence))
+	for _, ref := range item.Evidence {
+		evidence = append(evidence, Evidence{Type: ref.Type, Value: ref.Value})
+	}
+	refs := item.ProvenanceRefs
+	if refs == nil {
+		refs = []string{}
+	}
+	return ContextItem{
+		ID:             item.ID,
+		Statement:      item.Statement,
+		Source:         string(item.Source),
+		AuthorityScore: item.AuthorityScore,
+		TrustBand:      string(item.TrustBand),
+		AuthorityFactors: AuthorityFactors{
+			VerificationStatus: item.AuthorityFactors.VerificationStatus,
+			Origin:             item.AuthorityFactors.Origin,
+			SupersessionStatus: item.AuthorityFactors.SupersessionStatus,
+			RecencyBoost:       item.AuthorityFactors.RecencyBoost,
+			EvidenceStrength:   item.AuthorityFactors.EvidenceStrength,
+			SourceType:         item.AuthorityFactors.SourceType,
+			ScopeMatch:         item.AuthorityFactors.ScopeMatch,
+			GraphScore:         item.AuthorityFactors.GraphScore,
+		},
+		Scope:          Scope{Kind: item.Scope.Kind, Key: item.Scope.Key},
+		Evidence:       evidence,
+		ProvenanceRefs: refs,
+	}
+}
+
+func toConflictGroups(groups []appcontext.ConflictGroup) []ConflictGroup {
+	conflicts := make([]ConflictGroup, 0, len(groups))
+	for _, c := range groups {
 		ids := c.EntryIDs
 		if ids == nil {
 			ids = []string{}
@@ -106,29 +125,10 @@ func ToContextPacket(result queries.CompileContextResult) ContextPacket {
 			stmts = []string{}
 		}
 		conflicts = append(conflicts, ConflictGroup{
-			Scope: Scope{
-				Kind: c.Scope.Kind,
-				Key:  c.Scope.Key,
-			},
+			Scope:      Scope{Kind: c.Scope.Kind, Key: c.Scope.Key},
 			EntryIDs:   ids,
 			Statements: stmts,
 		})
 	}
-	return ContextPacket{
-		Task:  result.Task,
-		Query: result.Query,
-		Scope: Scope{
-			Kind: result.Scope.Kind,
-			Key:  result.Scope.Key,
-		},
-		Items: items,
-		Meta: ContextMeta{
-			TokenBudget:      result.Meta.TokenBudget,
-			EstimatedTokens:  result.Meta.EstimatedTokens,
-			ItemsIncluded:    result.Meta.ItemsIncluded,
-			ItemsTotalRanked: result.Meta.ItemsTotalRanked,
-		},
-		Warnings:  warnings,
-		Conflicts: conflicts,
-	}
+	return conflicts
 }
