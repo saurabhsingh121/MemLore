@@ -36,6 +36,7 @@ type UnitOfWork interface {
 	Ingest() IngestRepository
 	PRIngest() PRIngestRepository
 	ADRIngest() ADRIngestRepository
+	ReviewDecisions() ReviewDecisionRepository
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }

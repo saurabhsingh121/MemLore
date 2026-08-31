@@ -43,6 +43,10 @@ type Handlers struct {
 	ListADRIngestRuns *queries.ListADRIngestRunsHandler
 	GetADRIngestRun   *queries.GetADRIngestRunHandler
 	ListIngestCands   *queries.ListIngestCandidatesHandler
+	ListReviewQueue   *queries.ListReviewQueueHandler
+	GetReviewItem     *queries.GetReviewItemHandler
+	AcceptReview      *commands.AcceptReviewHandler
+	RejectReview      *commands.RejectReviewHandler
 	Auth              *appauth.Service
 	Authz             *authz.Gate
 	Membership        ports.MembershipDirectory
@@ -75,6 +79,10 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		ListADRIngestRuns: queries.NewListADRIngestRunsHandler(begin),
 		GetADRIngestRun:   queries.NewGetADRIngestRunHandler(begin),
 		ListIngestCands:   queries.NewListIngestCandidatesHandler(begin),
+		ListReviewQueue:   queries.NewListReviewQueueHandler(begin),
+		GetReviewItem:     queries.NewGetReviewItemHandler(begin),
+		AcceptReview:      commands.NewAcceptReviewHandler(begin, clock),
+		RejectReview:      commands.NewRejectReviewHandler(begin, clock),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
 		Version:           version,
 	}
@@ -107,6 +115,10 @@ func (h *Handlers) Router() http.Handler {
 		r.Get("/ingest/adr-runs", h.listADRIngestRuns)
 		r.Get("/ingest/adr-runs/{id}", h.getADRIngestRun)
 		r.Get("/ingest/candidates", h.listIngestCandidates)
+		r.Get("/review-queue", h.listReviewQueue)
+		r.Get("/review-queue/{id}", h.getReviewItem)
+		r.Post("/review-queue/{id}/accept", h.acceptReviewItem)
+		r.Post("/review-queue/{id}/reject", h.rejectReviewItem)
 
 		r.Post("/admin/teams", h.adminCreateTeam)
 		r.Post("/admin/projects", h.adminCreateProject)

@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M19 — product flywheel (next: F035 review queue or F040 decision model; F022 is next Epic D compiler follow-up)  
+**Current Milestone**: M19 — product flywheel (next: F040 decision model or F022 packet profiles)  
 **Current Release Target**: v0.9.0 engineering-intelligence flywheel  
 **Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
 
@@ -222,7 +222,7 @@ validity, evidence, and implementation awareness.
 | F032 | ADR auto-ingestion | P0 | DONE | `specs/032-adr-ingest/`; accepted ADRs → verified `architecture_decision` |
 | F033 | Documentation ingestion | P1 | PLANNED | Architecture/runbooks/standards only |
 | F034 | Agent session knowledge extraction | P1 | PLANNED | Labeled `agent_observation` / `agent_inference` |
-| F035 | Suggested Lore review queue | P0 | PLANNED | CLI + REST; nothing auto-becomes canonical |
+| F035 | Suggested Lore review queue | P0 | DONE | `specs/035-suggested-lore-review/`; CLI + REST; Accept supersedes observational lore |
 
 ### Epic D — Agent Intelligence
 
@@ -430,7 +430,7 @@ canonical writes. No new MCP tool.
 - [x] Linked issues/tickets are stored as evidence refs when present
 - [x] Unmerged PRs are skipped (not treated as landed implementation)
 
-**Next step**: Specify **F035** (suggested-lore review queue) or **F040** (first-class decision model).
+**Next step**: Specify **F040** (first-class decision model).
 
 ### F032 — ADR Auto-Ingestion
 
@@ -454,7 +454,7 @@ without copy-paste.
 - [x] Original ADR path remains the evidence source
 - [x] Uncertain extracts are skipped (F035 still applies later); accepted-file ingest is auto-trusted per spec
 
-**Next step**: Specify **F035** or **F040**; F033 docs ingest remains later.
+**Next step**: Specify **F040** (first-class decision model). F033 docs ingest remains later.
 
 ### F033 — Documentation Ingestion
 
@@ -496,46 +496,36 @@ mismatches).
 - [ ] F035 review is the promotion path
 - [ ] Prompt-injection / untrusted-agent content is treated as untrusted input
 
-**Next step**: Specify after F035.
+**Next step**: Specify after F035 (DONE); F035 is the promotion path.
 
 ### F035 — Suggested Lore Review Queue
 
-**Status**: PLANNED  
+**Status**: DONE  
 **Priority**: P0  
+**Spec**: `specs/035-suggested-lore-review/`  
 **Depends on**: F030–F032 (producers); F003 (authority); F010 (who may accept)
 
 **Goal**: Automatically extracted knowledge must not silently become
-authoritative. Humans Accept / Edit / Reject candidates with evidence and
-confidence visible.
+authoritative. Humans Accept / Edit / Reject candidates with evidence visible.
 
 **Product value**: Safe path from extraction to trusted engineering knowledge.
 
-**Surfaces**: **CLI + REST** (P0). No product web UI. MCP may list/read
-candidates for agents; mutating accept/reject is a human (or authorized
-human-equivalent) action.
+**Surfaces**: **CLI + REST** (P0). No product web UI. MCP stays at 10 tools;
+mutating accept/reject is a human action.
 
-Example (CLI/REST payload, not a GUI):
+**Acceptance criteria**:
 
-```text
-Suggested Lore
-Decision: Payment events use transactional outbox.
-Reason: Prevent duplicate Kafka publishing.
-Evidence: PR #1842, PAY-381
-Confidence: 0.84
-[Accept] [Edit] [Reject]
-```
+- [x] Candidates appear in a review queue with statement, evidence, source type
+- [x] Accept creates governed lore with human verification provenance (`human_verified`)
+- [x] Edit then accept records the human-authored statement, not the raw extract as-if-human
+- [x] Reject records a negative decision so the same extract is not re-prompted forever
+- [x] Queue is scoped by membership (F114)
+- [x] Nothing in the queue is treated as canonical until accept
+- [x] F032 accepted-ADR auto-trust remains; those entries are not review-queue items
+- [x] Re-ingest of an already-rejected extract does not resurrect it as a new pending item
+- [x] CLI + REST cover list, accept, edit+accept, reject; no web UI
 
-**Acceptance criteria** (draft):
-
-- [ ] Candidates appear in a review queue with statement, reason, evidence, confidence, source type
-- [ ] Accept creates/updates governed lore with human verification provenance
-- [ ] Edit then accept records the human-authored statement, not the raw extract as-if-human
-- [ ] Reject records a negative decision so the same extract is not re-prompted forever
-- [ ] Queue is scoped by membership (F114)
-- [ ] Nothing in the queue is treated as canonical until accept
-
-**Next step**: Specify as soon as the first ingest producer (F030/F031/F032)
-can create candidates — same flywheel slice if possible.
+**Next step**: Specify **F040** (first-class decision model) or **F022** (packet profiles).
 
 ---
 
@@ -618,7 +608,7 @@ this slice (F050 / `include_stale` not added). Conflicts stay on the existing
 - [x] REST and MCP stay in parity
 - [x] Agent identity is recorded for later F060 feedback, not used as authority
 
-**Next step**: Specify **F022** (packet profiles) or **F035** (suggested-lore review queue) per flywheel sequence.
+**Next step**: Specify **F022** (packet profiles) per flywheel sequence.
 
 ### F022 — Context Packet Profiles
 
@@ -830,8 +820,7 @@ current validity.
 - [ ] Evidence and owner are preserved
 - [ ] REST + CLI + MCP parity for read; write via REST/CLI (and MCP remember-shaped API if specify agrees)
 
-**Next step**: Specify after F032 or in parallel if manual decision entry is the
-MVP and ADR ingest lands immediately after.
+**Next step**: Specify next (F032/F035 ingest + promotion exist).
 
 ### F041 — Decision Timeline
 
@@ -1247,6 +1236,15 @@ requirement.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F035 suggested-lore review queue
+
+- Pending queue projects git/PR observational lore; F032 ADRs excluded
+- Accept supersedes observation with `human_verified` (as-stated) or verified `human_authored` (edit); evidence copied
+- Reject overlay keyed by scope + evidence + statement checksum; observation not deleted
+- CLI `memlore review list|accept|reject`; REST `/v1/review-queue`
+- MCP unchanged (10 tools); compile ranking unchanged (characterization)
+- Spec: `specs/035-suggested-lore-review/`; F035 marked DONE
+
 ### 2026-09-01 — F032 ADR auto-ingestion
 
 - Local working-copy ADR dirs (`docs/adr/`, `adr/`, `architecture/decisions/` + extras)
@@ -1303,11 +1301,10 @@ requirement.
 
 ### Immediate recommended tasks
 
-1. Specify **F035** (suggested-lore review queue) or **F040** (first-class decision model)
-2. Or specify **F022/F023** compiler profiles/budget if staying on agent briefing
-3. Then remaining Epic C ingest (F033 docs) after F035 as sequenced
-4. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
-5. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
+1. Specify **F040** (first-class decision model) or **F022/F023** compiler profiles/budget
+2. Then remaining Epic C ingest (F033 docs) now that F035 promotion exists
+3. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
+4. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale
 
 ---
 

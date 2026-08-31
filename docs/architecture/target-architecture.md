@@ -190,9 +190,10 @@ Agents interact with MemLore, not Graphiti directly.
 Strangler migration is complete (F113). Membership-scoped authz is complete
 (F114). F020 repository intelligence profile is on the Go core. Remaining
 product work is the engineering-intelligence flywheel (F021+): richer
-`get_for_task`, git/PR/ADR ingest, suggested-lore review (CLI + REST),
-first-class decisions, `memlore why`, architecture drift, and GitHub PR
-checks. See [FEATURE_DEVELOPMENT.md](../development/FEATURE_DEVELOPMENT.md).
+`get_for_task`, git/PR/ADR ingest, and suggested-lore review (CLI + REST)
+are shipped. Remaining: first-class decisions, `memlore why`, architecture
+drift, and GitHub PR checks. See
+[FEATURE_DEVELOPMENT.md](../development/FEATURE_DEVELOPMENT.md).
 
 ## Related documents
 

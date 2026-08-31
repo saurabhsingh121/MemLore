@@ -81,6 +81,9 @@ See [docs/api/mcp.md](docs/api/mcp.md).
 ./bin/memlore ingest pr --repository <key> [--pr <n>] [--actor <id>]
 ./bin/memlore ingest adr --repository <key> --path <dir> [--adr-dir <rel>] [--actor <id>]
 ./bin/memlore ingest status --repository <key> [--kind git|pr|adr]
+./bin/memlore review list --repository <key>
+./bin/memlore review accept <id> [--statement <text>] [--actor <id>]
+./bin/memlore review reject <id> [--actor <id>]
 ./bin/memlore migrate   # goose (embedded)
 ./bin/memlore worker    # outbox → graph-service
 ```
@@ -104,9 +107,9 @@ MemLore Core is **Go** (REST, MCP, migrations, worker, authority, lifecycle,
 OIDC/RBAC). Knowledge plane is a thin Python **graph-service** (Graphiti/Neo4j).
 Foundation (v0.8.0) is complete. F020 repository intelligence profile, F021
 agent context bootstrap (`get_for_task` named packet, `memlore context`),
-F030 git commit ingestion, and F031 pull request ingestion (`memlore ingest pr`)
-are available. Next: **F032** ADR ingest or **F035** review queue, or **F022**
-packet profiles — see the
+F030 git / F031 PR / F032 ADR ingest, and F035 suggested-lore review
+(`memlore review`) are available. Next: **F040** first-class decision model
+or **F022** packet profiles — see the
 [feature roadmap](docs/development/FEATURE_DEVELOPMENT.md).
 
 ## License

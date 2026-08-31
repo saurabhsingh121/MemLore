@@ -192,3 +192,17 @@ type User struct {
 	Subject   string
 	CreatedAt pgtype.Timestamptz
 }
+
+type LoreReviewDecision struct {
+	ID                 string
+	ScopeKind          string
+	ScopeKey           string
+	EvidenceType       string
+	EvidenceValue      string
+	StatementChecksum  string
+	LoreEntryID        string
+	SuccessorLoreID    pgtype.Text
+	Status             string
+	ActorID            string
+	DecidedAt          pgtype.Timestamptz
+}

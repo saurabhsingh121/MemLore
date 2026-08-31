@@ -94,6 +94,55 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "review":
+		if len(args) < 3 {
+			printUsage(stdout)
+			return 1
+		}
+		switch args[2] {
+		case "list":
+			opts, err := cli.ParseReviewListArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "review list failed: %v\n", err)
+				return 1
+			}
+			if err := runReviewList(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "review list failed: %v\n", err)
+				return 1
+			}
+			return 0
+		case "accept":
+			opts, err := cli.ParseReviewAcceptArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "review accept failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runReviewAccept(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "review accept failed: %v\n", err)
+				return 1
+			}
+			return 0
+		case "reject":
+			opts, err := cli.ParseReviewRejectArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "review reject failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runReviewReject(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "review reject failed: %v\n", err)
+				return 1
+			}
+			return 0
+		default:
+			fmt.Fprintf(os.Stderr, "unknown review command: %s\n", args[2])
+			return 1
+		}
 	case "ingest":
 		if len(args) < 3 {
 			printUsage(stdout)
@@ -182,6 +231,9 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore ingest pr --repository <key> [--pr <n>] [--actor <id>]")
 	fmt.Fprintln(stdout, "  memlore ingest adr --repository <key> --path <dir> [--adr-dir <rel>] [--actor <id>]")
 	fmt.Fprintln(stdout, "  memlore ingest status --repository <key> [--kind git|pr|adr]")
+	fmt.Fprintln(stdout, "  memlore review list --repository <key>")
+	fmt.Fprintln(stdout, "  memlore review accept <id> [--statement <text>] [--actor <id>]")
+	fmt.Fprintln(stdout, "  memlore review reject <id> [--actor <id>]")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -559,6 +611,85 @@ func runIngestStatus(opts cli.IngestStatusArgs, stdout io.Writer, _ *slog.Logger
 		latest = &runs[0]
 	}
 	_, err = io.WriteString(stdout, cli.FormatIngestStatus(opts.Repository, latest))
+	return err
+}
+
+func runReviewList(opts cli.ReviewListArgs, stdout io.Writer, logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	items, err := queries.NewListReviewQueueHandler(begin).Handle(context.Background(), queries.ListReviewQueueQuery{Scope: scope})
+	if err != nil {
+		return err
+	}
+	logger.Info("memlore review list", "repository_id", opts.Repository, "pending", len(items))
+	_, err = io.WriteString(stdout, cli.FormatReviewList(opts.Repository, items))
+	return err
+}
+
+func runReviewAccept(opts cli.ReviewAcceptArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	cmd := commands.AcceptReviewCommand{EntryID: opts.ID, ActorID: opts.Actor}
+	if opts.HasEdit {
+		stmt := opts.Statement
+		cmd.Statement = &stmt
+	}
+	logger.Info("memlore review accept started", "id", opts.ID, "actor_id", opts.Actor)
+	succ, err := commands.NewAcceptReviewHandler(begin, clock.SystemClock{}).Handle(context.Background(), cmd)
+	if err != nil {
+		logger.Error("memlore review accept failed", "id", opts.ID, "error", err)
+		return err
+	}
+	logger.Info("memlore review accept completed", "id", opts.ID, "successor_id", succ.ID, "origin", succ.Origin)
+	_, err = io.WriteString(stdout, cli.FormatReviewAccept(succ))
+	return err
+}
+
+func runReviewReject(opts cli.ReviewRejectArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	logger.Info("memlore review reject started", "id", opts.ID, "actor_id", opts.Actor)
+	got, err := commands.NewRejectReviewHandler(begin, clock.SystemClock{}).Handle(context.Background(), commands.RejectReviewCommand{
+		EntryID: opts.ID,
+		ActorID: opts.Actor,
+	})
+	if err != nil {
+		logger.Error("memlore review reject failed", "id", opts.ID, "error", err)
+		return err
+	}
+	logger.Info("memlore review reject completed", "id", opts.ID, "status", got.Status)
+	_, err = io.WriteString(stdout, cli.FormatReviewReject(got.ID, got.Status))
 	return err
 }
 
