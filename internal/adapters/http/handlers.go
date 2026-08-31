@@ -198,7 +198,11 @@ func (h *Handlers) listLoreEntries(w http.ResponseWriter, r *http.Request) {
 		handleDomainError(w, err)
 		return
 	}
-	items, err := h.ListLoreByScope.Handle(r.Context(), scope)
+	includeStale := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("include_stale")), "true")
+	items, err := h.ListLoreByScope.Handle(r.Context(), queries.ListLoreByScopeQuery{
+		Scope:        scope,
+		IncludeStale: includeStale,
+	})
 	if err != nil {
 		handleDomainError(w, err)
 		return
@@ -245,9 +249,10 @@ func (h *Handlers) knowledgeSearch(w http.ResponseWriter, r *http.Request) {
 		scope = &parsed
 	}
 	result, err := h.SearchKnowledge.Handle(r.Context(), queries.SearchKnowledgeQuery{
-		Query: body.Query,
-		Scope: scope,
-		Limit: body.Limit,
+		Query:        body.Query,
+		Scope:        scope,
+		Limit:        body.Limit,
+		IncludeStale: body.IncludeStale,
 	})
 	if err != nil {
 		handleDomainError(w, err)

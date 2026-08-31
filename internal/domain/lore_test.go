@@ -84,3 +84,31 @@ func TestLoreEntryRejectsNonHumanOriginOnCreate(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestIsCurrentExcludesSupersededAndInvalidated(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	current, err := domain.NewLoreEntry(domain.NewLoreEntryInput{
+		Statement: "current",
+		Scope:     scope,
+		CreatedBy: "alice",
+	})
+	if err != nil {
+		t.Fatalf("NewLoreEntry: %v", err)
+	}
+	if !domain.IsCurrent(current) {
+		t.Fatal("expected current")
+	}
+
+	succ := "successor-id"
+	superseded := current
+	superseded.SupersededByID = &succ
+	if domain.IsCurrent(superseded) {
+		t.Fatal("superseded must not be current")
+	}
+
+	invalidated := current
+	invalidated.VerificationStatus = domain.VerificationInvalidated
+	if domain.IsCurrent(invalidated) {
+		t.Fatal("invalidated must not be current")
+	}
+}

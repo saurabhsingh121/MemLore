@@ -83,14 +83,16 @@ type explainInput struct {
 }
 
 type searchInput struct {
-	Scope scopeInput `json:"scope"`
+	Scope        scopeInput `json:"scope"`
+	IncludeStale bool       `json:"include_stale,omitempty"`
 }
 
 type knowledgeSearchInput struct {
-	Query   string      `json:"query"`
-	Scope   *scopeInput `json:"scope,omitempty"`
-	Limit   *int        `json:"limit,omitempty"`
-	ActorID string      `json:"actor_id"`
+	Query        string      `json:"query"`
+	Scope        *scopeInput `json:"scope,omitempty"`
+	Limit        *int        `json:"limit,omitempty"`
+	IncludeStale bool        `json:"include_stale,omitempty"`
+	ActorID      string      `json:"actor_id"`
 }
 
 type getForTaskInput struct {
@@ -225,7 +227,10 @@ func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input sea
 	if err != nil {
 		return nil, presenters.LoreEntryList{}, mapDomainError(err)
 	}
-	items, err := t.ListLoreByScope.Handle(ctx, scope)
+	items, err := t.ListLoreByScope.Handle(ctx, queries.ListLoreByScopeQuery{
+		Scope:        scope,
+		IncludeStale: input.IncludeStale,
+	})
 	if err != nil {
 		return nil, presenters.LoreEntryList{}, mapDomainError(err)
 	}
@@ -253,9 +258,10 @@ func (t *Tools) knowledgeSearch(ctx context.Context, _ *sdkmcp.CallToolRequest, 
 		scope = &parsed
 	}
 	result, err := t.SearchKnowledge.Handle(ctx, queries.SearchKnowledgeQuery{
-		Query: input.Query,
-		Scope: scope,
-		Limit: derefLimit(input.Limit),
+		Query:        input.Query,
+		Scope:        scope,
+		Limit:        derefLimit(input.Limit),
+		IncludeStale: input.IncludeStale,
 	})
 	if err != nil {
 		return nil, presenters.KnowledgeSearchResult{}, mapDomainError(err)

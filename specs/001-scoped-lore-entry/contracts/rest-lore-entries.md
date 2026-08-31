@@ -90,6 +90,10 @@ List by exact scope.
 **Query**:
 - `scope_kind` (required)
 - `scope_key` (required)
+- `include_stale` (optional boolean, default `false`) — when `true`, include
+  superseded and invalidated entries; default returns **current only**
+
+Get-by-id remains unfiltered (historical entries are still fetchable).
 
 **Responses**:
 - `200` → `{ "items": [LoreEntryResponse, ...] }` (possibly empty)

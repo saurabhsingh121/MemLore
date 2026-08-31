@@ -20,6 +20,7 @@ MemLore-shaped dual-plane search. Response MUST NOT contain Graphiti-specific ke
 | query | string | yes | Non-empty search text |
 | scope | object | no | `{ kind, key }`; triggers governance list when set |
 | limit | integer | no | Default 10 |
+| include_stale | boolean | no | Default `false`; when `true`, include superseded/invalidated governance entries |
 
 ### Response `200`
 
@@ -47,9 +48,13 @@ MemLore-shaped dual-plane search. Response MUST NOT contain Graphiti-specific ke
 
 - `scope` is `null` when omitted from request.
 - `governance.items` uses `LoreEntry` shape (same as lore CRUD).
+- Default governance list is **current only** (not superseded, not invalidated).
 - `graph.items` may be empty; `governance.items` may be empty.
 - `warnings` may include `graph_service_unavailable` when graph-service fails but
   governance succeeded.
+- Graph items are not filtered for supersession/invalidation in v1.
+
+See also: [`specs/014-conflict-filtering/contracts/temporal-filter.md`](../../014-conflict-filtering/contracts/temporal-filter.md).
 
 ### Errors
 

@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
-**Last Updated**: 2026-08-28  
-**Current Milestone**: M12 — F110 invalidate + supersede complete  
+**Last Updated**: 2026-08-31  
+**Current Milestone**: M13 — F112 temporal filtering + conflict detection complete  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -31,9 +31,9 @@
 | F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
-| F007 | Context compiler + `get_for_task` | PARTIAL | ✓ | ✓ | — | — | F109 v1 compiler; conflict/temporal deferred |
-| F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 (filtering deferred F112) |
-| F009 | Conflict detection | PLANNED | — | — | — | — | F112 |
+| F007 | Context compiler + `get_for_task` | DONE | ✓ | ✓ | ✓ | — | F109 + F112 (temporal filter + conflicts) |
+| F008 | Supersession + invalidation | DONE | ✓ | ✓ | ✓ | 0003 | Implemented as F110 |
+| F009 | Conflict detection | DONE | ✓ | ✓ | ✓ | — | Implemented as F112 |
 | F010 | Auth (OIDC) + team/project scopes | PLANNED | — | — | partial | — | Actor header only today |
 | F101 | Go project skeleton + tooling | DONE | ✓ | ✓ | ✓ | 0005 | `go test ./...` green |
 | F102 | Go domain primitives (lore/scope/evidence) | DONE | ✓ | ✓ | — | — | Characterization parity with Python |
@@ -43,7 +43,8 @@
 | F106a | Go governance hardening + Python cutover | DONE | ✓ | ✓ | ✓ | — | `memlore migrate`, CI integration |
 | F106 | Extract graph-service + contracts | DONE | ✓ | ✓ | ✓ | — | `graph-service/`, Go KnowledgeGraph port |
 | F107 | Transactional outbox + graph sync worker | DONE | ✓ | ✓ | ✓ | — | `memlore worker`, outbox migration |
-| F110 | Invalidate + supersede lifecycle | DONE | ✓ | ✓ | ✓ | 0003 | REST + MCP; filtering deferred F112 |
+| F110 | Invalidate + supersede lifecycle | DONE | ✓ | ✓ | ✓ | 0003 | REST + MCP |
+| F112 | Temporal filter + conflict detection | DONE | ✓ | ✓ | ✓ | — | Filter stale from retrieval; surface conflicts |
 
 ---
 
@@ -368,7 +369,41 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-F111 — OIDC/RBAC. F112 — conflict detection + superseded/invalidated filtering.
+F111 — OIDC/RBAC.
+
+---
+
+## F112 — Temporal filtering + conflict detection
+
+**Status**: DONE  
+**Branch**: `014-conflict-filtering`  
+**Spec**: `specs/014-conflict-filtering/`  
+**Implements**: Product F009; completes F007 temporal/conflict stages
+
+### Goal
+
+Omit superseded/invalidated lore from default retrieval; surface structural
+conflict groups on compiled context. History remains via get/explain.
+
+### Acceptance Criteria
+
+- [x] Default list/search/knowledge_search/get_for_task omit stale
+- [x] `include_stale` opt-in on list/search/knowledge_search
+- [x] get/explain still return stale
+- [x] Compile `conflicts` array; neither side silently dropped
+- [x] REST + MCP parity; still 9 MCP tools
+- [x] `go test ./...` green
+
+### Implementation
+
+- `internal/domain/lore.go` (`IsCurrent`)
+- `internal/application/context/{current,conflicts}.go`
+- `internal/application/queries/{list_lore_by_scope,search_knowledge,compile_context}.go`
+- Presenters + HTTP/MCP adapters
+
+### Next Step
+
+F111 — OIDC/RBAC.
 
 ---
 
@@ -377,7 +412,7 @@ F111 — OIDC/RBAC. F112 — conflict detection + superseded/invalidated filteri
 **Status**: DONE  
 **Branch**: `013-supersede-invalidate`  
 **Spec**: `specs/013-supersede-invalidate/`  
-**Implements**: Product F008 (partial — no conflict detection / retrieval filtering)
+**Implements**: Product F008 (lifecycle; retrieval filtering is F112)
 
 ### Goal
 
@@ -403,7 +438,7 @@ successor that preserves the predecessor. REST and MCP (`memlore.invalidate`,
 
 ### Next Step
 
-F111 — OIDC/RBAC. F112 — conflict detection + superseded/invalidated filtering.
+F111 — OIDC/RBAC.
 
 ---
 
@@ -412,7 +447,7 @@ F111 — OIDC/RBAC. F112 — conflict detection + superseded/invalidated filteri
 **Status**: DONE  
 **Branch**: `012-context-compiler`  
 **Spec**: `specs/012-context-compiler/`  
-**Implements**: Product F007 (partial)
+**Implements**: Product F007 (completed via F112 temporal/conflict stages)
 
 ### Goal
 
@@ -436,7 +471,7 @@ ranking, dedup, token budgeting. REST `POST /v1/context/compile` and MCP
 
 ### Next Step
 
-F110 invalidate + supersede (DONE). Next: F111 auth, F112 conflict/filtering.
+F111 — OIDC/RBAC.
 
 ---
 
@@ -598,9 +633,8 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 
 ### Immediate recommended tasks
 
-1. Conflict detection + superseded/invalidated filtering (F112)
-2. OIDC / RBAC (F111)
-3. Dogfood via `./bin/memlore mcp` with `memlore.supersede`
+1. OIDC / RBAC (F111)
+2. Dogfood via `./bin/memlore mcp` with conflicting current lore + `get_for_task`
 
 ---
 

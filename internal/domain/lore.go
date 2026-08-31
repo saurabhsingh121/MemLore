@@ -96,3 +96,9 @@ func NewLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
 func IsSuperseded(entry LoreEntry) bool {
 	return entry.SupersededByID != nil && strings.TrimSpace(*entry.SupersededByID) != ""
 }
+
+// IsCurrent reports whether the entry is eligible for default retrieval.
+// Current means not superseded and not invalidated.
+func IsCurrent(entry LoreEntry) bool {
+	return !IsSuperseded(entry) && entry.VerificationStatus != VerificationInvalidated
+}

@@ -45,6 +45,100 @@ func TestCompileContextRequiresTaskAndScope(t *testing.T) {
 	}
 }
 
+func TestCompileContextOmitsStaleAndSurfacesConflicts(t *testing.T) {
+	now := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	succ := "succ-id"
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: []domain.LoreEntry{
+				{
+					ID: "a", Statement: "Use blue-green", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationUnverified,
+					CreatedAt: now, UpdatedAt: now,
+				},
+				{
+					ID: "b", Statement: "Use rolling", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationUnverified,
+					CreatedAt: now, UpdatedAt: now,
+				},
+				{
+					ID: "stale", Statement: "Old rule", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationVerified,
+					SupersededByID: &succ, CreatedAt: now, UpdatedAt: now,
+				},
+				{
+					ID: "inv", Statement: "Bad rule", Scope: scope,
+					Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationInvalidated,
+					CreatedAt: now, UpdatedAt: now,
+				},
+			},
+			Warnings: []string{"graph_service_unavailable"},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub)
+
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "deploy",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	if len(stub.calls) != 1 || stub.calls[0].IncludeStale {
+		t.Fatalf("search calls = %+v", stub.calls)
+	}
+	for _, item := range result.Items {
+		if item.ID == "stale" || item.ID == "inv" {
+			t.Fatalf("stale item in packet: %+v", item)
+		}
+	}
+	if len(result.Items) != 2 {
+		t.Fatalf("items = %+v", result.Items)
+	}
+	if len(result.Conflicts) != 1 {
+		t.Fatalf("conflicts = %+v", result.Conflicts)
+	}
+	if len(result.Conflicts[0].EntryIDs) != 2 {
+		t.Fatalf("conflict ids = %v", result.Conflicts[0].EntryIDs)
+	}
+	if len(result.Warnings) != 1 || result.Warnings[0] != "graph_service_unavailable" {
+		t.Fatalf("warnings = %v", result.Warnings)
+	}
+}
+
+func TestCompileContextConflictSurvivesBudget(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	longA := stringsRepeat('a', 400)
+	longB := stringsRepeat('b', 400)
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: []domain.LoreEntry{
+				{ID: "a", Statement: longA, Scope: scope, CreatedAt: now, UpdatedAt: now},
+				{ID: "b", Statement: longB, Scope: scope, CreatedAt: now, UpdatedAt: now},
+			},
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub)
+
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:        "task",
+		Scope:       scope,
+		TokenBudget: 200,
+	})
+	if err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("items = %d", len(result.Items))
+	}
+	if len(result.Conflicts) != 1 || len(result.Conflicts[0].EntryIDs) != 2 {
+		t.Fatalf("conflicts = %+v", result.Conflicts)
+	}
+}
+
 func TestCompileContextRanksAndBudgets(t *testing.T) {
 	now := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
 	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")

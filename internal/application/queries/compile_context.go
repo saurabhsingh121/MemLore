@@ -21,12 +21,13 @@ type CompileContextQuery struct {
 
 // CompileContextResult is the compiled context packet.
 type CompileContextResult struct {
-	Task     string
-	Query    string
-	Scope    domain.Scope
-	Items    []appcontext.RankedItem
-	Meta     appcontext.Meta
-	Warnings []string
+	Task      string
+	Query     string
+	Scope     domain.Scope
+	Items     []appcontext.RankedItem
+	Meta      appcontext.Meta
+	Warnings  []string
+	Conflicts []appcontext.ConflictGroup
 }
 
 type knowledgeSearcher interface {
@@ -68,21 +69,29 @@ func (h *CompileContextHandler) Handle(ctx context.Context, query CompileContext
 
 	scope := query.Scope
 	searchResult, err := h.search.Handle(ctx, SearchKnowledgeQuery{
-		Query: searchQuery,
-		Scope: &scope,
-		Limit: defaultCompileRetrievalLimit,
+		Query:        searchQuery,
+		Scope:        &scope,
+		Limit:        defaultCompileRetrievalLimit,
+		IncludeStale: false,
 	})
 	if err != nil {
 		return CompileContextResult{}, err
 	}
 
+	// Defense in depth: always current-only for compile ranking input.
+	current := appcontext.FilterCurrent(searchResult.Governance)
+	conflicts := appcontext.DetectConflicts(current)
+
 	now := h.now()
-	ranked := appcontext.RankAndDedup(searchResult.Governance, searchResult.Graph, now)
+	ranked := appcontext.RankAndDedup(current, searchResult.Graph, now)
 	selected, used := appcontext.ApplyTokenBudget(ranked, budget)
 
 	warnings := searchResult.Warnings
 	if warnings == nil {
 		warnings = []string{}
+	}
+	if conflicts == nil {
+		conflicts = []appcontext.ConflictGroup{}
 	}
 
 	return CompileContextResult{
@@ -96,6 +105,7 @@ func (h *CompileContextHandler) Handle(ctx context.Context, query CompileContext
 			ItemsIncluded:    len(selected),
 			ItemsTotalRanked: len(ranked),
 		},
-		Warnings: warnings,
+		Warnings:  warnings,
+		Conflicts: conflicts,
 	}, nil
 }

@@ -63,6 +63,41 @@ func TestDedupSkipsGraphMatchingGovernanceStatement(t *testing.T) {
 	}
 }
 
+func TestInvalidatedDoesNotOutrankUnverified(t *testing.T) {
+	now := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	governance := []domain.LoreEntry{
+		{
+			ID:                 "inv",
+			Statement:          "Invalidated rule",
+			Scope:              scope,
+			Origin:             domain.KnowledgeOriginHumanAuthored,
+			VerificationStatus: domain.VerificationInvalidated,
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		},
+		{
+			ID:                 "unv",
+			Statement:          "Unverified rule",
+			Scope:              scope,
+			Origin:             domain.KnowledgeOriginHumanAuthored,
+			VerificationStatus: domain.VerificationUnverified,
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		},
+	}
+	items := appcontext.RankAndDedup(governance, nil, now)
+	if len(items) != 2 {
+		t.Fatalf("items = %d", len(items))
+	}
+	if items[0].ID != "unv" {
+		t.Fatalf("expected unverified first, got %+v", items)
+	}
+	if items[0].AuthorityScore <= items[1].AuthorityScore {
+		t.Fatalf("scores = %f %f", items[0].AuthorityScore, items[1].AuthorityScore)
+	}
+}
+
 func TestApplyTokenBudgetCapsItems(t *testing.T) {
 	items := []appcontext.RankedItem{
 		{Statement: stringsRepeat('a', 400), EstimatedTokens: 120},

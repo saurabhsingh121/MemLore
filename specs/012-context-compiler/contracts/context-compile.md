@@ -1,6 +1,9 @@
-# Context Compile Contract (F109)
+# Context Compile Contract (F109 + F112)
 
 Compiled context packet for agents. No Graphiti-specific keys.
+
+Pipeline: retrieve → temporal filter (current only) → conflict detect →
+rank/dedup → token budget.
 
 ## REST — `POST /v1/context/compile`
 
@@ -38,6 +41,7 @@ Compiled context packet for agents. No Graphiti-specific keys.
       "authority_factors": {
         "verification_status": "verified",
         "origin": "human_authored",
+        "supersession_status": "current",
         "recency_boost": 0.08
       },
       "scope": { "kind": "repository", "key": "github.com/acme/payments" },
@@ -51,9 +55,19 @@ Compiled context packet for agents. No Graphiti-specific keys.
     "items_included": 1,
     "items_total_ranked": 3
   },
-  "warnings": []
+  "warnings": [],
+  "conflicts": []
 }
 ```
+
+- `items` contain **current** governance only (never superseded/invalidated).
+- `conflicts` is always present (`[]` when none). Each group:
+  `{ scope, entry_ids, statements }` for disagreeing current statements in one
+  scope within the retrieval set.
+- Conflict sides are not dropped; budget may exclude an id from `items` while
+  still listing it in `conflicts`.
+
+See also: [`specs/014-conflict-filtering/contracts/conflict-detection.md`](../../014-conflict-filtering/contracts/conflict-detection.md).
 
 ## MCP — `memlore.get_for_task`
 
@@ -69,7 +83,7 @@ Compiled context packet for agents. No Graphiti-specific keys.
 
 Success payload identical to REST `200`.
 
-## Unchanged
+## Related
 
-- `memlore.knowledge_search` — raw dual-plane search (F108)
-- `memlore.search` — exact scope list
+- `memlore.knowledge_search` — dual-plane search; optional `include_stale` (F108/F112)
+- `memlore.search` — exact scope list; optional `include_stale` (F112)
