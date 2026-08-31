@@ -196,6 +196,16 @@ func TestGetAndExplainExistingAndUnknown(t *testing.T) {
 	if _, ok := explainPayload["summary"]; ok {
 		t.Fatal("explain should not include summary")
 	}
+	if explainPayload["trust_band"] == nil || explainPayload["trust_band"] == "" {
+		t.Fatal("explain missing trust_band")
+	}
+	if _, ok := explainPayload["authority_factors"].(map[string]any); !ok {
+		t.Fatalf("explain authority_factors = %v", explainPayload["authority_factors"])
+	}
+	breakdown, ok := explainPayload["factor_breakdown"].([]any)
+	if !ok || len(breakdown) == 0 {
+		t.Fatalf("explain factor_breakdown = %v", explainPayload["factor_breakdown"])
+	}
 	audits := explainPayload["audits"].([]any)
 	if len(audits) != 1 || audits[0].(map[string]any)["action"] != "create" {
 		t.Fatalf("audits = %v", audits)
@@ -367,6 +377,10 @@ func TestGetForTaskMCPContract(t *testing.T) {
 	}
 	if _, ok := payload["conflicts"]; !ok {
 		t.Fatal("missing conflicts field")
+	}
+	first := items[0].(map[string]any)
+	if first["trust_band"] == nil || first["trust_band"] == "" {
+		t.Fatal("get_for_task missing trust_band")
 	}
 }
 
@@ -548,4 +562,3 @@ func TestInvalidateAndSupersedeMCPContract(t *testing.T) {
 		t.Fatalf("supersede invalidated = %v %q", invThenSup.IsError, toolText(invThenSup))
 	}
 }
-

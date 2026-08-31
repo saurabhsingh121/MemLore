@@ -78,12 +78,12 @@ func (h *CompileContextHandler) Handle(ctx context.Context, query CompileContext
 		return CompileContextResult{}, err
 	}
 
-	// Defense in depth: always current-only for compile ranking input.
+	// retrieve → temporal filter → conflict detect → evaluate+rank → budget.
 	current := appcontext.FilterCurrent(searchResult.Governance)
 	conflicts := appcontext.DetectConflicts(current)
 
 	now := h.now()
-	ranked := appcontext.RankAndDedup(current, searchResult.Graph, now)
+	ranked := appcontext.RankAndDedup(current, searchResult.Graph, scope, now)
 	selected, used := appcontext.ApplyTokenBudget(ranked, budget)
 
 	warnings := searchResult.Warnings

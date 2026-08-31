@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-08-31  
-**Current Milestone**: M14 — F111 OIDC + RBAC complete  
+**Current Milestone**: M15 — F003 authority evaluation complete  
 **Current Release Target**: v0.7.0 governance production-ready; v0.8.0 knowledge plane
 
 ---
@@ -27,7 +27,7 @@
 |----|---------|--------|------|-------|------|-----|-------|
 | F001 | Scoped human-authored lore entry (REST) | DONE | ✓ | ✓ | ✓ | 0001 | PostgreSQL governance slice |
 | F002 | MCP lore tools (remember/get/verify/explain/search) | DONE | ✓ | ✓ | ✓ | 0003 | Merged to main |
-| F003 | Authority factor model + evaluation | PLANNED | — | — | partial | — | Docs only today |
+| F003 | Authority factor model + evaluation | DONE | ✓ | ✓ | ✓ | — | Ephemeral factors + trust bands on compile/explain |
 | F004 | Transactional outbox + graph sync | DONE | ✓ | ✓ | ✓ | — | Implemented as F107 |
 | F005 | Graph knowledge service (Graphiti isolation) | DONE | ✓ | ✓ | ✓ | — | F106 graph-service |
 | F006 | Semantic search + graph retrieval | PARTIAL | ✓ | ✓ | — | — | F108 read path; full F006 deferred |
@@ -260,31 +260,40 @@ F104 — application handlers + REST adapter using Go repositories (DONE; see F1
 
 ## F003 — Authority Factor Model + Evaluation
 
-**Status**: PLANNED
+**Status**: DONE
+**Branch**: `016-authority-factors`
+**Spec**: `specs/016-authority-factors/`
 
 ### Goal
 
-Persist explainable authority factors and compute trust bands for retrieval ranking.
+Evaluate explainable authority factors at compile/explain time, derive a
+score **and** trust band, and rank compiled context from those factors —
+without opaque-only scores or a persistence table.
 
 ### Specification
 
-Not started — requires `/speckit.specify`
+`specs/016-authority-factors/` (specify → clarify → plan → tasks).
 
-### Acceptance Criteria (draft)
+### Acceptance Criteria
 
-- Verified ADR with evidence → high/canonical trust band
-- Unverified agent inference → low trust
-- Factors queryable for `explain` flows
-- No opaque-only score persistence
+- [x] Verified ADR with evidence → `canonical` (or `high` if evidence rule not met)
+- [x] Unverified agent inference → `low`; verified agent inference → `high` never `canonical`
+- [x] Factors + `trust_band` on compile/`get_for_task` items
+- [x] `memlore.explain` and `GET /v1/lore-entries/{id}/explain` include evaluation + `factor_breakdown` (no NL summary)
+- [x] Ranking uses evaluator (not only verified/unverified bases); invalidated cannot outrank unverified
+- [x] No authority table; ephemeral evaluation
+- [x] F112 filter/conflicts and F111 local-mode auth unchanged
+- [x] `go test ./...` green
 
-### Documentation
+### Implementation
 
-- `docs/architecture/authority-model.md` (intent)
-- `docs/concepts/authority.md`
+- `internal/domain/authority.go` — pure `EvaluateAuthority`
+- `internal/application/authority/` — LoreEntry / GraphFact adapters
+- Ranking, compile, explain presenters, REST GET explain
 
 ### Next Step
 
-Run Spec Kit specify after Go domain skeleton (F102) or in parallel if modeled language-agnostically.
+F010 remainder — team/project membership-scoped authorization.
 
 ---
 
@@ -370,7 +379,7 @@ binary for cross-project MCP, Python deprecation notices.
 
 ### Next Step
 
-Complete (see F111 / F112). Next product work: F010 membership or F003.
+Complete (see F111 / F112). Next product work: F010 membership (F003 done).
 
 ---
 
@@ -396,7 +405,7 @@ preserves `X-Memlore-Actor` / `actor_id` when OIDC is unset.
 
 ### Next Step
 
-F010 remainder — team/project membership-scoped authorization. Or F003.
+F010 remainder — team/project membership-scoped authorization.
 
 ---
 
@@ -661,8 +670,7 @@ Lore create writes a pending outbox event in the same Postgres transaction.
 ### Immediate recommended tasks
 
 1. Team/project membership-scoped authorization (F010 remainder)
-2. Full authority factor model (F003)
-3. Dogfood OIDC-on with HMAC or IdP JWKS
+2. Dogfood OIDC-on with HMAC or IdP JWKS
 
 ---
 

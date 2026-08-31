@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/memlore/memlore/internal/application/authority"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/domain"
 )
@@ -30,6 +31,9 @@ type AuthorityFactors struct {
 	Origin             string   `json:"origin,omitempty"`
 	SupersessionStatus string   `json:"supersession_status,omitempty"`
 	RecencyBoost       *float64 `json:"recency_boost,omitempty"`
+	EvidenceStrength   *float64 `json:"evidence_strength,omitempty"`
+	SourceType         string   `json:"source_type,omitempty"`
+	ScopeMatch         *float64 `json:"scope_match,omitempty"`
 	GraphScore         *float64 `json:"graph_score,omitempty"`
 }
 
@@ -39,6 +43,7 @@ type RankedItem struct {
 	Statement        string
 	Source           ItemSource
 	AuthorityScore   float64
+	TrustBand        domain.TrustBand
 	AuthorityFactors AuthorityFactors
 	Scope            domain.Scope
 	Evidence         []domain.EvidenceReference
@@ -69,64 +74,34 @@ func EstimateTokens(statement string) int {
 	return tokens
 }
 
-func recencyBoost(createdAt time.Time, now time.Time) float64 {
-	age := now.Sub(createdAt)
-	if age < 0 {
-		age = 0
+func factorsFrom(eval domain.Evaluation) AuthorityFactors {
+	return AuthorityFactors{
+		VerificationStatus: eval.Factors.VerificationStatus,
+		Origin:             eval.Factors.Origin,
+		SupersessionStatus: eval.Factors.SupersessionStatus,
+		RecencyBoost:       eval.Factors.RecencyBoost,
+		EvidenceStrength:   eval.Factors.EvidenceStrength,
+		SourceType:         eval.Factors.SourceType,
+		ScopeMatch:         eval.Factors.ScopeMatch,
+		GraphScore:         eval.Factors.GraphScore,
 	}
-	days := age.Hours() / 24
-	fraction := days / 365
-	if fraction > 1 {
-		fraction = 1
-	}
-	return 0.10 * (1 - fraction)
-}
-
-func governanceScore(entry domain.LoreEntry, now time.Time) (float64, AuthorityFactors) {
-	boost := recencyBoost(entry.CreatedAt, now)
-	factors := AuthorityFactors{
-		VerificationStatus: string(entry.VerificationStatus),
-		Origin:             string(entry.Origin),
-		RecencyBoost:       &boost,
-	}
-	base := 0.55
-	switch entry.VerificationStatus {
-	case domain.VerificationVerified:
-		base = 0.85
-	case domain.VerificationInvalidated:
-		// Defense: invalidated must never outrank unverified if it reaches ranking.
-		base = 0.20
-	}
-	if !domain.IsSuperseded(entry) && entry.VerificationStatus != domain.VerificationInvalidated {
-		factors.SupersessionStatus = "current"
-	} else if domain.IsSuperseded(entry) {
-		factors.SupersessionStatus = "superseded"
-	}
-	return base + boost, factors
-}
-
-func graphScore(fact ports.GraphFact) (float64, AuthorityFactors) {
-	score := fact.Score * 0.80
-	if score > 0.80 {
-		score = 0.80
-	}
-	factors := AuthorityFactors{GraphScore: &fact.Score}
-	return score, factors
 }
 
 // RankAndDedup merges search results into ranked items with graph dedup.
-func RankAndDedup(governance []domain.LoreEntry, graph []ports.GraphFact, now time.Time) []RankedItem {
+func RankAndDedup(governance []domain.LoreEntry, graph []ports.GraphFact, requested domain.Scope, now time.Time) []RankedItem {
 	govStatements := make(map[string]struct{}, len(governance))
 	items := make([]RankedItem, 0, len(governance)+len(graph))
+	req := &requested
 
 	for _, entry := range governance {
-		score, factors := governanceScore(entry, now)
+		eval := authority.EvaluateGovernance(entry, req, now)
 		items = append(items, RankedItem{
 			ID:               entry.ID,
 			Statement:        entry.Statement,
 			Source:           ItemSourceGovernance,
-			AuthorityScore:   score,
-			AuthorityFactors: factors,
+			AuthorityScore:   eval.Score,
+			TrustBand:        eval.Band,
+			AuthorityFactors: factorsFrom(eval),
 			Scope:            entry.Scope,
 			Evidence:         entry.Evidence,
 			ProvenanceRefs:   []string{},
@@ -146,7 +121,7 @@ func RankAndDedup(governance []domain.LoreEntry, graph []ports.GraphFact, now ti
 				scope, _ = domain.NewScope(kind, fact.Scope.Key)
 			}
 		}
-		score, factors := graphScore(fact)
+		eval := authority.EvaluateGraph(fact, req, now)
 		refs := fact.ProvenanceRefs
 		if refs == nil {
 			refs = []string{}
@@ -155,8 +130,9 @@ func RankAndDedup(governance []domain.LoreEntry, graph []ports.GraphFact, now ti
 			ID:               fact.ID,
 			Statement:        fact.Statement,
 			Source:           ItemSourceGraph,
-			AuthorityScore:   score,
-			AuthorityFactors: factors,
+			AuthorityScore:   eval.Score,
+			TrustBand:        eval.Band,
+			AuthorityFactors: factorsFrom(eval),
 			Scope:            scope,
 			Evidence:         nil,
 			ProvenanceRefs:   refs,

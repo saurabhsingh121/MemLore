@@ -341,3 +341,56 @@ func TestInvalidateAndSupersedeHTTPContract(t *testing.T) {
 		t.Fatalf("audits = %v", items)
 	}
 }
+
+func TestExplainLoreContract(t *testing.T) {
+	server := testClient(t)
+	body, _ := json.Marshal(map[string]any{
+		"statement": "Payment events must use the transactional outbox.",
+		"scope":     map[string]string{"kind": "repository", "key": "github.com/acme/payments"},
+		"evidence":  []map[string]string{{"type": "adr", "value": "0001-dual-plane"}},
+	})
+	createRec := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/lore-entries", bytes.NewReader(body))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.Header.Set("X-Memlore-Actor", "alice")
+	server.ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d body=%s", createRec.Code, createRec.Body.String())
+	}
+	var created map[string]any
+	_ = json.Unmarshal(createRec.Body.Bytes(), &created)
+	id := created["id"].(string)
+
+	explainRec := httptest.NewRecorder()
+	server.ServeHTTP(explainRec, httptest.NewRequest(http.MethodGet, "/v1/lore-entries/"+id+"/explain", nil))
+	if explainRec.Code != http.StatusOK {
+		t.Fatalf("explain status = %d body=%s", explainRec.Code, explainRec.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(explainRec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if _, ok := payload["summary"]; ok {
+		t.Fatal("explain should not include summary")
+	}
+	if payload["trust_band"] == nil || payload["trust_band"] == "" {
+		t.Fatal("missing trust_band")
+	}
+	if _, ok := payload["authority_factors"].(map[string]any); !ok {
+		t.Fatalf("authority_factors = %v", payload["authority_factors"])
+	}
+	breakdown, ok := payload["factor_breakdown"].([]any)
+	if !ok || len(breakdown) == 0 {
+		t.Fatalf("factor_breakdown = %v", payload["factor_breakdown"])
+	}
+	audits, ok := payload["audits"].([]any)
+	if !ok || len(audits) == 0 {
+		t.Fatalf("audits = %v", payload["audits"])
+	}
+
+	missingRec := httptest.NewRecorder()
+	server.ServeHTTP(missingRec, httptest.NewRequest(http.MethodGet, "/v1/lore-entries/00000000-0000-0000-0000-000000000000/explain", nil))
+	if missingRec.Code != http.StatusNotFound {
+		t.Fatalf("missing explain status = %d", missingRec.Code)
+	}
+}

@@ -3,7 +3,7 @@
 Compiled context packet for agents. No Graphiti-specific keys.
 
 Pipeline: retrieve → temporal filter (current only) → conflict detect →
-rank/dedup → token budget.
+authority evaluate + rank/dedup → token budget.
 
 ## REST — `POST /v1/context/compile`
 
@@ -38,11 +38,15 @@ rank/dedup → token budget.
       "statement": "Use outbox for payments.",
       "source": "governance",
       "authority_score": 0.92,
+      "trust_band": "high",
       "authority_factors": {
         "verification_status": "verified",
         "origin": "human_authored",
         "supersession_status": "current",
-        "recency_boost": 0.08
+        "recency_boost": 0.08,
+        "evidence_strength": 0.0,
+        "source_type": "human_statement",
+        "scope_match": 1.0
       },
       "scope": { "kind": "repository", "key": "github.com/acme/payments" },
       "evidence": [],
@@ -61,13 +65,15 @@ rank/dedup → token budget.
 ```
 
 - `items` contain **current** governance only (never superseded/invalidated).
+- Each item includes `trust_band` and explainable `authority_factors` (F003).
 - `conflicts` is always present (`[]` when none). Each group:
   `{ scope, entry_ids, statements }` for disagreeing current statements in one
   scope within the retrieval set.
 - Conflict sides are not dropped; budget may exclude an id from `items` while
   still listing it in `conflicts`.
 
-See also: [`specs/014-conflict-filtering/contracts/conflict-detection.md`](../../014-conflict-filtering/contracts/conflict-detection.md).
+See also: [`specs/014-conflict-filtering/contracts/conflict-detection.md`](../../014-conflict-filtering/contracts/conflict-detection.md)
+and [`specs/016-authority-factors/contracts/authority-evaluation.md`](../../016-authority-factors/contracts/authority-evaluation.md).
 
 ## MCP — `memlore.get_for_task`
 
