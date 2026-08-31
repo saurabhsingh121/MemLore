@@ -55,10 +55,43 @@ type AuditList struct {
 	Items []AuditRecord `json:"items"`
 }
 
-// ExplainResult is lore entry fields plus chronological audits.
+// ExplainResult is lore entry fields plus chronological audits and authority evaluation.
 type ExplainResult struct {
 	LoreEntry
-	Audits []AuditRecord `json:"audits"`
+	Audits           []AuditRecord    `json:"audits"`
+	TrustBand        string           `json:"trust_band"`
+	AuthorityScore   float64          `json:"authority_score"`
+	AuthorityFactors AuthorityFactors `json:"authority_factors"`
+	FactorBreakdown  []string         `json:"factor_breakdown"`
+}
+
+// ToExplainResult maps an entry, audits, and evaluation to the API payload.
+func ToExplainResult(entry domain.LoreEntry, audits []domain.AuditRecord, eval domain.Evaluation) ExplainResult {
+	breakdown := eval.Breakdown
+	if breakdown == nil {
+		breakdown = []string{}
+	}
+	mapped := make([]AuditRecord, 0, len(audits))
+	for _, record := range audits {
+		mapped = append(mapped, ToAuditRecord(record))
+	}
+	return ExplainResult{
+		LoreEntry:      ToLoreEntry(entry),
+		Audits:         mapped,
+		TrustBand:      string(eval.Band),
+		AuthorityScore: eval.Score,
+		AuthorityFactors: AuthorityFactors{
+			VerificationStatus: eval.Factors.VerificationStatus,
+			Origin:             eval.Factors.Origin,
+			SupersessionStatus: eval.Factors.SupersessionStatus,
+			RecencyBoost:       eval.Factors.RecencyBoost,
+			EvidenceStrength:   eval.Factors.EvidenceStrength,
+			SourceType:         eval.Factors.SourceType,
+			ScopeMatch:         eval.Factors.ScopeMatch,
+			GraphScore:         eval.Factors.GraphScore,
+		},
+		FactorBreakdown: breakdown,
+	}
 }
 
 // ToLoreEntry maps a domain lore entry to its API representation.

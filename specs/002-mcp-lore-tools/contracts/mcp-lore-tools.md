@@ -120,16 +120,21 @@ re-verify)
 { "id": "uuid-string" }
 ```
 
-**Success**: `ExplainResult` — all `LoreEntry` fields plus:
+**Success**: `ExplainResult` — all `LoreEntry` fields plus chronological
+`audits` and an ephemeral authority evaluation:
 
 ```json
 {
-  "audits": [ { "id": "uuid", "target_id": "uuid", "action": "create|verify", "actor_id": "string", "created_at": "RFC3339" } ]
+  "audits": [ { "id": "uuid", "target_id": "uuid", "action": "create|verify", "actor_id": "string", "created_at": "RFC3339" } ],
+  "trust_band": "medium",
+  "authority_score": 0.58,
+  "authority_factors": { "verification_status": "unverified", "origin": "human_authored" },
+  "factor_breakdown": ["verification_status=unverified", "origin=human_authored"]
 }
 ```
 
 `audits` MUST be chronological ascending. No generated natural-language
-summary field.
+summary field. See `specs/016-authority-factors/contracts/authority-evaluation.md`.
 
 **Errors**: `not_found` (never an empty success payload for unknown id)
 

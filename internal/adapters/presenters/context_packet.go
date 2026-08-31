@@ -10,6 +10,9 @@ type AuthorityFactors struct {
 	Origin             string   `json:"origin,omitempty"`
 	SupersessionStatus string   `json:"supersession_status,omitempty"`
 	RecencyBoost       *float64 `json:"recency_boost,omitempty"`
+	EvidenceStrength   *float64 `json:"evidence_strength,omitempty"`
+	SourceType         string   `json:"source_type,omitempty"`
+	ScopeMatch         *float64 `json:"scope_match,omitempty"`
 	GraphScore         *float64 `json:"graph_score,omitempty"`
 }
 
@@ -19,6 +22,7 @@ type ContextItem struct {
 	Statement        string           `json:"statement"`
 	Source           string           `json:"source"`
 	AuthorityScore   float64          `json:"authority_score"`
+	TrustBand        string           `json:"trust_band"`
 	AuthorityFactors AuthorityFactors `json:"authority_factors"`
 	Scope            Scope            `json:"scope"`
 	Evidence         []Evidence       `json:"evidence"`
@@ -68,11 +72,15 @@ func ToContextPacket(result queries.CompileContextResult) ContextPacket {
 			Statement:      item.Statement,
 			Source:         string(item.Source),
 			AuthorityScore: item.AuthorityScore,
+			TrustBand:      string(item.TrustBand),
 			AuthorityFactors: AuthorityFactors{
 				VerificationStatus: item.AuthorityFactors.VerificationStatus,
 				Origin:             item.AuthorityFactors.Origin,
 				SupersessionStatus: item.AuthorityFactors.SupersessionStatus,
 				RecencyBoost:       item.AuthorityFactors.RecencyBoost,
+				EvidenceStrength:   item.AuthorityFactors.EvidenceStrength,
+				SourceType:         item.AuthorityFactors.SourceType,
+				ScopeMatch:         item.AuthorityFactors.ScopeMatch,
 				GraphScore:         item.AuthorityFactors.GraphScore,
 			},
 			Scope: Scope{

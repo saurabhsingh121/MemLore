@@ -19,7 +19,7 @@ when OIDC is on.
 | `memlore.remember` | Store human-authored lore with provenance | implemented |
 | `memlore.get` | Fetch by id | implemented |
 | `memlore.verify` | Verify (self-verify allowed; idempotent re-verify) | implemented |
-| `memlore.explain` | Lore fields plus chronological audits (no NL summary) | implemented |
+| `memlore.explain` | Lore fields, chronological audits, and explainable authority evaluation (no NL summary) | implemented |
 | `memlore.search` | Exact scope list (`kind`+`key`); current only unless `include_stale` | implemented |
 | `memlore.knowledge_search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) | implemented |
 | `memlore.get_for_task` | Compiled context packet for a task (`conflicts` array; never packs stale) | implemented |
@@ -32,7 +32,9 @@ create).
 Default retrieval (`search`, `knowledge_search`, `get_for_task`) omits
 superseded and invalidated lore. `get` and `explain` still return history.
 `get_for_task` surfaces structural conflict groups when current statements in
-the same scope disagree.
+the same scope disagree. Compiled items include `trust_band` and explainable
+`authority_factors`. `memlore.explain` adds `trust_band`, `authority_score`,
+`authority_factors`, and `factor_breakdown`.
 
 ## Local attach
 
@@ -67,3 +69,4 @@ Invalidate and supersede:
 Temporal filter + conflicts:
 `specs/014-conflict-filtering/contracts/`.
 Auth + RBAC: `specs/015-oidc-rbac/contracts/auth-rbac.md`.
+Authority evaluation: `specs/016-authority-factors/contracts/authority-evaluation.md`.

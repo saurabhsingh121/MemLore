@@ -14,13 +14,14 @@ See [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/con
 | `GET` | `/health` | Liveness payload (`status`, `service`, `version`) |
 | `POST` | `/v1/lore-entries` | Create human-authored lore (`X-Memlore-Actor` or Bearer) |
 | `GET` | `/v1/lore-entries/{id}` | Get by id |
+| `GET` | `/v1/lore-entries/{id}/explain` | Entry + audits + authority evaluation (parity with `memlore.explain`) |
 | `POST` | `/v1/lore-entries/{id}/verify` | Verify (admin when OIDC on) |
 | `POST` | `/v1/lore-entries/{id}/invalidate` | Invalidate (admin when OIDC on) |
 | `POST` | `/v1/lore-entries/{id}/supersede` | Supersede (writer/admin when OIDC on) |
 | `GET` | `/v1/lore-entries` | List by `scope_kind` + `scope_key` (current only; `include_stale=true` for history) |
 | `GET` | `/v1/lore-entries/{id}/audits` | List audits (404 if entry missing) |
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) |
-| `POST` | `/v1/context/compile` | Compile token-budgeted context for a task (`conflicts` array) |
+| `POST` | `/v1/context/compile` | Compile token-budgeted context for a task (`conflicts` array; items include `trust_band`) |
 
 Contract details:
 [`specs/001-scoped-lore-entry/contracts/rest-lore-entries.md`](../../specs/001-scoped-lore-entry/contracts/rest-lore-entries.md).
@@ -29,6 +30,7 @@ Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).
 Auth + RBAC: [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).
+Authority evaluation: [`specs/016-authority-factors/contracts/authority-evaluation.md`](../../specs/016-authority-factors/contracts/authority-evaluation.md).
 
 Example create (local mode):
 

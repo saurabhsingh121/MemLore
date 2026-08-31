@@ -23,6 +23,7 @@ type Tools struct {
 	ListAudits      *queries.ListAuditsHandler
 	SearchKnowledge *queries.SearchKnowledgeHandler
 	CompileContext  *queries.CompileContextHandler
+	ExplainLore     *queries.ExplainLoreHandler
 	Auth            *appauth.Service
 }
 
@@ -39,6 +40,7 @@ func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Know
 		ListAudits:      queries.NewListAuditsHandler(begin),
 		SearchKnowledge: search,
 		CompileContext:  queries.NewCompileContextHandler(search),
+		ExplainLore:     queries.NewExplainLoreHandler(begin),
 		Auth:            appauth.NewService(appauth.Config{}, nil),
 	}
 }
@@ -54,11 +56,11 @@ type evidenceInput struct {
 }
 
 type rememberInput struct {
-	Statement    string          `json:"statement"`
-	Scope        scopeInput      `json:"scope"`
-	ActorID      string          `json:"actor_id"`
-	AccessToken  string          `json:"access_token,omitempty"`
-	Evidence     []evidenceInput `json:"evidence,omitempty"`
+	Statement   string          `json:"statement"`
+	Scope       scopeInput      `json:"scope"`
+	ActorID     string          `json:"actor_id"`
+	AccessToken string          `json:"access_token,omitempty"`
+	Evidence    []evidenceInput `json:"evidence,omitempty"`
 }
 
 type getInput struct {
@@ -218,22 +220,11 @@ func (t *Tools) explain(ctx context.Context, _ *sdkmcp.CallToolRequest, input ex
 	if err := t.resolveRead(ctx, "", input.AccessToken); err != nil {
 		return nil, presenters.ExplainResult{}, mapDomainError(err)
 	}
-	entry, err := t.GetLore.Handle(ctx, input.ID)
+	result, err := t.ExplainLore.Handle(ctx, input.ID)
 	if err != nil {
 		return nil, presenters.ExplainResult{}, mapDomainError(err)
 	}
-	audits, err := t.ListAudits.Handle(ctx, input.ID)
-	if err != nil {
-		return nil, presenters.ExplainResult{}, mapDomainError(err)
-	}
-	result := presenters.ExplainResult{
-		LoreEntry: presenters.ToLoreEntry(entry),
-		Audits:    make([]presenters.AuditRecord, 0, len(audits)),
-	}
-	for _, record := range audits {
-		result.Audits = append(result.Audits, presenters.ToAuditRecord(record))
-	}
-	return nil, result, nil
+	return nil, presenters.ToExplainResult(result.Entry, result.Audits, result.Evaluation), nil
 }
 
 func (t *Tools) search(ctx context.Context, _ *sdkmcp.CallToolRequest, input searchInput) (*sdkmcp.CallToolResult, presenters.LoreEntryList, error) {

@@ -46,6 +46,17 @@ Create human-authored lore entry.
 - `200` → `LoreEntryResponse`
 - `404` → not found
 
+## GET /v1/lore-entries/{id}/explain
+
+Entry fields plus chronological audits and ephemeral authority evaluation
+(F003). Same payload as `memlore.explain`. See
+[`specs/016-authority-factors/contracts/authority-evaluation.md`](../../016-authority-factors/contracts/authority-evaluation.md).
+
+**Responses**:
+- `200` → ExplainResult (`trust_band`, `authority_score`, `authority_factors`,
+  `factor_breakdown`, `audits`)
+- `404` → not found
+
 ## POST /v1/lore-entries/{id}/verify
 
 **Headers**: `X-Memlore-Actor` required  

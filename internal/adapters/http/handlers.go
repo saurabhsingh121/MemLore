@@ -27,6 +27,7 @@ type Handlers struct {
 	ListAudits      *queries.ListAuditsHandler
 	SearchKnowledge *queries.SearchKnowledgeHandler
 	CompileContext  *queries.CompileContextHandler
+	ExplainLore     *queries.ExplainLoreHandler
 	Auth            *appauth.Service
 	Version         string
 }
@@ -44,6 +45,7 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		ListAudits:      queries.NewListAuditsHandler(begin),
 		SearchKnowledge: search,
 		CompileContext:  queries.NewCompileContextHandler(search),
+		ExplainLore:     queries.NewExplainLoreHandler(begin),
 		Auth:            appauth.NewService(appauth.Config{}, nil),
 		Version:         version,
 	}
@@ -58,6 +60,7 @@ func (h *Handlers) Router() http.Handler {
 		r.Post("/lore-entries", h.createLoreEntry)
 		r.Get("/lore-entries", h.listLoreEntries)
 		r.Get("/lore-entries/{id}", h.getLoreEntry)
+		r.Get("/lore-entries/{id}/explain", h.explainLoreEntry)
 		r.Post("/lore-entries/{id}/verify", h.verifyLoreEntry)
 		r.Post("/lore-entries/{id}/invalidate", h.invalidateLoreEntry)
 		r.Post("/lore-entries/{id}/supersede", h.supersedeLoreEntry)
@@ -113,6 +116,16 @@ func (h *Handlers) getLoreEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, toLoreResponse(entry))
+}
+
+func (h *Handlers) explainLoreEntry(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	result, err := h.ExplainLore.Handle(r.Context(), id)
+	if err != nil {
+		handleDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, presenters.ToExplainResult(result.Entry, result.Audits, result.Evaluation))
 }
 
 func (h *Handlers) verifyLoreEntry(w http.ResponseWriter, r *http.Request) {

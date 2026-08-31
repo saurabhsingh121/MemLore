@@ -180,6 +180,12 @@ func TestCompileContextRanksAndBudgets(t *testing.T) {
 	if result.Items[0].Source != appcontext.ItemSourceGovernance {
 		t.Fatalf("first item source = %s", result.Items[0].Source)
 	}
+	if result.Items[0].TrustBand == "" {
+		t.Fatal("missing trust_band on compiled item")
+	}
+	if result.Items[0].AuthorityFactors.SourceType == "" {
+		t.Fatal("missing source_type on compiled item")
+	}
 	if result.Meta.ItemsTotalRanked != 2 {
 		t.Fatalf("meta = %+v", result.Meta)
 	}

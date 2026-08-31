@@ -41,7 +41,7 @@ func NewServerFromTools(tools *Tools, version string, logger *slog.Logger) *sdkm
 	}, tools.verify)
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "memlore.explain",
-		Description: "Return lore entry fields plus chronological audits.",
+		Description: "Return lore entry fields, chronological audits, and explainable authority evaluation.",
 		Annotations: &sdkmcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true},
 	}, tools.explain)
 	sdkmcp.AddTool(server, &sdkmcp.Tool{

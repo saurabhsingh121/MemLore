@@ -39,7 +39,7 @@ It does **not** embed Graphiti or speak Neo4j directly.
 | Identity & tenancy | users, teams, projects, repositories |
 | Scoping | scope resolution, permissions |
 | Lore governance | lore metadata, verification state, provenance |
-| Authority | factor persistence, explainable evaluation |
+| Authority | explainable evaluation at compile/explain (ephemeral; F003) |
 | Evidence | references, strength metadata |
 | Conflicts & supersession | detection, policy, governance records |
 | Audit | append-only history |
@@ -137,18 +137,20 @@ parallel retrieval ──┬── PostgreSQL (authority metadata)
                      ├── graph-service search
                      └── repo / task metadata
    ↓
-authority enrichment
-   ↓
 temporal filtering (superseded / invalidated)
    ↓
 conflict detection
    ↓
-deduplication + ranking
+authority evaluation + ranking / dedup
    ↓
 token budgeting
    ↓
 ContextPacket
 ```
+
+v1 (F003) evaluates authority **after** the temporal filter on the compile
+path so stale lore is not scored by default. `memlore.explain` still evaluates
+the fetched entry, including history.
 
 ## MCP surface (target)
 

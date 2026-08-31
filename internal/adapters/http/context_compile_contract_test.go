@@ -54,6 +54,16 @@ func TestCompileContextContract(t *testing.T) {
 	if _, ok := first["authority_score"]; !ok {
 		t.Fatal("missing authority_score")
 	}
+	if first["trust_band"] == nil || first["trust_band"] == "" {
+		t.Fatal("missing trust_band")
+	}
+	factors, ok := first["authority_factors"].(map[string]any)
+	if !ok {
+		t.Fatalf("authority_factors = %v", first["authority_factors"])
+	}
+	if factors["source_type"] == nil {
+		t.Fatal("missing source_type in authority_factors")
+	}
 	meta := resp["meta"].(map[string]any)
 	if meta["token_budget"] == nil {
 		t.Fatal("missing token_budget in meta")
