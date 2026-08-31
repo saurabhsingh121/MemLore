@@ -15,6 +15,7 @@ import (
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
 	"github.com/memlore/memlore/internal/domain"
+	"github.com/memlore/memlore/internal/infrastructure/gitcli"
 )
 
 // Handlers exposes lore REST endpoints.
@@ -30,6 +31,10 @@ type Handlers struct {
 	CompileContext    *queries.CompileContextHandler
 	RepositoryProfile *queries.RepositoryProfileHandler
 	ExplainLore       *queries.ExplainLoreHandler
+	IngestGit         *commands.IngestGitHandler
+	ListIngestRuns    *queries.ListIngestRunsHandler
+	GetIngestRun      *queries.GetIngestRunHandler
+	ListIngestCands   *queries.ListIngestCandidatesHandler
 	Auth              *appauth.Service
 	Authz             *authz.Gate
 	Membership        ports.MembershipDirectory
@@ -52,6 +57,10 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		CompileContext:    queries.NewCompileContextHandler(search, list),
 		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
+		IngestGit:         commands.NewIngestGitHandler(begin, clock, gitcli.NewReader()),
+		ListIngestRuns:    queries.NewListIngestRunsHandler(begin),
+		GetIngestRun:      queries.NewGetIngestRunHandler(begin),
+		ListIngestCands:   queries.NewListIngestCandidatesHandler(begin),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
 		Version:           version,
 	}
@@ -74,6 +83,10 @@ func (h *Handlers) Router() http.Handler {
 		r.Post("/knowledge-search", h.knowledgeSearch)
 		r.Post("/context/compile", h.compileContext)
 		r.Post("/repository-profile", h.repositoryProfile)
+		r.Post("/ingest/git", h.ingestGit)
+		r.Get("/ingest/runs", h.listIngestRuns)
+		r.Get("/ingest/runs/{id}", h.getIngestRun)
+		r.Get("/ingest/candidates", h.listIngestCandidates)
 
 		r.Post("/admin/teams", h.adminCreateTeam)
 		r.Post("/admin/projects", h.adminCreateProject)

@@ -13,9 +13,9 @@ const (
 type Permission string
 
 const (
-	PermRead      Permission = "read"
-	PermWrite     Permission = "write"
-	PermVerify    Permission = "verify"
+	PermRead       Permission = "read"
+	PermWrite      Permission = "write"
+	PermVerify     Permission = "verify"
 	PermInvalidate Permission = "invalidate"
 )
 

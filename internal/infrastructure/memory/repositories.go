@@ -127,6 +127,7 @@ type UnitOfWork struct {
 	lore   *LoreRepository
 	audits *AuditRepository
 	outbox *OutboxRepository
+	ingest *IngestRepository
 }
 
 func NewUnitOfWork() *UnitOfWork {
@@ -134,6 +135,7 @@ func NewUnitOfWork() *UnitOfWork {
 		lore:   NewLoreRepository(),
 		audits: NewAuditRepository(),
 		outbox: NewOutboxRepository(),
+		ingest: NewIngestRepository(),
 	}
 }
 
@@ -142,6 +144,8 @@ func (u *UnitOfWork) LoreEntries() ports.LoreRepository { return u.lore }
 func (u *UnitOfWork) Audits() ports.AuditRepository { return u.audits }
 
 func (u *UnitOfWork) Outbox() ports.OutboxRepository { return u.outbox }
+
+func (u *UnitOfWork) Ingest() ports.IngestRepository { return u.ingest }
 
 func (u *UnitOfWork) Commit(context.Context) error   { return nil }
 func (u *UnitOfWork) Rollback(context.Context) error { return nil }

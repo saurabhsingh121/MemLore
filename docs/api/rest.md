@@ -28,6 +28,10 @@ and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018
 | `POST` | `/v1/knowledge-search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) |
 | `POST` | `/v1/context/compile` | Compile token-budgeted named context packet for a task (`sections`, `sources`; `items` retained; additive optional files/ticket/agent_id) |
 | `POST` | `/v1/repository-profile` | Compile a repository intelligence profile (named sections; omit empty) |
+| `POST` | `/v1/ingest/git` | Ingest commits from a local git path (write; observational lore only) |
+| `GET` | `/v1/ingest/runs` | List ingest runs (`scope_kind` + `scope_key`) |
+| `GET` | `/v1/ingest/runs/{id}` | Get one ingest run |
+| `GET` | `/v1/ingest/candidates` | List current git-derived observational lore for a repository |
 | `POST` | `/v1/admin/teams` | Create team (admin) |
 | `POST` | `/v1/admin/projects` | Create project (admin; optional `team_key`) |
 | `POST` | `/v1/admin/teams/{key}/members` | Add team member (admin) |
@@ -46,6 +50,7 @@ lore (local: all).
 Context compile: [`specs/012-context-compiler/contracts/context-compile.md`](../../specs/012-context-compiler/contracts/context-compile.md)
 (v1 fields). F021 packet: [`specs/021-agent-context-bootstrap/contracts/context-packet.md`](../../specs/021-agent-context-bootstrap/contracts/context-packet.md).
 Repository profile: [`specs/020-repo-intelligence-profile/contracts/repository-profile.md`](../../specs/020-repo-intelligence-profile/contracts/repository-profile.md).
+Git commit ingest: [`specs/030-git-commit-ingest/contracts/git-commit-ingest.md`](../../specs/030-git-commit-ingest/contracts/git-commit-ingest.md).
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).
 Auth + RBAC: [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).

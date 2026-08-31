@@ -19,14 +19,16 @@ func TestScopeKindMatchesPythonValues(t *testing.T) {
 
 func TestEvidenceTypeMatchesPythonSet(t *testing.T) {
 	want := map[domain.EvidenceType]bool{
-		domain.EvidenceTypeURL:  true,
-		domain.EvidenceTypePath: true,
-		domain.EvidenceTypeADR:  true,
+		domain.EvidenceTypeURL:    true,
+		domain.EvidenceTypePath:   true,
+		domain.EvidenceTypeADR:    true,
+		domain.EvidenceTypeCommit: true,
 	}
 	types := []domain.EvidenceType{
 		domain.EvidenceTypeURL,
 		domain.EvidenceTypePath,
 		domain.EvidenceTypeADR,
+		domain.EvidenceTypeCommit,
 	}
 	if len(types) != len(want) {
 		t.Fatalf("unexpected evidence type count: %d", len(types))

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/domain"
 	"github.com/memlore/memlore/internal/infrastructure/postgres/sqlc"
@@ -91,12 +92,12 @@ func (r *LoreRepository) SearchRelevant(ctx context.Context, opts ports.SearchRe
 		rows, err = r.q.SearchLoreEntriesByStatementScoped(ctx, sqlc.SearchLoreEntriesByStatementScopedParams{
 			ScopeKind: string(opts.Scope.Kind),
 			ScopeKey:  opts.Scope.Key,
-			Column3:   pattern,
+			Column3:   pgtype.Text{String: pattern, Valid: true},
 			Limit:     fetchLimit,
 		})
 	} else {
 		rows, err = r.q.SearchLoreEntriesByStatementAll(ctx, sqlc.SearchLoreEntriesByStatementAllParams{
-			Column1: pattern,
+			Column1: pgtype.Text{String: pattern, Valid: true},
 			Limit:   fetchLimit,
 		})
 	}

@@ -58,3 +58,18 @@ func TestUsageMentionsContext(t *testing.T) {
 		t.Fatalf("usage missing context: %s", buf.String())
 	}
 }
+
+func TestUsageMentionsIngest(t *testing.T) {
+	var buf bytes.Buffer
+	printUsage(&buf)
+	if !bytes.Contains(buf.Bytes(), []byte("ingest git --repository")) {
+		t.Fatalf("usage missing ingest: %s", buf.String())
+	}
+}
+
+func TestIngestGitWithoutRepositoryExitsNonZero(t *testing.T) {
+	code := run([]string{"memlore", "ingest", "git"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(ingest git) = 0, want non-zero")
+	}
+}

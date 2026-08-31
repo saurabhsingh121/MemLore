@@ -39,11 +39,11 @@ type OutboxEvent struct {
 
 // EpisodeIngestPayload is the JSON payload for episode.ingest events.
 type EpisodeIngestPayload struct {
-	Statement       string   `json:"statement"`
-	ScopeKind       string   `json:"scope_kind"`
-	ScopeKey        string   `json:"scope_key"`
-	ProvenanceRefs  []string `json:"provenance_refs"`
-	EpisodeID       string   `json:"episode_id"`
+	Statement      string   `json:"statement"`
+	ScopeKind      string   `json:"scope_kind"`
+	ScopeKey       string   `json:"scope_key"`
+	ProvenanceRefs []string `json:"provenance_refs"`
+	EpisodeID      string   `json:"episode_id"`
 }
 
 // NewEpisodeIngestOutboxEvent builds a pending outbox row for lore graph sync.

@@ -143,6 +143,119 @@ func (q *Queries) ListLoreEntriesByScope(ctx context.Context, arg ListLoreEntrie
 	return items, nil
 }
 
+const searchLoreEntriesByStatementAll = `-- name: SearchLoreEntriesByStatementAll :many
+SELECT
+    id, statement, scope_kind, scope_key, origin, verification_status,
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
+FROM lore_entries
+WHERE statement ILIKE '%' || $1 || '%'
+ORDER BY created_at DESC
+LIMIT $2
+`
+
+type SearchLoreEntriesByStatementAllParams struct {
+	Column1 pgtype.Text
+	Limit   int32
+}
+
+func (q *Queries) SearchLoreEntriesByStatementAll(ctx context.Context, arg SearchLoreEntriesByStatementAllParams) ([]LoreEntry, error) {
+	rows, err := q.db.Query(ctx, searchLoreEntriesByStatementAll, arg.Column1, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LoreEntry{}
+	for rows.Next() {
+		var i LoreEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.Statement,
+			&i.ScopeKind,
+			&i.ScopeKey,
+			&i.Origin,
+			&i.VerificationStatus,
+			&i.Evidence,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.VerifiedBy,
+			&i.VerifiedAt,
+			&i.UpdatedAt,
+			&i.SupersededByID,
+			&i.InvalidatedBy,
+			&i.InvalidatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchLoreEntriesByStatementScoped = `-- name: SearchLoreEntriesByStatementScoped :many
+SELECT
+    id, statement, scope_kind, scope_key, origin, verification_status,
+    evidence, created_by, created_at, verified_by, verified_at, updated_at,
+    superseded_by_id, invalidated_by, invalidated_at
+FROM lore_entries
+WHERE scope_kind = $1
+  AND scope_key = $2
+  AND statement ILIKE '%' || $3 || '%'
+ORDER BY created_at DESC
+LIMIT $4
+`
+
+type SearchLoreEntriesByStatementScopedParams struct {
+	ScopeKind string
+	ScopeKey  string
+	Column3   pgtype.Text
+	Limit     int32
+}
+
+func (q *Queries) SearchLoreEntriesByStatementScoped(ctx context.Context, arg SearchLoreEntriesByStatementScopedParams) ([]LoreEntry, error) {
+	rows, err := q.db.Query(ctx, searchLoreEntriesByStatementScoped,
+		arg.ScopeKind,
+		arg.ScopeKey,
+		arg.Column3,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LoreEntry{}
+	for rows.Next() {
+		var i LoreEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.Statement,
+			&i.ScopeKind,
+			&i.ScopeKey,
+			&i.Origin,
+			&i.VerificationStatus,
+			&i.Evidence,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.VerifiedBy,
+			&i.VerifiedAt,
+			&i.UpdatedAt,
+			&i.SupersededByID,
+			&i.InvalidatedBy,
+			&i.InvalidatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateLoreEntry = `-- name: UpdateLoreEntry :exec
 UPDATE lore_entries SET
     statement = $2,
@@ -199,112 +312,4 @@ func (q *Queries) UpdateLoreEntry(ctx context.Context, arg UpdateLoreEntryParams
 		arg.InvalidatedAt,
 	)
 	return err
-}
-
-const searchLoreEntriesByStatementScoped = `-- name: SearchLoreEntriesByStatementScoped :many
-SELECT
-    id, statement, scope_kind, scope_key, origin, verification_status,
-    evidence, created_by, created_at, verified_by, verified_at, updated_at,
-    superseded_by_id, invalidated_by, invalidated_at
-FROM lore_entries
-WHERE scope_kind = $1
-  AND scope_key = $2
-  AND statement ILIKE '%' || $3 || '%'
-ORDER BY created_at DESC
-LIMIT $4
-`
-
-type SearchLoreEntriesByStatementScopedParams struct {
-	ScopeKind string
-	ScopeKey  string
-	Column3   string
-	Limit     int32
-}
-
-func (q *Queries) SearchLoreEntriesByStatementScoped(ctx context.Context, arg SearchLoreEntriesByStatementScopedParams) ([]LoreEntry, error) {
-	rows, err := q.db.Query(ctx, searchLoreEntriesByStatementScoped, arg.ScopeKind, arg.ScopeKey, arg.Column3, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []LoreEntry{}
-	for rows.Next() {
-		var i LoreEntry
-		if err := rows.Scan(
-			&i.ID,
-			&i.Statement,
-			&i.ScopeKind,
-			&i.ScopeKey,
-			&i.Origin,
-			&i.VerificationStatus,
-			&i.Evidence,
-			&i.CreatedBy,
-			&i.CreatedAt,
-			&i.VerifiedBy,
-			&i.VerifiedAt,
-			&i.UpdatedAt,
-			&i.SupersededByID,
-			&i.InvalidatedBy,
-			&i.InvalidatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const searchLoreEntriesByStatementAll = `-- name: SearchLoreEntriesByStatementAll :many
-SELECT
-    id, statement, scope_kind, scope_key, origin, verification_status,
-    evidence, created_by, created_at, verified_by, verified_at, updated_at,
-    superseded_by_id, invalidated_by, invalidated_at
-FROM lore_entries
-WHERE statement ILIKE '%' || $1 || '%'
-ORDER BY created_at DESC
-LIMIT $2
-`
-
-type SearchLoreEntriesByStatementAllParams struct {
-	Column1 string
-	Limit   int32
-}
-
-func (q *Queries) SearchLoreEntriesByStatementAll(ctx context.Context, arg SearchLoreEntriesByStatementAllParams) ([]LoreEntry, error) {
-	rows, err := q.db.Query(ctx, searchLoreEntriesByStatementAll, arg.Column1, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []LoreEntry{}
-	for rows.Next() {
-		var i LoreEntry
-		if err := rows.Scan(
-			&i.ID,
-			&i.Statement,
-			&i.ScopeKind,
-			&i.ScopeKey,
-			&i.Origin,
-			&i.VerificationStatus,
-			&i.Evidence,
-			&i.CreatedBy,
-			&i.CreatedAt,
-			&i.VerifiedBy,
-			&i.VerifiedAt,
-			&i.UpdatedAt,
-			&i.SupersededByID,
-			&i.InvalidatedBy,
-			&i.InvalidatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

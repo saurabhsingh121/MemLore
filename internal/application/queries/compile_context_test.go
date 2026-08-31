@@ -443,6 +443,47 @@ func TestCompileContextTokenBudgetLimitsItems(t *testing.T) {
 	}
 }
 
+func TestCompileContextVerifiedArchitectureOutranksGitObservation(t *testing.T) {
+	now := time.Now().UTC()
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	gitEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeCommit, Value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{
+				{ID: "git", Statement: "Use the outbox because dual-writes race.", Scope: scope, Origin: domain.KnowledgeOriginRepositoryObservation, VerificationStatus: domain.VerificationUnverified, Evidence: gitEv, CreatedAt: now, UpdatedAt: now},
+				{ID: "arch", Statement: "Hexagonal architecture is canonical.", Scope: scope, Origin: domain.KnowledgeOriginHumanAuthored, VerificationStatus: domain.VerificationVerified, CreatedAt: now, UpdatedAt: now},
+			}),
+			Warnings: []string{},
+		},
+	}
+	handler := queries.NewCompileContextHandler(stub, nil)
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "review architecture outbox",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) < 2 {
+		t.Fatalf("items = %+v", result.Items)
+	}
+	if result.Items[0].ID != "arch" {
+		t.Fatalf("expected verified architecture first, got %+v", result.Items)
+	}
+	var gitItem appcontext.RankedItem
+	for _, it := range result.Items {
+		if it.ID == "git" {
+			gitItem = it
+		}
+	}
+	if gitItem.ID == "" {
+		t.Fatal("git observation missing from packet")
+	}
+	if gitItem.AuthorityFactors.Origin != string(domain.KnowledgeOriginRepositoryObservation) {
+		t.Fatalf("git origin = %+v", gitItem.AuthorityFactors)
+	}
+}
+
 func stringsRepeat(ch byte, n int) string {
 	b := make([]byte, n)
 	for i := range b {
