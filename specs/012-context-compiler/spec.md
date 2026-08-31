@@ -54,10 +54,11 @@ shape matches the contract.
 
 ## Out of Scope
 
-- Conflict detection, supersede/invalidation filtering (F112+)
 - Full authority factor model (F003)
 - File/branch scope resolution
 - OIDC / multi-tenant auth
+
+*(Conflict detection and supersede/invalidation filtering delivered in F112.)*
 
 ## Success Criteria
 

@@ -17,9 +17,10 @@ const warningGraphServiceUnavailable = "graph_service_unavailable"
 
 // SearchKnowledgeQuery is input for dual-plane knowledge search.
 type SearchKnowledgeQuery struct {
-	Query string
-	Scope *domain.Scope
-	Limit int
+	Query        string
+	Scope        *domain.Scope
+	Limit        int
+	IncludeStale bool
 }
 
 // SearchKnowledgeResult is the merged orchestration output.
@@ -78,7 +79,10 @@ func (h *SearchKnowledgeHandler) Handle(ctx context.Context, query SearchKnowled
 	if query.Scope != nil {
 		scope := *query.Scope
 		g.Go(func() error {
-			items, err := h.listByScope.Handle(ctx, scope)
+			items, err := h.listByScope.Handle(ctx, ListLoreByScopeQuery{
+				Scope:        scope,
+				IncludeStale: query.IncludeStale,
+			})
 			if err != nil {
 				return err
 			}

@@ -8,6 +8,7 @@ import (
 type AuthorityFactors struct {
 	VerificationStatus string   `json:"verification_status,omitempty"`
 	Origin             string   `json:"origin,omitempty"`
+	SupersessionStatus string   `json:"supersession_status,omitempty"`
 	RecencyBoost       *float64 `json:"recency_boost,omitempty"`
 	GraphScore         *float64 `json:"graph_score,omitempty"`
 }
@@ -32,14 +33,22 @@ type ContextMeta struct {
 	ItemsTotalRanked int `json:"items_total_ranked"`
 }
 
+// ConflictGroup is disagreeing current lore in one scope.
+type ConflictGroup struct {
+	Scope      Scope    `json:"scope"`
+	EntryIDs   []string `json:"entry_ids"`
+	Statements []string `json:"statements"`
+}
+
 // ContextPacket is the compiled agent context response.
 type ContextPacket struct {
-	Task     string        `json:"task"`
-	Query    string        `json:"query"`
-	Scope    Scope         `json:"scope"`
-	Items    []ContextItem `json:"items"`
-	Meta     ContextMeta   `json:"meta"`
-	Warnings []string      `json:"warnings"`
+	Task      string          `json:"task"`
+	Query     string          `json:"query"`
+	Scope     Scope           `json:"scope"`
+	Items     []ContextItem   `json:"items"`
+	Meta      ContextMeta     `json:"meta"`
+	Warnings  []string        `json:"warnings"`
+	Conflicts []ConflictGroup `json:"conflicts"`
 }
 
 // ToContextPacket maps compilation output to API response.
@@ -62,6 +71,7 @@ func ToContextPacket(result queries.CompileContextResult) ContextPacket {
 			AuthorityFactors: AuthorityFactors{
 				VerificationStatus: item.AuthorityFactors.VerificationStatus,
 				Origin:             item.AuthorityFactors.Origin,
+				SupersessionStatus: item.AuthorityFactors.SupersessionStatus,
 				RecencyBoost:       item.AuthorityFactors.RecencyBoost,
 				GraphScore:         item.AuthorityFactors.GraphScore,
 			},
@@ -77,6 +87,25 @@ func ToContextPacket(result queries.CompileContextResult) ContextPacket {
 	if warnings == nil {
 		warnings = []string{}
 	}
+	conflicts := make([]ConflictGroup, 0, len(result.Conflicts))
+	for _, c := range result.Conflicts {
+		ids := c.EntryIDs
+		if ids == nil {
+			ids = []string{}
+		}
+		stmts := c.Statements
+		if stmts == nil {
+			stmts = []string{}
+		}
+		conflicts = append(conflicts, ConflictGroup{
+			Scope: Scope{
+				Kind: c.Scope.Kind,
+				Key:  c.Scope.Key,
+			},
+			EntryIDs:   ids,
+			Statements: stmts,
+		})
+	}
 	return ContextPacket{
 		Task:  result.Task,
 		Query: result.Query,
@@ -91,6 +120,7 @@ func ToContextPacket(result queries.CompileContextResult) ContextPacket {
 			ItemsIncluded:    result.Meta.ItemsIncluded,
 			ItemsTotalRanked: result.Meta.ItemsTotalRanked,
 		},
-		Warnings: warnings,
+		Warnings:  warnings,
+		Conflicts: conflicts,
 	}
 }

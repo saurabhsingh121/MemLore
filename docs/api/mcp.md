@@ -15,14 +15,19 @@ inferred from the environment.
 | `memlore.get` | Fetch by id | implemented |
 | `memlore.verify` | Verify (self-verify allowed; idempotent re-verify) | implemented |
 | `memlore.explain` | Lore fields plus chronological audits (no NL summary) | implemented |
-| `memlore.search` | Exact scope list (`kind`+`key`) | implemented |
-| `memlore.knowledge_search` | Dual-plane knowledge search (governance + graph) | implemented |
-| `memlore.get_for_task` | Compiled context packet for a task | implemented |
+| `memlore.search` | Exact scope list (`kind`+`key`); current only unless `include_stale` | implemented |
+| `memlore.knowledge_search` | Dual-plane knowledge search (governance + graph; optional `include_stale`) | implemented |
+| `memlore.get_for_task` | Compiled context packet for a task (`conflicts` array; never packs stale) | implemented |
 | `memlore.supersede` | Replace while preserving history | implemented |
 | `memlore.invalidate` | Mark invalid without deleting evidence | implemented |
 
 `memlore.remember` always stores origin `human_authored` (parity with REST
 create).
+
+Default retrieval (`search`, `knowledge_search`, `get_for_task`) omits
+superseded and invalidated lore. `get` and `explain` still return history.
+`get_for_task` surfaces structural conflict groups when current statements in
+the same scope disagree.
 
 ## Local attach
 
@@ -54,3 +59,5 @@ payload schemas. Knowledge search:
 Context compile: `specs/012-context-compiler/contracts/context-compile.md`.
 Invalidate and supersede:
 `specs/013-supersede-invalidate/contracts/lifecycle-lore.md`.
+Temporal filter + conflicts:
+`specs/014-conflict-filtering/contracts/`.

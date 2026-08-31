@@ -17,8 +17,8 @@ alwaysApply: true
 
 ## Active feature plan
 
-Read `specs/013-supersede-invalidate/spec.md` for completed F110 invalidate + supersede.
-Next: F111 auth (OIDC/RBAC) and F112 conflict detection + superseded/invalidated filtering.
-Completed: F101–F110, F106a, Python F001/F002.
+Read `specs/014-conflict-filtering/` for completed F112 temporal filter + conflicts.
+Next: F111 auth (OIDC/RBAC).
+Completed: F101–F110, F112, F106a, Python F001/F002.
 Target architecture: `docs/architecture/target-architecture.md`.
 <!-- SPECKIT END -->

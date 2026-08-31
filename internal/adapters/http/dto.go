@@ -79,9 +79,10 @@ type auditRecordResponse = presenters.AuditRecord
 type auditListResponse = presenters.AuditList
 
 type knowledgeSearchRequest struct {
-	Query string    `json:"query"`
-	Scope *scopeDTO `json:"scope"`
-	Limit int       `json:"limit"`
+	Query        string    `json:"query"`
+	Scope        *scopeDTO `json:"scope"`
+	Limit        int       `json:"limit"`
+	IncludeStale bool      `json:"include_stale"`
 }
 
 type compileContextRequest struct {

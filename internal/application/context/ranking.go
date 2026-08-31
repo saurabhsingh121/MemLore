@@ -28,6 +28,7 @@ const (
 type AuthorityFactors struct {
 	VerificationStatus string   `json:"verification_status,omitempty"`
 	Origin             string   `json:"origin,omitempty"`
+	SupersessionStatus string   `json:"supersession_status,omitempty"`
 	RecencyBoost       *float64 `json:"recency_boost,omitempty"`
 	GraphScore         *float64 `json:"graph_score,omitempty"`
 }
@@ -89,8 +90,17 @@ func governanceScore(entry domain.LoreEntry, now time.Time) (float64, AuthorityF
 		RecencyBoost:       &boost,
 	}
 	base := 0.55
-	if entry.VerificationStatus == domain.VerificationVerified {
+	switch entry.VerificationStatus {
+	case domain.VerificationVerified:
 		base = 0.85
+	case domain.VerificationInvalidated:
+		// Defense: invalidated must never outrank unverified if it reaches ranking.
+		base = 0.20
+	}
+	if !domain.IsSuperseded(entry) && entry.VerificationStatus != domain.VerificationInvalidated {
+		factors.SupersessionStatus = "current"
+	} else if domain.IsSuperseded(entry) {
+		factors.SupersessionStatus = "superseded"
 	}
 	return base + boost, factors
 }

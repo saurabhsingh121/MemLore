@@ -365,6 +365,83 @@ func TestGetForTaskMCPContract(t *testing.T) {
 	if meta["items_included"] == nil {
 		t.Fatal("missing meta.items_included")
 	}
+	if _, ok := payload["conflicts"]; !ok {
+		t.Fatal("missing conflicts field")
+	}
+}
+
+func TestTemporalFilterAndConflictsMCPContract(t *testing.T) {
+	session, _ := testSession(t)
+	scope := map[string]string{"kind": "repository", "key": "r1"}
+	a := callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use blue-green",
+		"scope":     scope,
+		"actor_id":  "alice",
+	})
+	b := callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Use rolling",
+		"scope":     scope,
+		"actor_id":  "alice",
+	})
+	old := callTool(t, session, "memlore.remember", map[string]any{
+		"statement": "Legacy rule",
+		"scope":     scope,
+		"actor_id":  "alice",
+	})
+	oldID := structuredContent(t, old)["id"].(string)
+	_ = callTool(t, session, "memlore.supersede", map[string]any{
+		"id":        oldID,
+		"statement": "Successor rule",
+		"actor_id":  "alice",
+	})
+
+	search := callTool(t, session, "memlore.search", map[string]any{"scope": scope})
+	searchItems := structuredContent(t, search)["items"].([]any)
+	for _, raw := range searchItems {
+		if raw.(map[string]any)["id"].(string) == oldID {
+			t.Fatal("default search must omit superseded")
+		}
+	}
+
+	staleSearch := callTool(t, session, "memlore.search", map[string]any{
+		"scope":         scope,
+		"include_stale": true,
+	})
+	foundStale := false
+	for _, raw := range structuredContent(t, staleSearch)["items"].([]any) {
+		if raw.(map[string]any)["id"].(string) == oldID {
+			foundStale = true
+		}
+	}
+	if !foundStale {
+		t.Fatal("include_stale search must return superseded")
+	}
+
+	got := callTool(t, session, "memlore.get", map[string]any{"id": oldID})
+	if got.IsError {
+		t.Fatalf("get stale failed: %s", toolText(got))
+	}
+
+	packet := callTool(t, session, "memlore.get_for_task", map[string]any{
+		"task":     "deploy",
+		"scope":    scope,
+		"actor_id": "alice",
+	})
+	if packet.IsError {
+		t.Fatalf("get_for_task failed: %s", toolText(packet))
+	}
+	payload := structuredContent(t, packet)
+	for _, raw := range payload["items"].([]any) {
+		if raw.(map[string]any)["id"].(string) == oldID {
+			t.Fatal("get_for_task must omit superseded from items")
+		}
+	}
+	conflicts := payload["conflicts"].([]any)
+	if len(conflicts) < 1 {
+		t.Fatalf("expected conflicts, got %v", conflicts)
+	}
+	_ = a
+	_ = b
 }
 
 func TestInvalidateAndSupersedeMCPContract(t *testing.T) {
