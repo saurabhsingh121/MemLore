@@ -7,9 +7,12 @@ import (
 	"time"
 
 	appcontext "github.com/memlore/memlore/internal/application/context"
+	"github.com/memlore/memlore/internal/application/commands"
 	"github.com/memlore/memlore/internal/application/ports"
 	"github.com/memlore/memlore/internal/application/queries"
 	"github.com/memlore/memlore/internal/domain"
+	"github.com/memlore/memlore/internal/infrastructure/clock"
+	"github.com/memlore/memlore/internal/infrastructure/memory"
 )
 
 type stubSearcher struct {
@@ -602,6 +605,94 @@ func TestCompileContextAcceptedReviewOutranksUnverifiedObservation(t *testing.T)
 	}
 	if acceptedRank < 0 || obsRank < 0 || acceptedRank >= obsRank {
 		t.Fatalf("accepted should outrank unverified observation, items=%+v", result.Items)
+	}
+}
+
+func TestCompileContextHumanDecisionOutranksUnverifiedObservation(t *testing.T) {
+	uow := memory.NewUnitOfWork()
+	begin := memory.BeginFactory(uow)
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	created, err := commands.NewCreateDecisionHandler(begin, clock.FixedClock{Instant: now}).Handle(context.Background(), commands.CreateDecisionCommand{
+		Scope: scope, Question: "How should payment events be published?", Choice: "Transactional outbox",
+		Owner: "alice", ActorID: "alice",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lore, err := uow.LoreEntries().Get(context.Background(), created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeCommit, Value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	adrEv := []domain.EvidenceReference{{Type: domain.EvidenceTypeADR, Value: "0001-use-postgres"}}
+	verified := "alice"
+	obs := domain.LoreEntry{
+		ID: "obs", Statement: "Use the outbox because dual-writes race.", Scope: scope,
+		Origin: domain.KnowledgeOriginRepositoryObservation, VerificationStatus: domain.VerificationUnverified,
+		Evidence: gitEv, CreatedAt: now, UpdatedAt: now,
+	}
+	adr := domain.LoreEntry{
+		ID: "adr", Statement: "Use PostgreSQL as the system of record.", Scope: scope,
+		Origin: domain.KnowledgeOriginArchitectureDecision, VerificationStatus: domain.VerificationVerified,
+		Evidence: adrEv, VerifiedBy: &verified, VerifiedAt: &now, CreatedAt: now, UpdatedAt: now,
+	}
+	_ = uow.LoreEntries().Add(context.Background(), obs)
+	_ = uow.LoreEntries().Add(context.Background(), adr)
+	stub := &stubSearcher{
+		result: queries.SearchKnowledgeResult{
+			Governance: queries.HitsFromEntries([]domain.LoreEntry{obs, adr, lore}),
+			Warnings:   []string{},
+		},
+	}
+	list := queries.NewListLoreByScopeHandler(begin)
+	handler := queries.NewCompileContextHandler(stub, list)
+	handler.SetDecisions(queries.NewListDecisionsHandler(begin))
+	result, err := handler.Handle(context.Background(), queries.CompileContextQuery{
+		Task:  "review architecture postgres outbox",
+		Scope: scope,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Items[0].ID != "adr" {
+		t.Fatalf("expected ADR first, got %+v", result.Items)
+	}
+	humanRank, obsRank := -1, -1
+	decisionIDs := 0
+	seen := map[string]int{}
+	for i, item := range result.Items {
+		if item.ID == created.ID {
+			humanRank = i
+			if !item.FirstClassDecision {
+				t.Fatal("human decision item should be first-class")
+			}
+		}
+		if item.ID == "obs" {
+			obsRank = i
+		}
+		if item.FirstClassDecision {
+			decisionIDs++
+			seen[item.ID]++
+			if seen[item.ID] > 1 {
+				t.Fatalf("duplicate decision id %s", item.ID)
+			}
+		}
+	}
+	if humanRank < 0 || obsRank < 0 || humanRank >= obsRank {
+		t.Fatalf("human decision should outrank unverified observation, items=%+v", result.Items)
+	}
+	if decisionIDs < 2 {
+		t.Fatalf("expected ADR + human first-class decisions, marked=%d items=%+v", decisionIDs, result.Items)
+	}
+	var decSection []appcontext.RankedItem
+	for _, sec := range result.Sections {
+		if sec.ID == appcontext.SectionDecisions {
+			decSection = sec.Items
+		}
+	}
+	if len(decSection) < 2 {
+		t.Fatalf("decisions section = %+v", result.Sections)
 	}
 }
 

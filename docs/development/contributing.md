@@ -1,7 +1,7 @@
 # Contributing
 
 1. Read the [constitution](../../.specify/memory/constitution.md).
-2. Pick work from the [feature roadmap](FEATURE_DEVELOPMENT.md) (next: F040 or F022).
+2. Pick work from the [feature roadmap](FEATURE_DEVELOPMENT.md) (next: F044 or F022).
 3. Use Spec Kit for material features.
 4. Follow TDD for behavioral changes.
 5. Keep PRs small and independently verifiable.

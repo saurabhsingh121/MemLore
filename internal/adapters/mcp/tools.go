@@ -35,6 +35,8 @@ type Tools struct {
 func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph) *Tools {
 	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
 	list := queries.NewListLoreByScopeHandler(begin)
+	compile := queries.NewCompileContextHandler(search, list)
+	compile.SetDecisions(queries.NewListDecisionsHandler(begin))
 	return &Tools{
 		CreateLore:        commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:        commands.NewVerifyLoreHandler(begin, clock),
@@ -44,7 +46,7 @@ func NewTools(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.Know
 		ListLoreByScope:   list,
 		ListAudits:        queries.NewListAuditsHandler(begin),
 		SearchKnowledge:   search,
-		CompileContext:    queries.NewCompileContextHandler(search, list),
+		CompileContext:    compile,
 		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
 		Auth:              appauth.NewService(appauth.Config{}, nil),

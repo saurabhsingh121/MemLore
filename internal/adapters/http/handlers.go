@@ -47,6 +47,10 @@ type Handlers struct {
 	GetReviewItem     *queries.GetReviewItemHandler
 	AcceptReview      *commands.AcceptReviewHandler
 	RejectReview      *commands.RejectReviewHandler
+	CreateDecision    *commands.CreateDecisionHandler
+	GetDecision       *queries.GetDecisionHandler
+	ListDecisions     *queries.ListDecisionsHandler
+	SupersedeDecision *commands.SupersedeDecisionHandler
 	Auth              *appauth.Service
 	Authz             *authz.Gate
 	Membership        ports.MembershipDirectory
@@ -57,6 +61,9 @@ type Handlers struct {
 func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.KnowledgeGraph, version string) *Handlers {
 	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
 	list := queries.NewListLoreByScopeHandler(begin)
+	compile := queries.NewCompileContextHandler(search, list)
+	decisions := queries.NewListDecisionsHandler(begin)
+	compile.SetDecisions(decisions)
 	return &Handlers{
 		CreateLore:        commands.NewCreateLoreHandler(begin, clock),
 		VerifyLore:        commands.NewVerifyLoreHandler(begin, clock),
@@ -66,7 +73,7 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		ListLoreByScope:   list,
 		ListAudits:        queries.NewListAuditsHandler(begin),
 		SearchKnowledge:   search,
-		CompileContext:    queries.NewCompileContextHandler(search, list),
+		CompileContext:    compile,
 		RepositoryProfile: queries.NewRepositoryProfileHandler(list, search),
 		ExplainLore:       queries.NewExplainLoreHandler(begin),
 		IngestGit:         commands.NewIngestGitHandler(begin, clock, gitcli.NewReader()),
@@ -83,6 +90,10 @@ func NewHandlers(begin ports.UnitOfWorkFactory, clock ports.Clock, graph ports.K
 		GetReviewItem:     queries.NewGetReviewItemHandler(begin),
 		AcceptReview:      commands.NewAcceptReviewHandler(begin, clock),
 		RejectReview:      commands.NewRejectReviewHandler(begin, clock),
+		CreateDecision:    commands.NewCreateDecisionHandler(begin, clock),
+		GetDecision:       queries.NewGetDecisionHandler(begin),
+		ListDecisions:     decisions,
+		SupersedeDecision: commands.NewSupersedeDecisionHandler(begin, clock),
 		Auth:              appauth.NewService(appauth.Config{}, nil),
 		Version:           version,
 	}
@@ -119,6 +130,11 @@ func (h *Handlers) Router() http.Handler {
 		r.Get("/review-queue/{id}", h.getReviewItem)
 		r.Post("/review-queue/{id}/accept", h.acceptReviewItem)
 		r.Post("/review-queue/{id}/reject", h.rejectReviewItem)
+
+		r.Post("/decisions", h.createDecision)
+		r.Get("/decisions", h.listDecisions)
+		r.Get("/decisions/{id}", h.getDecision)
+		r.Post("/decisions/{id}/supersede", h.supersedeDecision)
 
 		r.Post("/admin/teams", h.adminCreateTeam)
 		r.Post("/admin/projects", h.adminCreateProject)

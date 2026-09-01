@@ -112,6 +112,16 @@ func TestClassifyPacketNamedSectionsAndTaskContext(t *testing.T) {
 	}
 }
 
+func TestClassifyItemFirstClassDecision(t *testing.T) {
+	id, ok := appcontext.ClassifyItem(appcontext.RankedItem{
+		Statement:          "Transactional outbox",
+		FirstClassDecision: true,
+	})
+	if !ok || id != appcontext.SectionDecisions {
+		t.Fatalf("got %q ok=%v, want decisions", id, ok)
+	}
+}
+
 func TestClassifyPacketOmitsEmptyAndUsesFiles(t *testing.T) {
 	items := []appcontext.RankedItem{
 		{Statement: "Publisher writes to src/payments/outbox.go after commit."},

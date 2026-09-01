@@ -74,6 +74,16 @@ func TestUsageMentionsIngest(t *testing.T) {
 	if !bytes.Contains(buf.Bytes(), []byte("review list --repository")) {
 		t.Fatalf("usage missing review list: %s", buf.String())
 	}
+	if !bytes.Contains(buf.Bytes(), []byte("decision create --repository")) {
+		t.Fatalf("usage missing decision create: %s", buf.String())
+	}
+}
+
+func TestDecisionWithoutRepositoryExitsNonZero(t *testing.T) {
+	code := run([]string{"memlore", "decision", "list"}, io.Discard, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if code == 0 {
+		t.Fatal("run(decision list) = 0, want non-zero")
+	}
 }
 
 func TestIngestPRWithoutRepositoryExitsNonZero(t *testing.T) {

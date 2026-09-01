@@ -39,16 +39,17 @@ type AuthorityFactors struct {
 
 // RankedItem is a scored candidate before token budgeting.
 type RankedItem struct {
-	ID               string
-	Statement        string
-	Source           ItemSource
-	AuthorityScore   float64
-	TrustBand        domain.TrustBand
-	AuthorityFactors AuthorityFactors
-	Scope            domain.Scope
-	Evidence         []domain.EvidenceReference
-	ProvenanceRefs   []string
-	EstimatedTokens  int
+	ID                 string
+	Statement          string
+	Source             ItemSource
+	AuthorityScore     float64
+	TrustBand          domain.TrustBand
+	AuthorityFactors   AuthorityFactors
+	Scope              domain.Scope
+	Evidence           []domain.EvidenceReference
+	ProvenanceRefs     []string
+	EstimatedTokens    int
+	FirstClassDecision bool
 }
 
 // Meta summarizes compilation output.

@@ -12,18 +12,18 @@ import (
 type ProfileSectionID string
 
 const (
-	SectionDecisions         ProfileSectionID = "decisions"
-	SectionConventions       ProfileSectionID = "conventions"
-	SectionGotchas           ProfileSectionID = "gotchas"
-	SectionMigrations        ProfileSectionID = "migrations"
-	SectionOwnership         ProfileSectionID = "ownership"
-	SectionOperationalRisks  ProfileSectionID = "operational_risks"
-	SectionHotspots          ProfileSectionID = "hotspots"
-	SectionRelatedServices   ProfileSectionID = "related_services"
-	SectionArchitecture      ProfileSectionID = "architecture"
-	SectionTechnologies      ProfileSectionID = "technologies"
-	SectionRecentChanges     ProfileSectionID = "recent_changes"
-	SectionTaskContext       ProfileSectionID = "task_context"
+	SectionDecisions        ProfileSectionID = "decisions"
+	SectionConventions      ProfileSectionID = "conventions"
+	SectionGotchas          ProfileSectionID = "gotchas"
+	SectionMigrations       ProfileSectionID = "migrations"
+	SectionOwnership        ProfileSectionID = "ownership"
+	SectionOperationalRisks ProfileSectionID = "operational_risks"
+	SectionHotspots         ProfileSectionID = "hotspots"
+	SectionRelatedServices  ProfileSectionID = "related_services"
+	SectionArchitecture     ProfileSectionID = "architecture"
+	SectionTechnologies     ProfileSectionID = "technologies"
+	SectionRecentChanges    ProfileSectionID = "recent_changes"
+	SectionTaskContext      ProfileSectionID = "task_context"
 )
 
 // ClassificationOrder is first-match priority (most specific first).
@@ -58,7 +58,7 @@ type ProfileMeta struct {
 
 // ClassifyItem returns the first matching section, or false if unmatched.
 func ClassifyItem(item RankedItem) (ProfileSectionID, bool) {
-	if hasADREvidence(item) || item.AuthorityFactors.Origin == string(domain.KnowledgeOriginArchitectureDecision) {
+	if item.FirstClassDecision || hasADREvidence(item) || item.AuthorityFactors.Origin == string(domain.KnowledgeOriginArchitectureDecision) {
 		return SectionDecisions, true
 	}
 	text := strings.ToLower(item.Statement)

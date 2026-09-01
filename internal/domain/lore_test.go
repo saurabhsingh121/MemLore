@@ -408,3 +408,82 @@ func TestIsCurrentExcludesSupersededAndInvalidated(t *testing.T) {
 		t.Fatal("invalidated must not be current")
 	}
 }
+
+func TestDecisionLoreEntryIsVerifiedHumanAuthored(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "github.com/acme/payments")
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	entry, err := domain.NewDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Transactional outbox",
+		Scope:     scope,
+		CreatedBy: "alice",
+		ID:        "dec-1",
+		Now:       now,
+	})
+	if err != nil {
+		t.Fatalf("NewDecisionLoreEntry: %v", err)
+	}
+	if entry.ID != "dec-1" {
+		t.Fatalf("id = %q", entry.ID)
+	}
+	if entry.Origin != domain.KnowledgeOriginHumanAuthored {
+		t.Fatalf("origin = %q", entry.Origin)
+	}
+	if entry.VerificationStatus != domain.VerificationVerified {
+		t.Fatalf("status = %q", entry.VerificationStatus)
+	}
+	if entry.VerifiedBy == nil || *entry.VerifiedBy != "alice" {
+		t.Fatalf("verified_by = %v", entry.VerifiedBy)
+	}
+	if entry.VerifiedAt == nil || !entry.VerifiedAt.Equal(now) {
+		t.Fatalf("verified_at = %v", entry.VerifiedAt)
+	}
+	if len(entry.Evidence) != 0 {
+		t.Fatalf("evidence = %+v", entry.Evidence)
+	}
+}
+
+func TestDecisionLoreEntryPreservesOptionalEvidence(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	ev, err := domain.NewEvidenceReference(domain.EvidenceTypeURL, "https://wiki.example/outbox")
+	if err != nil {
+		t.Fatalf("evidence: %v", err)
+	}
+	entry, err := domain.NewDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Transactional outbox",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Evidence:  []domain.EvidenceReference{ev},
+	})
+	if err != nil {
+		t.Fatalf("NewDecisionLoreEntry: %v", err)
+	}
+	if len(entry.Evidence) != 1 || entry.Evidence[0].Value != "https://wiki.example/outbox" {
+		t.Fatalf("evidence = %+v", entry.Evidence)
+	}
+}
+
+func TestDecisionLoreEntryRejectsNonHumanOrigin(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	_, err := domain.NewDecisionLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Choice",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Origin:    domain.KnowledgeOriginArchitectureDecision,
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
+func TestNewLoreEntryStillRejectsNonHumanOrigin(t *testing.T) {
+	scope, _ := domain.NewScope(domain.ScopeKindRepository, "r1")
+	_, err := domain.NewLoreEntry(domain.NewLoreEntryInput{
+		Statement: "Choice",
+		Scope:     scope,
+		CreatedBy: "alice",
+		Origin:    domain.KnowledgeOriginArchitectureDecision,
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}
