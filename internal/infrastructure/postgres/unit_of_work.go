@@ -20,6 +20,7 @@ type UnitOfWork struct {
 	prIngest  ports.PRIngestRepository
 	adrIngest ports.ADRIngestRepository
 	review    ports.ReviewDecisionRepository
+	decisions ports.DecisionRepository
 }
 
 // BeginUnitOfWork starts a transaction-bound unit of work.
@@ -39,6 +40,7 @@ func BeginUnitOfWork(ctx context.Context, pool *pgxpool.Pool) (*UnitOfWork, erro
 		prIngest:  NewPRIngestRepository(q),
 		adrIngest: NewADRIngestRepository(q),
 		review:    NewReviewDecisionRepository(q),
+		decisions: NewDecisionRepository(q),
 	}, nil
 }
 
@@ -68,6 +70,10 @@ func (u *UnitOfWork) ADRIngest() ports.ADRIngestRepository {
 
 func (u *UnitOfWork) ReviewDecisions() ports.ReviewDecisionRepository {
 	return u.review
+}
+
+func (u *UnitOfWork) Decisions() ports.DecisionRepository {
+	return u.decisions
 }
 
 func (u *UnitOfWork) Commit(ctx context.Context) error {

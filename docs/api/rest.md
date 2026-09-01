@@ -42,6 +42,10 @@ and [`specs/018-membership-authz/contracts/membership-authz.md`](../../specs/018
 | `GET` | `/v1/review-queue/{id}` | Get one review item (pending or decided) |
 | `POST` | `/v1/review-queue/{id}/accept` | Accept as stated or with edited `statement` (write) |
 | `POST` | `/v1/review-queue/{id}/reject` | Reject so the extract is not re-queued (write) |
+| `POST` | `/v1/decisions` | Create a human-recorded engineering decision (write) |
+| `GET` | `/v1/decisions` | List current decisions (`scope_kind` + `scope_key`; includes ADR projections) |
+| `GET` | `/v1/decisions/{id}` | Get a decision by id (human row or ADR-projected lore) |
+| `POST` | `/v1/decisions/{id}/supersede` | Supersede with a new human-recorded decision (write) |
 | `POST` | `/v1/admin/teams` | Create team (admin) |
 | `POST` | `/v1/admin/projects` | Create project (admin; optional `team_key`) |
 | `POST` | `/v1/admin/teams/{key}/members` | Add team member (admin) |
@@ -64,6 +68,7 @@ Git commit ingest: [`specs/030-git-commit-ingest/contracts/git-commit-ingest.md`
 PR ingest: [`specs/031-pull-request-ingest/contracts/pull-request-ingest.md`](../../specs/031-pull-request-ingest/contracts/pull-request-ingest.md).
 ADR ingest: [`specs/032-adr-ingest/contracts/adr-ingest.md`](../../specs/032-adr-ingest/contracts/adr-ingest.md).
 Suggested lore review queue: [`specs/035-suggested-lore-review/contracts/review-queue.md`](../../specs/035-suggested-lore-review/contracts/review-queue.md).
+Engineering decisions: [`specs/040-decision-model/contracts/decisions.md`](../../specs/040-decision-model/contracts/decisions.md).
 Invalidate / supersede: [`specs/013-supersede-invalidate/contracts/lifecycle-lore.md`](../../specs/013-supersede-invalidate/contracts/lifecycle-lore.md).
 Temporal filter + conflicts: [`specs/014-conflict-filtering/contracts/`](../../specs/014-conflict-filtering/contracts/).
 Auth + RBAC: [`specs/015-oidc-rbac/contracts/auth-rbac.md`](../../specs/015-oidc-rbac/contracts/auth-rbac.md).

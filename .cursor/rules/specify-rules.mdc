@@ -16,12 +16,13 @@ alwaysApply: true
 
 ## Active feature plan
 
+F040 First-Class Decision Model is DONE (`specs/040-decision-model/`).
 F035 Suggested Lore Review Queue is DONE (`specs/035-suggested-lore-review/`).
 F032 ADR Auto-Ingestion, F031 PR ingest, F030 git commit ingest, and F021
-agent context bootstrap are DONE. Next: F040 first-class decision model
-(Epic C), or F022 packet profiles (Epic D).
+agent context bootstrap are DONE. Next: F044 `memlore why` (Epic E), or
+F022 packet profiles (Epic D).
 F007 compile v1 and F020 repository profile remain DONE.
-Do not reopen F007/F020/F021/F030/F031/F032/F035 contracts except additive
+Do not reopen F007/F020/F021/F030/F031/F032/F035/F040 contracts except additive
 fields/routes required by a later spec.
 Foundation complete (v0.8.0): F001–F010, F003, F101–F114, F113.
 Product roadmap is epic-based (A–J). Frozen IDs F101–F114 are never reused;

@@ -94,6 +94,66 @@ func run(args []string, stdout io.Writer, logger *slog.Logger) int {
 			return 1
 		}
 		return 0
+	case "decision":
+		if len(args) < 3 {
+			printUsage(stdout)
+			return 1
+		}
+		switch args[2] {
+		case "create":
+			opts, err := cli.ParseDecisionCreateArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "decision create failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runDecisionCreate(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "decision create failed: %v\n", err)
+				return 1
+			}
+			return 0
+		case "get":
+			opts, err := cli.ParseDecisionGetArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "decision get failed: %v\n", err)
+				return 1
+			}
+			if err := runDecisionGet(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "decision get failed: %v\n", err)
+				return 1
+			}
+			return 0
+		case "list":
+			opts, err := cli.ParseDecisionListArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "decision list failed: %v\n", err)
+				return 1
+			}
+			if err := runDecisionList(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "decision list failed: %v\n", err)
+				return 1
+			}
+			return 0
+		case "supersede":
+			opts, err := cli.ParseDecisionSupersedeArgs(args[3:])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "decision supersede failed: %v\n", err)
+				return 1
+			}
+			if opts.Actor == "" {
+				opts.Actor = strings.TrimSpace(os.Getenv("MEMLORE_ACTOR"))
+			}
+			if err := runDecisionSupersede(opts, stdout, logger); err != nil {
+				fmt.Fprintf(os.Stderr, "decision supersede failed: %v\n", err)
+				return 1
+			}
+			return 0
+		default:
+			fmt.Fprintf(os.Stderr, "unknown decision command: %s\n", args[2])
+			return 1
+		}
 	case "review":
 		if len(args) < 3 {
 			printUsage(stdout)
@@ -234,6 +294,10 @@ func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  memlore review list --repository <key>")
 	fmt.Fprintln(stdout, "  memlore review accept <id> [--statement <text>] [--actor <id>]")
 	fmt.Fprintln(stdout, "  memlore review reject <id> [--actor <id>]")
+	fmt.Fprintln(stdout, "  memlore decision create --repository <key> --question <text> --choice <text> --owner <id> [--actor <id>]")
+	fmt.Fprintln(stdout, "  memlore decision get <id>")
+	fmt.Fprintln(stdout, "  memlore decision list --repository <key>")
+	fmt.Fprintln(stdout, "  memlore decision supersede <id> --question <text> --choice <text> --owner <id> [--actor <id>]")
 	fmt.Fprintln(stdout, "  memlore worker")
 }
 
@@ -412,6 +476,7 @@ func runContext(opts cli.ContextArgs, stdout io.Writer, logger *slog.Logger) err
 	list := queries.NewListLoreByScopeHandler(begin)
 	search := queries.NewSearchKnowledgeHandler(begin, graph, nil)
 	handler := queries.NewCompileContextHandler(search, list)
+	handler.SetDecisions(queries.NewListDecisionsHandler(begin))
 	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
 	if err != nil {
 		return err
@@ -690,6 +755,138 @@ func runReviewReject(opts cli.ReviewRejectArgs, stdout io.Writer, logger *slog.L
 	}
 	logger.Info("memlore review reject completed", "id", opts.ID, "status", got.Status)
 	_, err = io.WriteString(stdout, cli.FormatReviewReject(got.ID, got.Status))
+	return err
+}
+
+func runDecisionCreate(opts cli.DecisionCreateArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	evidence, err := cli.ParseEvidenceFlags(opts.Evidence)
+	if err != nil {
+		return err
+	}
+	decided, err := cli.ParseDecisionDate(opts.Date)
+	if err != nil {
+		return err
+	}
+	logger.Info("memlore decision create started", "repository_id", opts.Repository, "actor_id", opts.Actor)
+	got, err := commands.NewCreateDecisionHandler(begin, clock.SystemClock{}).Handle(context.Background(), commands.CreateDecisionCommand{
+		Scope:              scope,
+		Question:           opts.Question,
+		Choice:             opts.Choice,
+		Rationale:          opts.Rationale,
+		Alternatives:       cli.DecisionAlternativesFromArgs(opts.Alternatives),
+		Consequences:       opts.Consequences,
+		Owner:              opts.Owner,
+		DecidedAt:          decided,
+		AffectedComponents: opts.Components,
+		Evidence:           evidence,
+		ActorID:            opts.Actor,
+	})
+	if err != nil {
+		logger.Error("memlore decision create failed", "repository_id", opts.Repository, "error", err)
+		return err
+	}
+	logger.Info("memlore decision create completed", "id", got.ID, "source", got.SourceKind)
+	_, err = io.WriteString(stdout, cli.FormatDecision(got))
+	return err
+}
+
+func runDecisionGet(opts cli.DecisionGetArgs, stdout io.Writer, logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	got, err := queries.NewGetDecisionHandler(begin).Handle(context.Background(), queries.GetDecisionQuery{ID: opts.ID})
+	if err != nil {
+		logger.Error("memlore decision get failed", "id", opts.ID, "error", err)
+		return err
+	}
+	logger.Info("memlore decision get", "id", got.ID, "source", got.SourceKind)
+	_, err = io.WriteString(stdout, cli.FormatDecision(got))
+	return err
+}
+
+func runDecisionList(opts cli.DecisionListArgs, stdout io.Writer, logger *slog.Logger) error {
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	scope, err := domain.NewScope(domain.ScopeKindRepository, opts.Repository)
+	if err != nil {
+		return err
+	}
+	items, err := queries.NewListDecisionsHandler(begin).Handle(context.Background(), queries.ListDecisionsQuery{Scope: scope})
+	if err != nil {
+		logger.Error("memlore decision list failed", "repository_id", opts.Repository, "error", err)
+		return err
+	}
+	logger.Info("memlore decision list", "repository_id", opts.Repository, "count", len(items))
+	_, err = io.WriteString(stdout, cli.FormatDecisionList(opts.Repository, items))
+	return err
+}
+
+func runDecisionSupersede(opts cli.DecisionSupersedeArgs, stdout io.Writer, logger *slog.Logger) error {
+	if strings.TrimSpace(opts.Actor) == "" {
+		return fmt.Errorf("validation_error: --actor or MEMLORE_ACTOR is required")
+	}
+	dsn := envOr("MEMLORE_POSTGRES_DSN", "postgresql://memlore:memlore@localhost:15432/memlore")
+	dsn = bootstrap.NormalizePostgresDSN(dsn)
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return fmt.Errorf("connect postgres: %w", err)
+	}
+	defer pool.Close()
+	begin := bootstrap.PostgresUnitOfWorkFactory(pool)
+	evidence, err := cli.ParseEvidenceFlags(opts.Evidence)
+	if err != nil {
+		return err
+	}
+	decided, err := cli.ParseDecisionDate(opts.Date)
+	if err != nil {
+		return err
+	}
+	logger.Info("memlore decision supersede started", "id", opts.ID, "actor_id", opts.Actor)
+	got, err := commands.NewSupersedeDecisionHandler(begin, clock.SystemClock{}).Handle(context.Background(), commands.SupersedeDecisionCommand{
+		PredecessorID:      opts.ID,
+		Question:           opts.Question,
+		Choice:             opts.Choice,
+		Rationale:          opts.Rationale,
+		Alternatives:       cli.DecisionAlternativesFromArgs(opts.Alternatives),
+		Consequences:       opts.Consequences,
+		Owner:              opts.Owner,
+		DecidedAt:          decided,
+		AffectedComponents: opts.Components,
+		Evidence:           evidence,
+		ActorID:            opts.Actor,
+	})
+	if err != nil {
+		logger.Error("memlore decision supersede failed", "id", opts.ID, "error", err)
+		return err
+	}
+	logger.Info("memlore decision supersede completed", "id", got.ID, "predecessor_id", opts.ID)
+	_, err = io.WriteString(stdout, cli.FormatDecision(got))
 	return err
 }
 

@@ -194,15 +194,45 @@ type User struct {
 }
 
 type LoreReviewDecision struct {
-	ID                 string
-	ScopeKind          string
-	ScopeKey           string
-	EvidenceType       string
-	EvidenceValue      string
-	StatementChecksum  string
-	LoreEntryID        string
-	SuccessorLoreID    pgtype.Text
-	Status             string
-	ActorID            string
-	DecidedAt          pgtype.Timestamptz
+	ID                string
+	ScopeKind         string
+	ScopeKey          string
+	EvidenceType      string
+	EvidenceValue     string
+	StatementChecksum string
+	LoreEntryID       string
+	SuccessorLoreID   pgtype.Text
+	Status            string
+	ActorID           string
+	DecidedAt         pgtype.Timestamptz
+}
+
+type Decision struct {
+	ID             string
+	ScopeKind      string
+	ScopeKey       string
+	Question       string
+	Choice         string
+	Rationale      string
+	Consequences   string
+	Owner          string
+	DecidedAt      pgtype.Timestamptz
+	SourceKind     string
+	SupersededByID pgtype.Text
+	CreatedBy      string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+type DecisionAlternative struct {
+	DecisionID string
+	Position   int32
+	Label      string
+	Note       string
+}
+
+type DecisionComponent struct {
+	DecisionID string
+	Position   int32
+	Name       string
 }

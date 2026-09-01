@@ -236,6 +236,63 @@ func NewVerifiedHumanAuthoredLoreEntry(in NewLoreEntryInput) (LoreEntry, error) 
 	return newVerifiedReviewSuccessor(in, KnowledgeOriginHumanAuthored, "verified human authored origin must be human_authored")
 }
 
+// NewDecisionLoreEntry creates verified human_authored lore for an F040 Decision.
+// Evidence is optional. NewLoreEntry remains unverified human-authored only.
+func NewDecisionLoreEntry(in NewLoreEntryInput) (LoreEntry, error) {
+	statement := strings.TrimSpace(in.Statement)
+	createdBy := strings.TrimSpace(in.CreatedBy)
+
+	if statement == "" {
+		return LoreEntry{}, validationError("statement must be non-empty")
+	}
+	if len(statement) > MaxStatementLength {
+		return LoreEntry{}, validationError(
+			fmt.Sprintf("statement must be at most %d characters", MaxStatementLength),
+		)
+	}
+	if createdBy == "" {
+		return LoreEntry{}, validationError("created_by must be non-empty")
+	}
+	origin := in.Origin
+	if origin == "" {
+		origin = KnowledgeOriginHumanAuthored
+	}
+	if origin != KnowledgeOriginHumanAuthored {
+		return LoreEntry{}, validationError("decision lore origin must be human_authored")
+	}
+
+	evidence := in.Evidence
+	if evidence == nil {
+		evidence = []EvidenceReference{}
+	}
+
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		id = uuid.NewString()
+	}
+
+	now := in.Now
+	if now.IsZero() {
+		now = time.Now().UTC()
+	} else {
+		now = now.UTC()
+	}
+
+	return LoreEntry{
+		ID:                 id,
+		Statement:          statement,
+		Scope:              in.Scope,
+		Origin:             origin,
+		VerificationStatus: VerificationVerified,
+		Evidence:           evidence,
+		CreatedBy:          createdBy,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+		VerifiedBy:         &createdBy,
+		VerifiedAt:         &now,
+	}, nil
+}
+
 func newVerifiedReviewSuccessor(in NewLoreEntryInput, want KnowledgeOrigin, originErr string) (LoreEntry, error) {
 	statement := strings.TrimSpace(in.Statement)
 	createdBy := strings.TrimSpace(in.CreatedBy)

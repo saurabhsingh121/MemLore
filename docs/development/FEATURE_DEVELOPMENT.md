@@ -1,7 +1,7 @@
 # MemLore Feature Development Tracker
 
 **Last Updated**: 2026-09-01  
-**Current Milestone**: M19 — product flywheel (next: F040 decision model or F022 packet profiles)  
+**Current Milestone**: M19 — product flywheel (next: F044 `memlore why` or F022 packet profiles)  
 **Current Release Target**: v0.9.0 engineering-intelligence flywheel  
 **Foundation**: v0.8.0 knowledge plane + governance (F001–F010, F101–F114)
 
@@ -147,7 +147,7 @@ capture → trust → retrieve → use → detect drift → human correction →
 4. **F031** — Pull Request Ingestion
 5. **F032** — ADR Auto-Ingestion
 6. **F035** — Suggested Lore Review Queue
-7. **F040** — First-Class Decision Model
+7. **F040** — First-Class Decision Model ✅
 8. **F044** — `memlore why`
 9. **F050** — Architecture Drift Detection
 10. **F054** — GitHub PR Check Integration
@@ -246,7 +246,7 @@ validity, evidence, and implementation awareness.
 
 | ID | Feature | Priority | Status | Notes |
 |----|---------|----------|--------|-------|
-| F040 | First-class decision model | P0 | PLANNED | Dedicated domain, not generic lore only |
+| F040 | First-class decision model | P0 | DONE | Dedicated domain; ADR lore projected; MCP stays at 10 |
 | F041 | Decision timeline | P1 | PLANNED | Previous truth remains discoverable |
 | F042 | Alternative tracking | P1 | PLANNED | Why X, why not Y |
 | F043 | Decision impact graph | P1 | PLANNED | Affected services, events, components |
@@ -430,7 +430,7 @@ canonical writes. No new MCP tool.
 - [x] Linked issues/tickets are stored as evidence refs when present
 - [x] Unmerged PRs are skipped (not treated as landed implementation)
 
-**Next step**: Specify **F040** (first-class decision model).
+**Next step**: Done — F040 first-class decision model is specified and implemented.
 
 ### F032 — ADR Auto-Ingestion
 
@@ -454,7 +454,7 @@ without copy-paste.
 - [x] Original ADR path remains the evidence source
 - [x] Uncertain extracts are skipped (F035 still applies later); accepted-file ingest is auto-trusted per spec
 
-**Next step**: Specify **F040** (first-class decision model). F033 docs ingest remains later.
+**Next step**: Done — F040 first-class decision model is specified and implemented. F033 docs ingest remains later.
 
 ### F033 — Documentation Ingestion
 
@@ -525,7 +525,7 @@ mutating accept/reject is a human action.
 - [x] Re-ingest of an already-rejected extract does not resurrect it as a new pending item
 - [x] CLI + REST cover list, accept, edit+accept, reject; no web UI
 
-**Next step**: Specify **F040** (first-class decision model) or **F022** (packet profiles).
+**Next step**: Done — F040 first-class decision model is specified and implemented. F022 packet profiles remain later.
 
 ---
 
@@ -799,7 +799,7 @@ feedback, dangerous areas, preferred implementation patterns.
 
 ### F040 — First-Class Decision Model
 
-**Status**: PLANNED  
+**Status**: DONE  
 **Priority**: P0  
 **Depends on**: F001 (lore), F008 (supersession), F032 (ADR ingest strongly preferred)
 
@@ -812,15 +812,17 @@ current validity.
 
 **Product value**: Agents can answer “why Kafka?” as a decision, not a snippet.
 
-**Acceptance criteria** (draft):
+**Acceptance criteria**:
 
-- [ ] Decisions can be created, retrieved, and superseded without deleting history
-- [ ] Required fields from the model above are represented (optional fields allowed)
-- [ ] Decisions participate in compile / `get_for_task` as first-class sections
-- [ ] Evidence and owner are preserved
-- [ ] REST + CLI + MCP parity for read; write via REST/CLI (and MCP remember-shaped API if specify agrees)
+- [x] Decisions can be created, retrieved, and superseded without deleting history
+- [x] Required fields from the model above are represented (optional fields allowed)
+- [x] Decisions participate in compile / `get_for_task` as first-class sections
+- [x] Evidence and owner are preserved
+- [x] REST + CLI for create/get/list-current/supersede; MCP read via `get_for_task` (10 tools)
 
-**Next step**: Specify next (F032/F035 ingest + promotion exist).
+**Spec**: `specs/040-decision-model/`
+
+**Next step**: Specify **F044** (`memlore why`).
 
 ### F041 — Decision Timeline
 
@@ -1236,6 +1238,16 @@ requirement.
 
 ## Development Ledger Notes
 
+### 2026-09-01 — F040 first-class decision model
+
+- Dedicated `decisions` table; human create dual-writes verified `human_authored` lore (same id)
+- Current F032 accepted-ADR lore projected as Decisions (id = lore id, source `adr`); no second current fact
+- Supersede creates a new human Decision + F110 lore supersession; history remains gettable
+- Compile / `get_for_task` `decisions` section fed by first-class Decisions; ranking formulas unchanged
+- CLI `memlore decision create|get|list|supersede`; REST `/v1/decisions`; MCP stays at 10 tools
+- F035 Accept does not create Decisions; observational lore is not auto-upgraded
+- Spec: `specs/040-decision-model/`; F040 marked DONE
+
 ### 2026-09-01 — F035 suggested-lore review queue
 
 - Pending queue projects git/PR observational lore; F032 ADRs excluded
@@ -1301,7 +1313,7 @@ requirement.
 
 ### Immediate recommended tasks
 
-1. Specify **F040** (first-class decision model) or **F022/F023** compiler profiles/budget
+1. Specify **F044** (`memlore why`) or **F022/F023** compiler profiles/budget
 2. Then remaining Epic C ingest (F033 docs) now that F035 promotion exists
 3. Dogfood OIDC-on with HMAC or IdP JWKS (ops, not a product epic)
 4. Optional: Postgres `pg_trgm` / FTS upgrade for governance relevance at scale

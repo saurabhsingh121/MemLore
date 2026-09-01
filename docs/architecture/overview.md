@@ -60,7 +60,7 @@ isolated in `graph-service/`.
 (`get_for_task` / `why`) → use (coding agent) → detect drift (PR check) →
 human correction → learn. See
 [FEATURE_DEVELOPMENT.md](../development/FEATURE_DEVELOPMENT.md). Next specify:
-F040 decision model or F022 packet profiles. P0 human queues are CLI + REST; a
+F044 `memlore why` or F022 packet profiles. P0 human queues are CLI + REST; a
 product web UI is F120 (P2).
 
 ## Adapters

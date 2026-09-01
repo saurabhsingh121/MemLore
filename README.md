@@ -39,7 +39,7 @@ it, and what this agent needs to know right now."
 - **Temporal truth** — supersede facts without erasing history
 - **Conflicts** — surface drift between policy and implementation
 - **Scopes** — organization → team → project → repository → task
-- **Decisions** — first-class rationale, not generic memories (roadmap F040)
+- **Decisions** — first-class rationale, not generic memories (F040)
 - **Drift** — intent vs implementation in the PR loop (roadmap F050)
 
 ## Quick start

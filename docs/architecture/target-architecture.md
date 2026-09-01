@@ -95,7 +95,7 @@ Go communicates via a `KnowledgeGraph` port — never imports Graphiti types.
 
 | Store | Source of truth for |
 |-------|---------------------|
-| **PostgreSQL** | users, teams, projects, repos, scopes, lore metadata, authority factors, verification, provenance, evidence refs, permissions, audit, ingestion status, outbox events |
+| **PostgreSQL** | users, teams, projects, repos, scopes, lore metadata, engineering decisions, authority factors, verification, provenance, evidence refs, permissions, audit, ingestion status, outbox events |
 | **Neo4j (via Graphiti)** | entities, facts, relationships, episodes, embeddings, temporal graph retrieval |
 
 PostgreSQL is authoritative for governance decisions even when graph search

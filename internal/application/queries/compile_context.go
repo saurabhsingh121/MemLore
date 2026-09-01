@@ -46,11 +46,16 @@ type knowledgeSearcher interface {
 	Handle(ctx context.Context, query SearchKnowledgeQuery) (SearchKnowledgeResult, error)
 }
 
+type decisionLister interface {
+	Handle(ctx context.Context, query ListDecisionsQuery) ([]domain.Decision, error)
+}
+
 // CompileContextHandler compiles a token-budgeted context packet for agents.
 type CompileContextHandler struct {
-	search knowledgeSearcher
-	list   loreLister
-	now    func() time.Time
+	search    knowledgeSearcher
+	list      loreLister
+	decisions decisionLister
+	now       func() time.Time
 }
 
 // NewCompileContextHandler wires the compiler with search and optional list-by-scope.
@@ -60,6 +65,11 @@ func NewCompileContextHandler(search knowledgeSearcher, list loreLister) *Compil
 		list:   list,
 		now:    time.Now,
 	}
+}
+
+// SetDecisions wires current first-class Decisions into compile classification.
+func (h *CompileContextHandler) SetDecisions(list decisionLister) {
+	h.decisions = list
 }
 
 // Handle retrieves knowledge and compiles ranked, budgeted context.
@@ -100,12 +110,34 @@ func (h *CompileContextHandler) Handle(ctx context.Context, query CompileContext
 	}
 
 	governance := searchResult.LoreEntries()
+	var listed []domain.LoreEntry
 	if h.list != nil && scope.Kind == domain.ScopeKindRepository {
-		listed, listErr := h.list.Handle(ctx, ListLoreByScopeQuery{Scope: scope, IncludeStale: false})
+		var listErr error
+		listed, listErr = h.list.Handle(ctx, ListLoreByScopeQuery{Scope: scope, IncludeStale: false})
 		if listErr != nil {
 			return CompileContextResult{}, listErr
 		}
 		governance = mergeLoreByID(governance, briefingLore(listed))
+	}
+
+	decisionIDs := map[string]struct{}{}
+	if h.decisions != nil && scope.Kind == domain.ScopeKindRepository {
+		decs, decErr := h.decisions.Handle(ctx, ListDecisionsQuery{Scope: scope})
+		if decErr != nil {
+			return CompileContextResult{}, decErr
+		}
+		for _, d := range decs {
+			decisionIDs[d.ID] = struct{}{}
+		}
+		if len(decisionIDs) > 0 && len(listed) > 0 {
+			extra := make([]domain.LoreEntry, 0, len(decisionIDs))
+			for _, entry := range listed {
+				if _, ok := decisionIDs[entry.ID]; ok {
+					extra = append(extra, entry)
+				}
+			}
+			governance = mergeLoreByID(governance, extra)
+		}
 	}
 
 	// retrieve → temporal filter → conflict detect → evaluate+rank → budget → classify.
@@ -114,6 +146,13 @@ func (h *CompileContextHandler) Handle(ctx context.Context, query CompileContext
 
 	now := h.now()
 	ranked := appcontext.RankAndDedup(current, searchResult.Graph, scope, now)
+	if len(decisionIDs) > 0 {
+		for i := range ranked {
+			if _, ok := decisionIDs[ranked[i].ID]; ok {
+				ranked[i].FirstClassDecision = true
+			}
+		}
+	}
 	selected, used := appcontext.ApplyTokenBudget(ranked, budget)
 
 	sig := appcontext.TaskSignals{

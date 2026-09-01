@@ -78,6 +78,16 @@ func TestAcceptReviewAsStatedCreatesHumanVerifiedSuccessor(t *testing.T) {
 	if again.ID != succ.ID {
 		t.Fatalf("idempotent successor = %s want %s", again.ID, succ.ID)
 	}
+
+	listed, err := queries.NewListDecisionsHandler(begin).Handle(context.Background(), queries.ListDecisionsQuery{Scope: pred.Scope})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range listed {
+		if d.ID == succ.ID {
+			t.Fatal("F035 Accept must not create a Decision")
+		}
+	}
 }
 
 func TestAcceptReviewEditIsHumanAuthored(t *testing.T) {
